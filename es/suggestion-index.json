@@ -1,0 +1,54 @@
+{
+  "index": "search_suggestion_index",
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 1,
+    "analysis": {
+      "analyzer": {
+        "suggestion_analyzer": {
+          "type": "custom",
+          "tokenizer": "suggestion_tokenizer"
+        }
+      },
+      "tokenizer": {
+        "suggestion_tokenizer": {
+          "type": "edge_ngram",
+          "min_gram": 1,
+          "max_gram": 20,
+          "token_chars": ["letter", "digit"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "keyword": {
+        "type": "text",
+        "analyzer": "suggestion_analyzer",
+        "search_analyzer": "standard",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "suggestion_type": {
+        "type": "keyword"
+      },
+      "search_count": {
+        "type": "integer"
+      },
+      "weight": {
+        "type": "integer"
+      },
+      "category": {
+        "type": "keyword"
+      },
+      "updated_at": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis"
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/sql/admin-service.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/sql/analytics-service.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/sql/comment-service.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/sql/file-service.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/sql/init/01-init-databases.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/sql/init/02-init-nacos.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/sql/message-service.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/sql/note-service.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/sql/notification-service.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/sql/payment-service.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/sql/rating-service.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/sql/report-service.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/sql/search-service.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/sql/subscription-service.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/sql/user-service.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/sql/withdrawal-service.sql" dialect="MySQL" />
+  </component>
+</project>
