@@ -18,6 +18,10 @@
     <name>OnlyStudents Common</name>
     <description>公共模块聚合</description>
 
+    <properties>
+        <lombok.version>1.18.30</lombok.version>
+    </properties>
+
     <modules>
         <module>common-core</module>
         <module>common-web</module>
@@ -25,4 +29,5 @@
         <module>common-redis</module>
         <module>common-rabbitmq</module>
     </modules>
+
 </project>

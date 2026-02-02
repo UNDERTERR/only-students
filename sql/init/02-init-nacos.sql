@@ -175,3 +175,8 @@ CREATE TABLE IF NOT EXISTS users (
   enabled TINYINT NOT NULL DEFAULT 1,
   PRIMARY KEY (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 插入默认用户（密码为 nacos）
+INSERT INTO users (username, password, enabled) VALUES 
+('nacos', '$2a$10$EuWPZHzz32dJN7jexM34MOeYirDdFAZm2kuWj7VEOJhhZkDrxfvUu', 1)
+ON DUPLICATE KEY UPDATE username=username;

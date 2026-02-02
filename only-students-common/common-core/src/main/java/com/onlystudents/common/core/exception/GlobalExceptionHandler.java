@@ -17,7 +17,6 @@ public class GlobalExceptionHandler {
         log.warn("业务异常: {}", e.getMessage());
         return Result.error(e.getCode(), e.getMessage());
     }
-    
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public Result<Void> handleValidException(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()

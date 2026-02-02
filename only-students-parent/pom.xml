@@ -19,31 +19,35 @@
 
         <!-- Spring Boot -->
         <spring-boot.version>3.2.0</spring-boot.version>
-        
+
         <!-- Spring Cloud Alibaba -->
         <spring-cloud-alibaba.version>2023.0.0.0-RC1</spring-cloud-alibaba.version>
         <spring-cloud.version>2023.0.0</spring-cloud.version>
-        
+
         <!-- Database -->
-        <mybatis-plus.version>3.5.5</mybatis-plus.version>
+        <mybatis-plus.version>3.5.7</mybatis-plus.version>
         <druid.version>1.2.20</druid.version>
         <mysql-connector.version>8.0.33</mysql-connector.version>
-        
+
         <!-- Cache -->
         <redisson.version>3.24.3</redisson.version>
-        
+
         <!-- Search -->
         <elasticsearch.version>8.11.0</elasticsearch.version>
-        
+
         <!-- MQ -->
         <spring-boot-starter-amqp.version>3.2.0</spring-boot-starter-amqp.version>
-        
+
         <!-- Utils -->
         <lombok.version>1.18.30</lombok.version>
+        <slf4j.version>2.0.9</slf4j.version>
         <hutool.version>5.8.22</hutool.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <jwt.version>4.4.0</jwt.version>
-        
+
+        <!-- API Doc -->
+        <knife4j.version>4.5.0</knife4j.version>
+
         <!-- File -->
         <minio.version>8.5.7</minio.version>
         <jodconverter.version>4.4.6</jodconverter.version>
@@ -81,8 +85,14 @@
             <!-- MyBatis Plus -->
             <dependency>
                 <groupId>com.baomidou</groupId>
-                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
                 <version>${mybatis-plus.version}</version>
+<!--                <exclusions>-->
+<!--                    <exclusion>-->
+<!--                        <groupId>org.mybatis</groupId>-->
+<!--                        <artifactId>mybatis-spring</artifactId>-->
+<!--                    </exclusion>-->
+<!--                </exclusions>-->
             </dependency>
 
             <!-- Druid -->
@@ -125,6 +135,13 @@
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
             </dependency>
 
             <!-- Hutool -->
@@ -160,6 +177,13 @@
                 <groupId>org.jodconverter</groupId>
                 <artifactId>jodconverter-local</artifactId>
                 <version>${jodconverter.version}</version>
+            </dependency>
+
+            <!-- Knife4j API Doc -->
+            <dependency>
+                <groupId>com.github.xiaoymin</groupId>
+                <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+                <version>${knife4j.version}</version>
             </dependency>
 
             <!-- Common Modules -->

@@ -4,17 +4,24 @@ server:
 spring:
   application:
     name: gateway-service
+  config:
+    import:
+      - optional:nacos:application-${spring.profiles.active:}.yaml
   cloud:
     nacos:
       discovery:
         server-addr: localhost:8848
         namespace: public
         group: DEFAULT_GROUP
+        username: nacos
+        password: nacos
       config:
         server-addr: localhost:8848
         file-extension: yaml
         namespace: public
         group: DEFAULT_GROUP
+        import-check:
+          enabled: false
     gateway:
       discovery:
         locator:
@@ -100,18 +107,18 @@ spring:
             - Path=/api/search/**
           filters:
             - StripPrefix=1
-
-  redis:
-    host: localhost
-    port: 6379
-    database: 0
-    password: xiaojie666
-    timeout: 3000ms
-    lettuce:
-      pool:
-        max-active: 8
-        max-idle: 8
-        min-idle: 0
+  data:
+    redis:
+      database: 0
+      host: localhost
+      port: 6379
+      password: xiaojie666
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
 
 # JWT配置
 jwt:
@@ -120,11 +127,4 @@ jwt:
 
 # 白名单路径（不需要认证）
 whitelist:
-  paths:
-    - /api/user/register
-    - /api/user/login
-    - /api/user/refresh-token
-    - /api/note/list
-    - /api/note/detail/**
-    - /api/search/**
-    - /api/file/preview/**
+  paths: /api/user/register,/api/user/login,/api/user/refresh-token,/api/note/list,/api/note/detail/**,/api/search/**,/api/file/preview/**
