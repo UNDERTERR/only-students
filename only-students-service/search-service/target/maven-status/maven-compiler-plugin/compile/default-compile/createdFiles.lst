@@ -1,0 +1,8 @@
+com\onlystudents\search\controller\SearchController.class
+com\onlystudents\search\config\Knife4jConfig.class
+com\onlystudents\search\service\impl\SearchServiceImpl.class
+com\onlystudents\search\service\SearchService.class
+com\onlystudents\search\dto\NoteSearchResult.class
+com\onlystudents\search\SearchServiceApplication.class
+com\onlystudents\search\dto\UserSearchResult.class
+com\onlystudents\search\dto\SearchResult.class

@@ -1,0 +1,171 @@
+package com.onlystudents.comment.service.impl;
+
+import com.onlystudents.comment.client.UserFeignClient;
+import com.onlystudents.comment.dto.CommentDTO;
+import com.onlystudents.comment.dto.CreateCommentRequest;
+import com.onlystudents.comment.entity.Comment;
+import com.onlystudents.comment.entity.CommentLike;
+import com.onlystudents.comment.mapper.CommentLikeMapper;
+import com.onlystudents.comment.mapper.CommentMapper;
+import com.onlystudents.comment.service.CommentService;
+import com.onlystudents.common.core.exception.BusinessException;
+import com.onlystudents.common.core.result.Result;
+import com.onlystudents.common.core.result.ResultCode;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class CommentServiceImpl implements CommentService {
+
+    private final CommentMapper commentMapper;
+    private final CommentLikeMapper likeMapper;
+    private final UserFeignClient userFeignClient;
+    
+    @Override
+    @Transactional
+    public CommentDTO createComment(CreateCommentRequest request, Long userId) {
+        Comment comment = new Comment();
+        BeanUtils.copyProperties(request, comment);
+        comment.setUserId(userId);
+        comment.setLikeCount(0);
+        comment.setReplyCount(0);
+        comment.setStatus(1);
+        comment.setIsTop(0);
+        
+        // 如果没有parentId，设为0
+        if (comment.getParentId() == null) {
+            comment.setParentId(0L);
+        }
+        
+        // 如果没有rootId，设为parentId
+        if (comment.getRootId() == null) {
+            comment.setRootId(comment.getParentId());
+        }
+        
+        commentMapper.insert(comment);
+        
+        // 如果是回复，增加父评论的回复数
+        if (comment.getParentId() != 0) {
+            commentMapper.incrementReplyCount(comment.getParentId());
+        }
+        
+        return convertToDTO(comment, userId);
+    }
+    
+    @Override
+    @Transactional
+    public void deleteComment(Long commentId, Long userId) {
+        Comment comment = commentMapper.selectById(commentId);
+        if (comment == null) {
+            return;
+        }
+        
+        if (!comment.getUserId().equals(userId)) {
+            throw new BusinessException(ResultCode.FORBIDDEN);
+        }
+        
+        comment.setStatus(0);
+        commentMapper.updateById(comment);
+    }
+    
+    @Override
+    public List<CommentDTO> getNoteComments(Long noteId, Long currentUserId) {
+        // 获取根评论
+        List<Comment> rootComments = commentMapper.selectRootCommentsByNoteId(noteId);
+        
+        return rootComments.stream()
+                .map(comment -> {
+                    CommentDTO dto = convertToDTO(comment, currentUserId);
+                    // 获取回复
+                    if (comment.getReplyCount() > 0) {
+                        List<Comment> replies = commentMapper.selectRepliesByRootId(comment.getId());
+                        dto.setReplies(replies.stream()
+                                .map(reply -> convertToDTO(reply, currentUserId))
+                                .collect(Collectors.toList()));
+                    }
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    @Transactional
+    public void likeComment(Long commentId, Long userId) {
+        // 检查是否已点赞
+        CommentLike exist = likeMapper.selectByCommentAndUser(commentId, userId);
+        if (exist != null) {
+            return;
+        }
+        
+        CommentLike like = new CommentLike();
+        like.setCommentId(commentId);
+        like.setUserId(userId);
+        likeMapper.insert(like);
+        
+        // 增加点赞数
+        commentMapper.incrementLikeCount(commentId);
+    }
+    
+    @Override
+    @Transactional
+    public void unlikeComment(Long commentId, Long userId) {
+        CommentLike exist = likeMapper.selectByCommentAndUser(commentId, userId);
+        if (exist == null) {
+            return;
+        }
+        
+        likeMapper.deleteById(exist.getId());
+    }
+    
+    @Override
+    public Integer getCommentCount(Long noteId) {
+        return commentMapper.countByNoteId(noteId);
+    }
+    
+    private CommentDTO convertToDTO(Comment comment, Long currentUserId) {
+        CommentDTO dto = new CommentDTO();
+        BeanUtils.copyProperties(comment, dto);
+
+        // 检查当前用户是否点赞
+        if (currentUserId != null) {
+            CommentLike like = likeMapper.selectByCommentAndUser(comment.getId(), currentUserId);
+            dto.setIsLiked(like != null);
+        } else {
+            dto.setIsLiked(false);
+        }
+
+        // 通过 Feign 调用 User-Service 查询用户信息
+        try {
+            Result<Map<String, Object>> result = userFeignClient.getUserById(comment.getUserId());
+            if (result != null && result.isSuccess() && result.getData() != null) {
+                Map<String, Object> userData = result.getData();
+                // 优先使用 nickname，如果没有则使用 username
+                String nickname = (String) userData.get("nickname");
+                String username = (String) userData.get("username");
+                dto.setUsername(Objects.toString(nickname != null ? nickname : username, "用户_" + comment.getUserId()));
+                // 设置头像
+                String avatar = (String) userData.get("avatar");
+                dto.setAvatar(avatar != null ? avatar : "");
+            } else {
+                dto.setUsername("用户_" + comment.getUserId());
+                dto.setAvatar("");
+            }
+        } catch (Exception e) {
+            log.error("查询用户信息失败，commentId={}, userId={}", comment.getId(), comment.getUserId(), e);
+            dto.setUsername("用户_" + comment.getUserId());
+            dto.setAvatar("");
+        }
+
+        return dto;
+    }
+}

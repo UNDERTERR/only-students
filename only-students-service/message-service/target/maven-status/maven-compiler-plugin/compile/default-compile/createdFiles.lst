@@ -1,0 +1,9 @@
+com\onlystudents\message\entity\Conversation.class
+com\onlystudents\message\config\Knife4jConfig.class
+com\onlystudents\message\service\MessageService.class
+com\onlystudents\message\MessageServiceApplication.class
+com\onlystudents\message\mapper\ConversationMapper.class
+com\onlystudents\message\controller\MessageController.class
+com\onlystudents\message\service\impl\MessageServiceImpl.class
+com\onlystudents\message\entity\Message.class
+com\onlystudents\message\mapper\MessageMapper.class

@@ -11,14 +11,25 @@
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
           <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct-processor/1.5.5.Final/mapstruct-processor-1.5.5.Final.jar" />
         </processorPath>
-        <module name="common-mybatis" />
+        <module name="rating-service" />
+        <module name="withdrawal-service" />
+        <module name="subscription-service" />
         <module name="note-service" />
         <module name="common-rabbitmq" />
-        <module name="common-web" />
         <module name="only-students-gateway" />
         <module name="user-service" />
         <module name="common-redis" />
         <module name="file-service" />
+        <module name="message-service" />
+        <module name="notification-service" />
+        <module name="common-mybatis" />
+        <module name="comment-service" />
+        <module name="payment-service" />
+        <module name="search-service" />
+        <module name="analytics-service" />
+        <module name="common-web" />
+        <module name="report-service" />
+        <module name="admin-service" />
         <module name="common-core" />
       </profile>
     </annotationProcessing>

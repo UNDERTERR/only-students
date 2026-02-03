@@ -1,0 +1,7 @@
+com\onlystudents\notification\mapper\NotificationMapper.class
+com\onlystudents\notification\NotificationServiceApplication.class
+com\onlystudents\notification\entity\Notification.class
+com\onlystudents\notification\service\NotificationService.class
+com\onlystudents\notification\controller\NotificationController.class
+com\onlystudents\notification\service\impl\NotificationServiceImpl.class
+com\onlystudents\notification\config\Knife4jConfig.class

@@ -30,6 +30,7 @@ public enum ResultCode {
     USER_EXISTS(1002, "用户已存在"),
     USER_DISABLED(1003, "用户已被禁用"),
     USERNAME_PASSWORD_ERROR(1004, "用户名或密码错误"),
+    CAPTCHA_ERROR(1005, "验证码错误"),
     
     NOTE_NOT_FOUND(2001, "笔记不存在"),
     NOTE_NOT_VISIBLE(2002, "笔记不可见"),

@@ -45,7 +45,12 @@ spring:
       max-wait: 60000
   elasticsearch:
     uris: http://localhost:9200
-
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin      # 你的自定义用户名
+    password: admin123     # 你的自定义密码
+    virtual-host: /
 # MyBatis Plus
 mybatis-plus:
   configuration:

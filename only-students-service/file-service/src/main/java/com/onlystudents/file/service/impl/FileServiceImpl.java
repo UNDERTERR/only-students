@@ -33,6 +33,7 @@ public class FileServiceImpl implements FileService {
     private final MinioClient minioClient;
     private final MinioConfig minioConfig;
     private final FileRecordMapper fileRecordMapper;
+    private final com.onlystudents.file.service.FileConvertService fileConvertService;
     
     @Value("${file.upload.max-size:209715200}")
     private Long maxFileSize;
@@ -209,8 +210,7 @@ public class FileServiceImpl implements FileService {
     
     @Override
     public void convertToPdf(Long fileId) {
-        // TODO: 实现异步PDF转换，通过RabbitMQ发送消息
-        log.info("文件 [{}] 需要转换为PDF", fileId);
+        fileConvertService.convertToPdf(fileId);
     }
     
     private String calculateMd5(MultipartFile file) {

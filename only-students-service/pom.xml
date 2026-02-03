@@ -22,5 +22,16 @@
         <module>user-service</module>
         <module>file-service</module>
         <module>note-service</module>
+        <module>subscription-service</module>
+        <module>payment-service</module>
+        <module>comment-service</module>
+        <module>message-service</module>
+        <module>notification-service</module>
+        <module>rating-service</module>
+        <module>report-service</module>
+        <module>withdrawal-service</module>
+        <module>search-service</module>
+        <module>analytics-service</module>
+        <module>admin-service</module>
     </modules>
 </project>

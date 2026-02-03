@@ -1,0 +1,4 @@
+com\onlystudents\rating\entity\NoteShare.class
+com\onlystudents\rating\RatingServiceApplication.class
+com\onlystudents\rating\entity\NoteRating.class
+com\onlystudents\rating\entity\NoteFavorite.class

@@ -17,13 +17,35 @@
     <file url="file://$PROJECT_DIR$/only-students-gateway/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/only-students-parent/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/only-students-parent/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/admin-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/admin-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/analytics-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/analytics-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/comment-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/comment-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/only-students-service/file-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/only-students-service/file-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/message-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/message-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/only-students-service/note-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/only-students-service/note-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/notification-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/notification-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/payment-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/payment-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/rating-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/rating-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/report-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/report-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/search-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/search-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/only-students-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/only-students-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/subscription-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/subscription-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/only-students-service/user-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/only-students-service/user-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/withdrawal-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/only-students-service/withdrawal-service/src/main/resources" charset="UTF-8" />
   </component>
 </project>

@@ -2,7 +2,9 @@ package com.onlystudents.note.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.onlystudents.common.core.exception.BusinessException;
+import com.onlystudents.common.core.result.Result;
 import com.onlystudents.common.core.result.ResultCode;
+import com.onlystudents.note.client.SubscriptionFeignClient;
 import com.onlystudents.note.dto.CreateNoteRequest;
 import com.onlystudents.note.dto.NoteDTO;
 import com.onlystudents.note.dto.UpdateNoteRequest;
@@ -24,6 +26,8 @@ import java.util.stream.Collectors;
 public class NoteServiceImpl implements NoteService {
     
     private final NoteMapper noteMapper;
+    private final com.onlystudents.note.service.NoteSearchService noteSearchService;
+    private final SubscriptionFeignClient subscriptionFeignClient;
     
     @Override
     public NoteDTO createNote(CreateNoteRequest request, Long userId) {
@@ -99,8 +103,16 @@ public class NoteServiceImpl implements NoteService {
         }
         
         if (note.getVisibility() > 0 && !note.getUserId().equals(userId)) {
-            // TODO: 检查用户是否订阅了作者
-            throw new BusinessException(ResultCode.SUBSCRIPTION_REQUIRED);
+            // 通过Feign调用subscription-service检查是否订阅
+            try {
+                Result<Boolean> result = subscriptionFeignClient.checkSubscription(note.getUserId(), userId);
+                if (result.getData() == null || !result.getData()) {
+                    throw new BusinessException(ResultCode.SUBSCRIPTION_REQUIRED);
+                }
+            } catch (Exception e) {
+                log.error("检查订阅状态失败: noteId={}, userId={}, creatorId={}", noteId, userId, note.getUserId(), e);
+                throw new BusinessException(ResultCode.SUBSCRIPTION_REQUIRED);
+            }
         }
         
         // 增加浏览量
@@ -158,8 +170,9 @@ public class NoteServiceImpl implements NoteService {
         note.setPublishTime(LocalDateTime.now());
         noteMapper.updateById(note);
         
-        // TODO: 同步到Elasticsearch
-        log.info("笔记 [{}] 已发布", noteId);
+        // 同步到Elasticsearch
+        noteSearchService.updateNote(note);
+        log.info("笔记 [{}] 已发布并同步到ES", noteId);
     }
     
     private NoteDTO convertToDTO(Note note) {
