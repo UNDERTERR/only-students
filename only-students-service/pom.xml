@@ -20,5 +20,7 @@
 
     <modules>
         <module>user-service</module>
+        <module>file-service</module>
+        <module>note-service</module>
     </modules>
 </project>

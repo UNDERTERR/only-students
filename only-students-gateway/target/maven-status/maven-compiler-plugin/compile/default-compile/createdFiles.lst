@@ -1,0 +1,2 @@
+com\onlystudents\gateway\GatewayApplication.class
+com\onlystudents\gateway\filter\AuthFilter.class

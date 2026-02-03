@@ -1,0 +1,63 @@
+server:
+  port: 8002
+
+spring:
+  application:
+    name: file-service
+  config:
+    import:
+      - optional:nacos:application-${spring.profiles.active:}.yaml
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+        namespace: public
+        group: DEFAULT_GROUP
+      config:
+        server-addr: localhost:8848
+        file-extension: yaml
+        namespace: public
+        group: DEFAULT_GROUP
+        import-check:
+          enabled: false
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/only_students_file?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: xiaojie666
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 200MB
+      max-request-size: 200MB
+
+# MinIO配置
+minio:
+  endpoint: http://localhost:9000
+  access-key: minioadmin
+  secret-key: minioadmin123
+  bucket-name: only-students-files
+
+# MyBatis Plus
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+
+# 文件上传配置
+file:
+  upload:
+    max-size: 209715200  # 200MB in bytes
+    allowed-types: doc,docx,xls,xlsx,ppt,pptx,pdf,txt,md,jpg,jpeg,png,gif
+  convert:
+    enabled: true
+    timeout: 300  # 转换超时时间（秒）

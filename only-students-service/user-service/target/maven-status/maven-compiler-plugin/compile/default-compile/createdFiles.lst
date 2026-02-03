@@ -1,0 +1,15 @@
+com\onlystudents\user\config\MyBatisConfig$1.class
+com\onlystudents\user\config\MyBatisConfig.class
+com\onlystudents\user\UserServiceApplication.class
+com\onlystudents\user\entity\UserDevice.class
+com\onlystudents\user\dto\request\RegisterRequest.class
+com\onlystudents\user\controller\UserController.class
+com\onlystudents\user\service\UserService.class
+com\onlystudents\user\dto\response\LoginResponse.class
+com\onlystudents\user\mapper\UserDeviceMapper.class
+com\onlystudents\user\entity\User.class
+com\onlystudents\user\mapper\UserMapper.class
+com\onlystudents\user\service\impl\UserServiceImpl.class
+com\onlystudents\user\dto\request\LoginRequest.class
+com\onlystudents\user\config\Knife4jConfig.class
+com\onlystudents\user\dto\response\UserResponse.class
