@@ -3,7 +3,7 @@ package com.onlystudents.user.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.onlystudents.common.core.exception.BusinessException;
 import com.onlystudents.common.core.result.ResultCode;
-import com.onlystudents.common.web.utils.JwtUtils;
+import com.onlystudents.common.core.utils.JwtUtils;
 import com.onlystudents.user.dto.request.LoginRequest;
 import com.onlystudents.user.dto.request.RegisterRequest;
 import com.onlystudents.user.dto.response.LoginResponse;
@@ -16,6 +16,7 @@ import com.onlystudents.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ import java.util.List;
 
 @Slf4j
 @Service
+@Import(JwtUtils.class)
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     

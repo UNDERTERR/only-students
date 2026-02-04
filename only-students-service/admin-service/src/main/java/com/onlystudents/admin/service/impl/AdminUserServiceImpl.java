@@ -9,7 +9,7 @@ import com.onlystudents.admin.mapper.AdminUserMapper;
 import com.onlystudents.admin.service.AdminUserService;
 import com.onlystudents.common.core.exception.BusinessException;
 import com.onlystudents.common.core.result.ResultCode;
-import com.onlystudents.common.web.utils.JwtUtils;
+import com.onlystudents.common.core.utils.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Import;
