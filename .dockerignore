@@ -1,0 +1,138 @@
+# Git
+.git
+.gitignore
+.gitattributes
+# IDE
+.idea
+.vscode
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings
+.factorypath
+# Build output
+target/
+build/
+out/
+*.class
+*.jar
+*.war
+*.ear
+# Maven
+.mvn/
+dependency-reduced-pom.xml
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+# Gradle
+.gradle
+gradle/
+gradlew
+gradlew.bat
+build.gradle.kts
+settings.gradle.kts
+# Logs
+*.log
+logs/
+log/
+# Test files
+**/src/test/
+test-output/
+reports/
+coverage/
+*.test
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~
+.DS_Store
+Thumbs.db
+# Documentation
+README.md
+README
+CHANGELOG.md
+LICENSE
+CONTRIBUTING.md
+docs/
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+.docker/
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+# Local configuration
+.env
+.env.local
+.env.*.local
+application-local.yml
+application-dev.yml
+application-local.properties
+application-dev.properties
+*.local.yml
+*.local.properties
+# Secrets
+*.key
+*.pem
+*.p12
+*.jks
+*.keystore
+secrets.yml
+secrets.properties
+secrets/
+# Node modules (if frontend exists)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+# Data directories
+nacos/data/
+nacos/logs/
+minio/data/
+elasticsearch/data/
+redis/data/
+rabbitmq/data/
+volumes/
+data/
+# OS files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+# Windows
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+# Linux
+*~
+.nfs*
+# Uploads and temporary directories
+uploads/
+tmp/
+temp/
+downloads/
+# Compressed files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.h2.db
+# Profiler and monitoring
+*.hprof
+*.jfr

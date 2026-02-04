@@ -13,7 +13,9 @@ import com.onlystudents.note.mapper.NoteMapper;
 import com.onlystudents.note.service.NoteService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -28,7 +30,9 @@ public class NoteServiceImpl implements NoteService {
     private final NoteMapper noteMapper;
     private final com.onlystudents.note.service.NoteSearchService noteSearchService;
     private final SubscriptionFeignClient subscriptionFeignClient;
-    
+    private final RabbitTemplate rabbitTemplate;
+
+
     @Override
     public NoteDTO createNote(CreateNoteRequest request, Long userId) {
         Note note = new Note();
@@ -172,7 +176,15 @@ public class NoteServiceImpl implements NoteService {
         
         // 同步到Elasticsearch
         noteSearchService.updateNote(note);
-        log.info("笔记 [{}] 已发布并同步到ES", noteId);
+        // 异步发送到MQ，由NoteSyncListener处理ES同步
+        try {
+            rabbitTemplate.convertAndSend("note.exchange", "note.sync", note);
+            log.info("笔记 [{}] 已发布，同步消息已发送到MQ", noteId);
+        } catch (Exception e) {
+            log.error("发送笔记同步消息失败: noteId={}", noteId, e);
+            // 可以选择抛异常回滚，或者继续执行（最终一致性）
+            // throw new BusinessException(ResultCode.SYSTEM_ERROR, "同步失败");
+        }
     }
     
     private NoteDTO convertToDTO(Note note) {

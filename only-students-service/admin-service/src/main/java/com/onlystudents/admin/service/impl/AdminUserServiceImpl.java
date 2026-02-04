@@ -12,6 +12,7 @@ import com.onlystudents.common.core.result.ResultCode;
 import com.onlystudents.common.web.utils.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,12 +24,13 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
+@Import(JwtUtils.class)
 public class AdminUserServiceImpl implements AdminUserService {
 
     private final AdminUserMapper adminUserMapper;
     private final AdminRoleMapper adminRoleMapper;
     private final StringRedisTemplate redisTemplate;
-    private final JwtUtils jwtUtils = new JwtUtils();
+    private final JwtUtils jwtUtils;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     private static final String ADMIN_TOKEN_PREFIX = "admin:token:";
