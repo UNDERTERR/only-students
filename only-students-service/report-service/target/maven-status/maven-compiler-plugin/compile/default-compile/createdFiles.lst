@@ -1,7 +1,0 @@
-com\onlystudents\report\config\Knife4jConfig.class
-com\onlystudents\report\service\impl\ReportServiceImpl.class
-com\onlystudents\report\service\ReportService.class
-com\onlystudents\report\controller\ReportController.class
-com\onlystudents\report\entity\Report.class
-com\onlystudents\report\mapper\ReportMapper.class
-com\onlystudents\report\ReportServiceApplication.class

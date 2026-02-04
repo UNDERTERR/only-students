@@ -1,7 +1,0 @@
-com\onlystudents\withdrawal\controller\WithdrawalController.class
-com\onlystudents\withdrawal\service\impl\WithdrawalServiceImpl.class
-com\onlystudents\withdrawal\config\Knife4jConfig.class
-com\onlystudents\withdrawal\entity\WithdrawalApplication.class
-com\onlystudents\withdrawal\WithdrawalServiceApplication.class
-com\onlystudents\withdrawal\mapper\WithdrawalApplicationMapper.class
-com\onlystudents\withdrawal\service\WithdrawalService.class
