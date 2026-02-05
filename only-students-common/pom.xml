@@ -11,10 +11,10 @@
           <relativePath>../only-students-parent/pom.xml</relativePath>
     </parent>
 
-    <artifactId>common</artifactId>
+    <artifactId>only-students-common</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
-    <name>Common</name>
+    <name>OnlyStudents Common</name>
     <description>公共模块</description>
 
     <dependencies>

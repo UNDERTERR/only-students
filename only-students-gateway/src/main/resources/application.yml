@@ -160,3 +160,9 @@ jwt:
 # 白名单路径（不需要认证）
 whitelist:
   paths: /api/user/register,/api/user/login,/api/user/refresh-token,/api/note/list,/api/note/detail/**,/api/search/**,/api/file/preview/**
+
+# Sentinel配置
+sentinel:
+  transport:
+    dashboard: localhost:8858  # Sentinel控制台地址
+  eager: true  # 取消懒加载，启动时立即注册

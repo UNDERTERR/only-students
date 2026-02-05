@@ -47,3 +47,6 @@ mybatis-plus:
   global-config:
     db-config:
       id-type: auto
+      logic-delete-field: ${mybatis-plus.logic-delete-field}
+      logic-delete-value: ${mybatis-plus.logic-delete-value}
+      logic-not-delete-value: ${mybatis-plus.logic-not-delete-value}

@@ -16,6 +16,8 @@ import com.onlystudents.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -139,6 +141,7 @@ public class UserServiceImpl implements UserService {
     }
     
     @Override
+    @Cacheable(value = "users", key = "#userId", unless = "#result == null")
     public UserResponse getUserById(Long userId) {
         User user = userMapper.selectById(userId);
         if (user == null) {

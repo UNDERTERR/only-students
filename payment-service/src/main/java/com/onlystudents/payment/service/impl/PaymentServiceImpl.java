@@ -12,6 +12,7 @@ import com.onlystudents.payment.entity.WalletTransaction;
 import com.onlystudents.payment.mapper.PaymentOrderMapper;
 import com.onlystudents.payment.mapper.WalletMapper;
 import com.onlystudents.payment.mapper.WalletTransactionMapper;
+import com.onlystudents.payment.service.CompensationTaskService;
 import com.onlystudents.payment.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final WalletMapper walletMapper;
     private final WalletTransactionMapper transactionMapper;
     private final NoteFeignClient noteFeignClient;
+    private final CompensationTaskService compensationTaskService;
     
     @Value("${platform.fee-rate:0.2}")
     private BigDecimal platformFeeRate;

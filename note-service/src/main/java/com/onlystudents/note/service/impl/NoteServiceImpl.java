@@ -16,21 +16,31 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class NoteServiceImpl implements NoteService {
-    
+
     private final NoteMapper noteMapper;
     private final NoteSearchService noteSearchService;
     private final SubscriptionFeignClient subscriptionFeignClient;
     private final RabbitTemplate rabbitTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    private static final String CACHE_KEY_NOTE = "note:detail:";
+    private static final String CACHE_KEY_HOT = "note:hot";
+    private static final String CACHE_KEY_LATEST = "note:latest";
+    private static final long CACHE_TTL_MINUTES = 5;
 
 
     @Override
@@ -52,38 +62,47 @@ public class NoteServiceImpl implements NoteService {
     }
     
     @Override
+    @CacheEvict(value = "notes", key = "#noteId")
     public NoteDTO updateNote(Long noteId, UpdateNoteRequest request, Long userId) {
         Note note = noteMapper.selectById(noteId);
         if (note == null) {
             throw new BusinessException(ResultCode.NOTE_NOT_FOUND);
         }
-        
+
         if (!note.getUserId().equals(userId)) {
             throw new BusinessException(ResultCode.FORBIDDEN);
         }
-        
+
         BeanUtils.copyProperties(request, note);
         noteMapper.updateById(note);
-        
+
+        // 清除热门和最新列表缓存
+        clearListCache();
+
         return convertToDTO(note);
     }
     
     @Override
+    @CacheEvict(value = "notes", key = "#noteId")
     public void deleteNote(Long noteId, Long userId) {
         Note note = noteMapper.selectById(noteId);
         if (note == null) {
             return;
         }
-        
+
         if (!note.getUserId().equals(userId)) {
             throw new BusinessException(ResultCode.FORBIDDEN);
         }
-        
+
         note.setStatus(4); // 已删除
         noteMapper.updateById(note);
+
+        // 清除热门和最新列表缓存
+        clearListCache();
     }
     
     @Override
+    @Cacheable(value = "notes", key = "#noteId", unless = "#result == null")
     public NoteDTO getNoteById(Long noteId) {
         Note note = noteMapper.selectById(noteId);
         if (note == null || note.getStatus() != 2) { // 只返回已发布的
@@ -126,6 +145,7 @@ public class NoteServiceImpl implements NoteService {
     }
     
     @Override
+    @Cacheable(value = "hotNotes", key = "#limit", unless = "#result == null || #result.isEmpty()")
     public List<NoteDTO> getHotNotes(Integer limit) {
         if (limit == null || limit > 100) {
             limit = 20;
@@ -135,6 +155,7 @@ public class NoteServiceImpl implements NoteService {
     }
     
     @Override
+    @Cacheable(value = "latestNotes", key = "#limit", unless = "#result == null || #result.isEmpty()")
     public List<NoteDTO> getLatestNotes(Integer limit) {
         if (limit == null || limit > 100) {
             limit = 20;
@@ -160,20 +181,21 @@ public class NoteServiceImpl implements NoteService {
     }
     
     @Override
+    @CacheEvict(value = "notes", key = "#noteId")
     public void publishNote(Long noteId, Long userId) {
         Note note = noteMapper.selectById(noteId);
         if (note == null) {
             throw new BusinessException(ResultCode.NOTE_NOT_FOUND);
         }
-        
+
         if (!note.getUserId().equals(userId)) {
             throw new BusinessException(ResultCode.FORBIDDEN);
         }
-        
+
         note.setStatus(2); // 已发布
         note.setPublishTime(LocalDateTime.now());
         noteMapper.updateById(note);
-        
+
         // 同步到Elasticsearch
         noteSearchService.updateNote(note);
         // 异步发送到MQ，由NoteSyncListener处理ES同步
@@ -184,6 +206,22 @@ public class NoteServiceImpl implements NoteService {
             log.error("发送笔记同步消息失败: noteId={}", noteId, e);
             // 可以选择抛异常回滚，或者继续执行（最终一致性）
             // throw new BusinessException(ResultCode.SYSTEM_ERROR, "同步失败");
+        }
+
+        // 清除列表缓存
+        clearListCache();
+    }
+
+    /**
+     * 清除列表缓存
+     */
+    private void clearListCache() {
+        try {
+            redisTemplate.delete(CACHE_KEY_HOT);
+            redisTemplate.delete(CACHE_KEY_LATEST);
+            log.debug("清除笔记列表缓存");
+        } catch (Exception e) {
+            log.warn("清除缓存失败", e);
         }
     }
     

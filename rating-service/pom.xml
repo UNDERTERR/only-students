@@ -21,7 +21,7 @@
     <dependencies>
         <dependency>
             <groupId>com.onlystudents</groupId>
-            <artifactId>common</artifactId>
+            <artifactId>only-students-common</artifactId>
         </dependency>
 
      <dependency>
@@ -68,6 +68,12 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+        </dependency>
+        
+        <!-- RabbitMQ -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
     </dependencies>
 

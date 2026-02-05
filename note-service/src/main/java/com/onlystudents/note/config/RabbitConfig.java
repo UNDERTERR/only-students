@@ -37,4 +37,38 @@ public class RabbitConfig {
                 .to(noteExchange())
                 .with("note.sync");
     }
+    
+    // ==================== 接收评分服务的事件队列 ====================
+    
+    /**
+     * 收藏创建队列
+     */
+    @Bean
+    public Queue favoriteCreatedQueue() {
+        return new Queue("favorite.created.queue", true);
+    }
+    
+    /**
+     * 收藏删除队列
+     */
+    @Bean
+    public Queue favoriteDeletedQueue() {
+        return new Queue("favorite.deleted.queue", true);
+    }
+    
+    /**
+     * 评分更新队列
+     */
+    @Bean
+    public Queue ratingUpdatedQueue() {
+        return new Queue("rating.updated.queue", true);
+    }
+    
+    /**
+     * 分享创建队列
+     */
+    @Bean
+    public Queue shareCreatedQueue() {
+        return new Queue("share.created.queue", true);
+    }
 }

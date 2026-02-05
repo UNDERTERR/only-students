@@ -26,4 +26,22 @@ public interface NoteMapper extends BaseMapper<Note> {
     
     @Update("UPDATE note SET favorite_count = favorite_count + 1 WHERE id = #{noteId}")
     int incrementFavoriteCount(@Param("noteId") Long noteId);
+    
+    /**
+     * 更新收藏数（设置为指定值）
+     */
+    @Update("UPDATE note SET favorite_count = #{count} WHERE id = #{noteId}")
+    int updateFavoriteCount(@Param("noteId") Long noteId, @Param("count") Integer count);
+    
+    /**
+     * 更新分享数
+     */
+    @Update("UPDATE note SET share_count = #{count} WHERE id = #{noteId}")
+    int updateShareCount(@Param("noteId") Long noteId, @Param("count") Integer count);
+    
+    /**
+     * 更新评分统计
+     */
+    @Update("UPDATE note SET rating = #{avgScore}, rating_count = #{count} WHERE id = #{noteId}")
+    int updateRatingStats(@Param("noteId") Long noteId, @Param("avgScore") Double avgScore, @Param("count") Integer count);
 }
