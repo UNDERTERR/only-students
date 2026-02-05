@@ -1,0 +1,19 @@
+package com.onlystudents.admin;
+
+import com.onlystudents.common.utils.JwtUtils;
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.context.annotation.Import;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+@MapperScan("com.onlystudents.admin.mapper")
+@Import(JwtUtils.class)
+public class AdminServiceApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(AdminServiceApplication.class, args);
+    }
+}

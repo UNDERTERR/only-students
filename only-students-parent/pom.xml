@@ -180,32 +180,13 @@
                 <version>${knife4j.version}</version>
             </dependency>
 
-            <!-- Common Modules -->
+
             <dependency>
                 <groupId>com.onlystudents</groupId>
-                <artifactId>common-core</artifactId>
-                <version>${project.version}</version>
+                <artifactId>common</artifactId>
+                <version>${project.version}</version>  <!-- 添加版本 -->
             </dependency>
-            <dependency>
-                <groupId>com.onlystudents</groupId>
-                <artifactId>common-web</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.onlystudents</groupId>
-                <artifactId>common-mybatis</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.onlystudents</groupId>
-                <artifactId>common-redis</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.onlystudents</groupId>
-                <artifactId>common-rabbitmq</artifactId>
-                <version>${project.version}</version>
-            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
