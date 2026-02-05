@@ -15,29 +15,43 @@ import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jodconverter.core.DocumentConverter;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * 文件转换服务实现
+ * 使用 Gotenberg HTTP API 进行文档转换（替代本地 LibreOffice）
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class FileConvertServiceImpl implements FileConvertService {
     
-    private final DocumentConverter documentConverter;
     private final FileRecordMapper fileRecordMapper;
     private final FileConvertTaskMapper taskMapper;
     private final MinioClient minioClient;
     private final MinioConfig minioConfig;
+    private final RestTemplate restTemplate = new RestTemplate();
+    
+    @Value("${gotenberg.url:http://localhost:3000}")
+    private String gotenbergUrl;
     
     @Value("${file.convert.temp-dir:/tmp/only-students/convert}")
     private String tempDir;
@@ -122,8 +136,8 @@ public class FileConvertServiceImpl implements FileConvertService {
                 Files.copy(is, tempInputFile.toPath());
             }
             
-            // 执行转换
-            documentConverter.convert(tempInputFile).to(tempOutputFile).execute();
+            // 使用 Gotenberg HTTP API 转换
+            convertWithGotenberg(tempInputFile, tempOutputFile);
             
             // 上传PDF到MinIO
             String pdfFileName = IdUtil.simpleUUID() + ".pdf";
@@ -179,5 +193,44 @@ public class FileConvertServiceImpl implements FileConvertService {
                 tempOutputFile.delete();
             }
         }
+    }
+    
+    /**
+     * 使用 Gotenberg HTTP API 转换文档
+     * 
+     * @param inputFile  输入文件（doc/docx/xls/xlsx等）
+     * @param outputFile 输出PDF文件
+     */
+    private void convertWithGotenberg(File inputFile, File outputFile) throws Exception {
+        log.info("调用 Gotenberg API 转换文件: {} -> PDF", inputFile.getName());
+        
+        // 构建请求
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("files", new FileSystemResource(inputFile));
+        
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+        
+        // 调用 Gotenberg API
+        String url = gotenbergUrl + "/forms/libreoffice/convert";
+        ResponseEntity<byte[]> response = restTemplate.postForEntity(
+                url, 
+                requestEntity, 
+                byte[].class
+        );
+        
+        if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+            throw new BusinessException(ResultCode.ERROR, 
+                    "Gotenberg转换失败: HTTP " + response.getStatusCode());
+        }
+        
+        // 保存PDF文件
+        try (FileOutputStream fos = new FileOutputStream(outputFile)) {
+            fos.write(response.getBody());
+        }
+        
+        log.info("Gotenberg 转换完成: {} bytes", outputFile.length());
     }
 }

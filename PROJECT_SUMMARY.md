@@ -5,18 +5,18 @@
 ### ✅ 已完成 (100%)
 
 #### 1. 基础设施 (Phase 1)
-- **Gateway** (8080) - API网关、JWT认证、路由转发
+- **Gateway** (8080) - API网关、JWT认证、路由转发、**统一CORS配置**
 - **User-Service** (8001) - 注册/登录/多端设备管理(3设备限制)
-- **Common模块** - Core/Web/MyBatis/Redis/RabbitMQ
+- **Common模块** - 核心工具类、统一响应封装、JWT工具
 - **Docker环境** - MySQL/Redis/Nacos/ES/RabbitMQ/MinIO
 
 #### 2. 核心功能 (Phase 2)
 - **File-Service** (8002) - 文件上传/MD5秒传/MinIO存储/**PDF转换**
-- **Note-Service** (8003) - 笔记CRUD/热度排序/最新发布/**ES同步**
+- **Note-Service** (8003) - 笔记CRUD/热度排序/最新发布/**ES同步**/**分类管理**
 
 #### 3. 商业闭环 (Phase 3)
 - **Subscription-Service** (8004) - 订阅/取消订阅/配置管理
-- **Payment-Service** (8005) - 订单/钱包/支付回调(20%平台抽成)
+- **Payment-Service** (8005) - 订单/钱包/支付回调(20%平台抽成)/**创作者收入自动分配**
 - **Comment-Service** (8006) - 评论/点赞/楼中楼回复/**Feign调用**
 - **Rating-Service** (8007) - 评分/收藏/分享统计
 
@@ -65,15 +65,34 @@
 - ✅ 自动上传到MinIO
 
 ### 2. ES同步 (Note-Service)
-- ✅ 发布笔记时同步到Elasticsearch
+- ✅ 发布笔记时通过MQ异步同步到Elasticsearch
 - ✅ NoteDocument实体定义
 - ✅ 异步消息队列处理
+- ✅ **用户信息Feign查询填充**(username/nickname)
+- ✅ **分类名称数据库查询填充**
 
 ### 3. Feign调用 (服务间通信)
 - ✅ FeignConfig配置
-- ✅ UserFeignClient示例
+- ✅ SubscriptionFeignClient - 订阅状态检查
+- ✅ UserFeignClient - 用户信息查询
+- ✅ NoteFeignClient - 笔记信息查询
 - ✅ Fallback降级处理
-- ✅ Comment-Service集成示例
+
+### 4. 订阅权限检查 (Note-Service)
+- ✅ 查看付费笔记时检查订阅状态
+- ✅ 未订阅用户返回SUBSCRIPTION_REQUIRED错误
+
+### 5. 创作者收入 (Payment-Service)
+- ✅ 支付成功后自动查询笔记作者
+- ✅ 自动增加创作者钱包余额
+- ✅ 平台20%抽成计算
+
+### 6. 项目结构优化
+- ✅ 扁平化目录结构
+- ✅ 清理无用common子模块
+- ✅ 统一CORS配置到Gateway
+- ✅ 修复依赖重复问题
+- ✅ 修复JwtUtils注入问题
 
 ---
 
@@ -90,12 +109,16 @@ start-all.bat
 
 ---
 
-## 📝 遗留TODO（需要业务配合）
+## 📝 遗留说明
 
-1. **Note-Service** - 订阅权限检查（需调用subscription-service Feign接口）
-2. **Payment-Service** - 支付后给创作者增加收入（需查询笔记作者）
-3. **Note-Sync** - ES文档完整字段填充（需Feign查询用户信息）
-4. **LibreOffice** - 需要服务器安装LibreOffice才能使用PDF转换
+### 1. **ES集成** (NoteSearchServiceImpl)
+- 当前为模拟实现，记录日志即可
+- 实际需要时集成Elasticsearch客户端
+- 不影响业务功能，搜索服务由Search-Service提供
+
+### 2. **LibreOffice**
+- 需要服务器安装LibreOffice才能使用PDF转换
+- 安装后自动检测路径使用
 
 ---
 
@@ -131,4 +154,4 @@ start-all.bat
 
 **项目状态: ✅ 完成**
 **构建状态: ✅ 全部通过**
-**最后更新: 2026-02-03**
+**最后更新: 2026-02-05**

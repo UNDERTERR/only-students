@@ -4,6 +4,7 @@ import com.onlystudents.common.result.Result;
 import com.onlystudents.note.client.UserFeignClient;
 import com.onlystudents.note.elasticsearch.NoteDocument;
 import com.onlystudents.note.entity.Note;
+import com.onlystudents.note.mapper.NoteCategoryMapper;
 import com.onlystudents.note.service.NoteSearchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,7 @@ public class NoteSyncListener {
     
     private final NoteSearchService noteSearchService;
     private final UserFeignClient userFeignClient;
+    private final NoteCategoryMapper noteCategoryMapper;
     
     @RabbitListener(queues = "note.sync.queue")
     public void handleNoteSync(Note note) {
@@ -54,7 +56,20 @@ public class NoteSyncListener {
             
             document.setUsername(username);
             document.setNickname(nickname);
-            document.setCategoryName("分类"); // TODO: 后续可通过Feign获取分类名称
+            
+            // 查询分类名称
+            String categoryName = "未分类";
+            if (note.getCategoryId() != null) {
+                try {
+                    String name = noteCategoryMapper.selectNameById(note.getCategoryId());
+                    if (name != null && !name.isEmpty()) {
+                        categoryName = name;
+                    }
+                } catch (Exception e) {
+                    log.warn("获取分类名称失败，使用默认名称: categoryId={}", note.getCategoryId(), e);
+                }
+            }
+            document.setCategoryName(categoryName);
             
             noteSearchService.saveNote(document);
             log.info("笔记同步到ES成功: noteId={}", note.getId());

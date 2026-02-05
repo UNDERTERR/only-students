@@ -58,6 +58,10 @@ mybatis-plus:
     db-config:
       id-type: auto
 
+# Gotenberg 文档转换服务配置
+gotenberg:
+  url: http://localhost:3000  # Gotenberg 服务地址
+
 # 文件上传配置
 file:
   upload:

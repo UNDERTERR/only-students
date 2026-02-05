@@ -65,12 +65,6 @@
             <artifactId>minio</artifactId>
         </dependency>
         
-        <!-- Jodconverter (Office转PDF) -->
-        <dependency>
-            <groupId>org.jodconverter</groupId>
-            <artifactId>jodconverter-local</artifactId>
-        </dependency>
-        
         <!-- Knife4j API Doc -->
         <dependency>
             <groupId>com.github.xiaoymin</groupId>
