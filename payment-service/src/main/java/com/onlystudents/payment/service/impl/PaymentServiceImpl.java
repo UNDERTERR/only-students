@@ -7,13 +7,10 @@ import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.payment.client.NoteFeignClient;
 import com.onlystudents.payment.dto.*;
 import com.onlystudents.payment.entity.PaymentOrder;
-import com.onlystudents.payment.entity.Wallet;
-import com.onlystudents.payment.entity.WalletTransaction;
 import com.onlystudents.payment.mapper.PaymentOrderMapper;
-import com.onlystudents.payment.mapper.WalletMapper;
-import com.onlystudents.payment.mapper.WalletTransactionMapper;
 import com.onlystudents.payment.service.CompensationTaskService;
 import com.onlystudents.payment.service.PaymentService;
+import com.onlystudents.payment.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -34,9 +31,8 @@ import java.util.stream.Collectors;
 public class PaymentServiceImpl implements PaymentService {
     
     private final PaymentOrderMapper orderMapper;
-    private final WalletMapper walletMapper;
-    private final WalletTransactionMapper transactionMapper;
     private final NoteFeignClient noteFeignClient;
+    private final WalletService walletService;
     private final CompensationTaskService compensationTaskService;
     
     @Value("${platform.fee-rate:0.2}")
@@ -119,9 +115,18 @@ public class PaymentServiceImpl implements PaymentService {
             }
             
             if (creatorId != null) {
-                addIncome(creatorId, order.getId(), order.getCreatorAmount());
-                log.info("订单 [{}] 支付成功，已分配创作者收入: {} 元给创作者 {}", 
-                    request.getOrderNo(), order.getCreatorAmount(), creatorId);
+                try {
+                    walletService.addIncome(creatorId, order.getId(), order.getCreatorAmount());
+                    log.info("订单 [{}] 支付成功，已分配创作者收入: {} 元给创作者 {}", 
+                        request.getOrderNo(), order.getCreatorAmount(), creatorId);
+                } catch (Exception e) {
+                    log.error("订单 [{}] 支付成功，但收入分配失败: {}", request.getOrderNo(), e.getMessage());
+                    // 创建补偿任务
+                    compensationTaskService.createIncomeCompensationTask(
+                        order.getId(), creatorId, order.getCreatorAmount());
+                    log.info("已创建收入分配补偿任务: orderId={}, creatorId={}", 
+                        order.getId(), creatorId);
+                }
             } else {
                 log.warn("订单 [{}] 支付成功，但无法确定创作者，收入未分配", request.getOrderNo());
             }
@@ -134,62 +139,24 @@ public class PaymentServiceImpl implements PaymentService {
     
     @Override
     public WalletDTO getWallet(Long userId) {
-        Wallet wallet = walletMapper.selectByUserId(userId);
-        if (wallet == null) {
-            // 自动创建钱包
-            createWallet(userId);
-            wallet = walletMapper.selectByUserId(userId);
-        }
-        return convertToWalletDTO(wallet);
+        return walletService.getWallet(userId);
     }
     
     @Override
     @Transactional
     public void createWallet(Long userId) {
-        Wallet exist = walletMapper.selectByUserId(userId);
-        if (exist != null) {
-            return;
-        }
-        
-        Wallet wallet = new Wallet();
-        wallet.setUserId(userId);
-        wallet.setBalance(BigDecimal.ZERO);
-        wallet.setFrozenAmount(BigDecimal.ZERO);
-        wallet.setTotalIncome(BigDecimal.ZERO);
-        wallet.setTotalWithdrawal(BigDecimal.ZERO);
-        
-        walletMapper.insert(wallet);
+        walletService.createWallet(userId);
     }
     
     @Override
     @Transactional
     public void addIncome(Long userId, Long orderId, BigDecimal amount) {
-        // 增加余额
-        walletMapper.addIncome(userId, amount);
-        
-        // 记录流水
-        WalletTransaction transaction = new WalletTransaction();
-        transaction.setUserId(userId);
-        transaction.setType(1); // 收入
-        transaction.setAmount(amount);
-        
-        Wallet wallet = walletMapper.selectByUserId(userId);
-        transaction.setBalance(wallet.getBalance().add(amount));
-        transaction.setRelatedOrderNo(orderId.toString());
-        transaction.setRemark("订单收入");
-        
-        transactionMapper.insert(transaction);
+        walletService.addIncome(userId, orderId, amount);
     }
     
     private OrderDTO convertToDTO(PaymentOrder order) {
         OrderDTO dto = new OrderDTO();
         BeanUtils.copyProperties(order, dto);
-        return dto;
-    }
-    
-    private WalletDTO convertToWalletDTO(Wallet wallet) {
-        WalletDTO dto = new WalletDTO();
-        BeanUtils.copyProperties(wallet, dto);
         return dto;
     }
 }

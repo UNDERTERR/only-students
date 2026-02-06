@@ -19,11 +19,11 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -35,7 +35,7 @@ public class NoteServiceImpl implements NoteService {
     private final NoteSearchService noteSearchService;
     private final SubscriptionFeignClient subscriptionFeignClient;
     private final RabbitTemplate rabbitTemplate;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
 
     private static final String CACHE_KEY_NOTE = "note:detail:";
     private static final String CACHE_KEY_HOT = "note:hot";

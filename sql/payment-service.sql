@@ -77,3 +77,22 @@ CREATE TABLE IF NOT EXISTS refund_record (
     INDEX idx_user_id (user_id),
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='退款记录表';
+
+-- 补偿任务表（用于业务补偿，如收入分配失败）
+CREATE TABLE IF NOT EXISTS compensation_task (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    task_type VARCHAR(50) NOT NULL COMMENT '任务类型：INCOME_ALLOCATION',
+    business_id BIGINT NOT NULL COMMENT '业务ID（订单ID）',
+    status INT DEFAULT 0 COMMENT '0-待处理 1-处理中 2-成功 3-失败 4-放弃',
+    retry_count INT DEFAULT 0 COMMENT '重试次数',
+    max_retry_count INT DEFAULT 5 COMMENT '最大重试次数',
+    params TEXT COMMENT '任务参数（JSON）',
+    error_msg TEXT COMMENT '错误信息',
+    next_execute_time DATETIME COMMENT '下次执行时间',
+    success_time DATETIME COMMENT '成功时间',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_business_type (business_id, task_type),
+    INDEX idx_status_time (status, next_execute_time),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='补偿任务表';

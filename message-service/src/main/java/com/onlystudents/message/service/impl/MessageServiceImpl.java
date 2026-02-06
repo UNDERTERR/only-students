@@ -1,6 +1,5 @@
 package com.onlystudents.message.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.message.entity.Conversation;

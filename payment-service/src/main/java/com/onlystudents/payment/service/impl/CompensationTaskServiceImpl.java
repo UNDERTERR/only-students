@@ -4,7 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.onlystudents.payment.entity.CompensationTask;
 import com.onlystudents.payment.mapper.CompensationTaskMapper;
 import com.onlystudents.payment.service.CompensationTaskService;
-import com.onlystudents.payment.service.PaymentService;
+import com.onlystudents.payment.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,7 +25,7 @@ import java.util.Map;
 public class CompensationTaskServiceImpl implements CompensationTaskService {
     
     private final CompensationTaskMapper taskMapper;
-    private final PaymentService paymentService;
+    private final WalletService walletService;
     
     private static final String TASK_TYPE_INCOME = "INCOME_ALLOCATION";
     private static final int MAX_RETRY_COUNT = 5;
@@ -90,8 +90,8 @@ public class CompensationTaskServiceImpl implements CompensationTaskService {
             Long creatorId = Long.valueOf(params.get("creatorId").toString());
             BigDecimal amount = new BigDecimal(params.get("amount").toString());
             
-            // 调用支付服务增加收入
-            paymentService.addIncome(creatorId, orderId, amount);
+            // 调用钱包服务增加收入
+            walletService.addIncome(creatorId, orderId, amount);
             
             // 标记成功
             taskMapper.markSuccess(task.getId());
