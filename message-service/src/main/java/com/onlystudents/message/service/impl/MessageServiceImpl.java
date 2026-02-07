@@ -2,8 +2,10 @@ package com.onlystudents.message.service.impl;
 
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.ResultCode;
+import com.onlystudents.message.dto.WebSocketMessage;
 import com.onlystudents.message.entity.Conversation;
 import com.onlystudents.message.entity.Message;
+import com.onlystudents.message.handler.WebSocketSessionManager;
 import com.onlystudents.message.mapper.ConversationMapper;
 import com.onlystudents.message.mapper.MessageMapper;
 import com.onlystudents.message.service.MessageService;
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -22,6 +25,7 @@ public class MessageServiceImpl implements MessageService {
     
     private final ConversationMapper conversationMapper;
     private final MessageMapper messageMapper;
+    private final WebSocketSessionManager sessionManager;
     
     @Override
     @Transactional
@@ -61,6 +65,22 @@ public class MessageServiceImpl implements MessageService {
         }
         
         log.info("用户{}向用户{}发送消息", senderId, receiverId);
+        
+        // 推送实时消息给接收者（如果在线）
+        if (sessionManager.isUserOnline(receiverId)) {
+            sessionManager.sendMessageToUser(receiverId, WebSocketMessage.builder()
+                    .type("MESSAGE")
+                    .data(Map.of(
+                            "id", message.getId(),
+                            "senderId", senderId,
+                            "receiverId", receiverId,
+                            "content", content,
+                            "createdAt", message.getCreatedAt()
+                    ))
+                    .build());
+            log.info("消息已通过WebSocket推送给用户{}", receiverId);
+        }
+        
         return message;
     }
     

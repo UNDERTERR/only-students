@@ -7,6 +7,7 @@ import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.notification.entity.Notification;
 import com.onlystudents.notification.mapper.NotificationMapper;
 import com.onlystudents.notification.service.NotificationService;
+import com.onlystudents.notification.sse.SseEmitterManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.List;
 public class NotificationServiceImpl implements NotificationService {
     
     private final NotificationMapper notificationMapper;
+    private final SseEmitterManager sseEmitterManager;
     
     @Override
     @Transactional
@@ -38,7 +40,14 @@ public class NotificationServiceImpl implements NotificationService {
         
         notificationMapper.insert(notification);
         
-        log.info("发送通知给用户{}: {}", userId, title);
+        // 如果用户在线，通过SSE实时推送
+        if (sseEmitterManager.isUserOnline(userId)) {
+            sseEmitterManager.sendNotification(userId, notification);
+            log.info("通知已通过SSE推送给用户{}: {}", userId, title);
+        } else {
+            log.info("通知已存储，用户{}不在线，待登录后查看: {}", userId, title);
+        }
+        
         return notification;
     }
     
