@@ -32,7 +32,7 @@ public class AnalyticsController {
     @Operation(summary = "获取每日统计", description = "获取指定创作者在某日期的统计数据")
     public Result<com.onlystudents.analytics.entity.DailyStats> getDailyStats(
             @PathVariable Long creatorId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @RequestParam(name = "date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return Result.success(dailyStatsService.getDailyStats(creatorId, date));
     }
 
@@ -40,8 +40,8 @@ public class AnalyticsController {
     @Operation(summary = "获取日期范围统计", description = "获取指定创作者在日期范围内的统计数据列表")
     public Result<List<com.onlystudents.analytics.entity.DailyStats>> getDailyStatsRange(
             @PathVariable Long creatorId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestParam(name = "startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(name = "endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return Result.success(dailyStatsService.getDailyStatsRange(creatorId, startDate, endDate));
     }
 
@@ -49,8 +49,8 @@ public class AnalyticsController {
     @Operation(summary = "获取汇总统计数据", description = "获取指定创作者在日期范围内的汇总统计数据")
     public Result<Map<String, Object>> getSummaryStats(
             @PathVariable Long creatorId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestParam(name = "startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(name = "endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return Result.success(dailyStatsService.getSummaryStats(creatorId, startDate, endDate));
     }
 
@@ -63,21 +63,21 @@ public class AnalyticsController {
     @GetMapping("/creators/top-revenue")
     @Operation(summary = "获取收入排行榜", description = "按收入获取创作者排行榜")
     public Result<List<com.onlystudents.analytics.entity.CreatorSummary>> getTopCreatorsByRevenue(
-            @RequestParam(defaultValue = "10") Integer limit) {
+            @RequestParam(name = "limit", defaultValue = "10") Integer limit) {
         return Result.success(creatorSummaryService.getTopCreatorsByRevenue(limit));
     }
 
     @GetMapping("/creators/top-followers")
     @Operation(summary = "获取粉丝排行榜", description = "按粉丝数获取创作者排行榜")
     public Result<List<com.onlystudents.analytics.entity.CreatorSummary>> getTopCreatorsByFollowers(
-            @RequestParam(defaultValue = "10") Integer limit) {
+            @RequestParam(name = "limit", defaultValue = "10") Integer limit) {
         return Result.success(creatorSummaryService.getTopCreatorsByFollowers(limit));
     }
 
     @GetMapping("/creators/weekly-top")
     @Operation(summary = "获取周榜", description = "获取周榜创作者列表")
     public Result<List<com.onlystudents.analytics.entity.CreatorSummary>> getWeeklyTopCreators(
-            @RequestParam(defaultValue = "10") Integer limit) {
+            @RequestParam(name = "limit", defaultValue = "10") Integer limit) {
         return Result.success(creatorSummaryService.getWeeklyTopCreators(limit));
     }
 
@@ -85,7 +85,7 @@ public class AnalyticsController {
     @Operation(summary = "更新创作者热度分", description = "更新指定创作者的热度分")
     public Result<Void> updateCreatorHeatScore(
             @PathVariable Long creatorId,
-            @RequestParam BigDecimal heatScore) {
+            @RequestParam(name = "heatScore") BigDecimal heatScore) {
         creatorSummaryService.updateHeatScore(creatorId, heatScore);
         return Result.success();
     }
@@ -105,7 +105,7 @@ public class AnalyticsController {
     @GetMapping("/notes/top")
     @Operation(summary = "获取热门笔记", description = "获取热度最高的笔记列表")
     public Result<List<com.onlystudents.analytics.entity.NoteStats>> getTopNotes(
-            @RequestParam(defaultValue = "10") Integer limit) {
+            @RequestParam(name = "limit", defaultValue = "10") Integer limit) {
         return Result.success(noteStatsService.getTopNotes(limit));
     }
 
@@ -113,8 +113,8 @@ public class AnalyticsController {
     @Operation(summary = "更新笔记热度分", description = "更新指定笔记的热度分和排名")
     public Result<Void> updateNoteHeatScore(
             @PathVariable Long noteId,
-            @RequestParam BigDecimal heatScore,
-            @RequestParam Integer ranking) {
+            @RequestParam(name = "heatScore") BigDecimal heatScore,
+            @RequestParam(name = "ranking") Integer ranking) {
         noteStatsService.updateHeatScore(noteId, heatScore, ranking);
         return Result.success();
     }
@@ -123,8 +123,8 @@ public class AnalyticsController {
     @Operation(summary = "获取小时统计数据", description = "获取指定创作者在时间段内的小时统计数据")
     public Result<List<com.onlystudents.analytics.entity.HourlyStats>> getHourlyStats(
             @PathVariable Long creatorId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime) {
+            @RequestParam(name = "startTime") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
+            @RequestParam(name = "endTime") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime) {
         return Result.success(hourlyStatsService.getHourlyStatsRange(creatorId, startTime, endTime));
     }
 
@@ -132,7 +132,7 @@ public class AnalyticsController {
     @Operation(summary = "获取高峰时段", description = "获取创作者的粉丝活跃高峰时段")
     public Result<List<Map<String, Object>>> getPeakHours(
             @PathVariable Long creatorId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime) {
+            @RequestParam(name = "startTime") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime) {
         return Result.success(hourlyStatsService.getPeakHours(creatorId, startTime));
     }
 }

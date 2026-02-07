@@ -21,22 +21,22 @@ public class NotificationController {
     
     @PostMapping("/send")
     @Operation(summary = "发送通知", description = "向指定用户发送系统通知")
-    public Result<Notification> sendNotification(@RequestParam Long userId,
-                                               @RequestParam Integer type,
-                                               @RequestParam String title,
-                                               @RequestParam String content,
-                                               @RequestParam(required = false) String redirectUrl,
-                                               @RequestParam(required = false) Long sourceId,
-                                               @RequestParam(required = false) Integer sourceType) {
+    public Result<Notification> sendNotification(@RequestParam(name = "userId") Long userId,
+                                               @RequestParam(name = "type") Integer type,
+                                               @RequestParam(name = "title") String title,
+                                               @RequestParam(name = "content") String content,
+                                               @RequestParam(name = "redirectUrl", required = false) String redirectUrl,
+                                               @RequestParam(name = "sourceId", required = false) Long sourceId,
+                                               @RequestParam(name = "sourceType", required = false) Integer sourceType) {
         return Result.success(notificationService.sendNotification(userId, type, title, content, redirectUrl, sourceId, sourceType));
     }
     
     @GetMapping("/list")
     @Operation(summary = "获取通知列表", description = "获取当前用户的通知列表，可按状态筛选")
     public Result<List<Notification>> getNotificationList(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
-                                                         @RequestParam(required = false) Integer status,
-                                                         @RequestParam(defaultValue = "1") Integer page,
-                                                         @RequestParam(defaultValue = "20") Integer size) {
+                                                         @RequestParam(name = "status", required = false) Integer status,
+                                                         @RequestParam(name = "page", defaultValue = "1") Integer page,
+                                                         @RequestParam(name = "size", defaultValue = "20") Integer size) {
         return Result.success(notificationService.getNotificationList(userId, status, page, size));
     }
     

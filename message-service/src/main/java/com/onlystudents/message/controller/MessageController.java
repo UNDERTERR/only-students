@@ -23,8 +23,8 @@ public class MessageController {
     @PostMapping("/send")
     @Operation(summary = "发送消息", description = "向指定用户发送私信")
     public Result<Message> sendMessage(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
-                                       @RequestParam Long receiverId,
-                                       @RequestParam String content) {
+                                       @RequestParam(name = "receiverId") Long receiverId,
+                                       @RequestParam(name = "content") String content) {
         return Result.success(messageService.sendMessage(userId, receiverId, content));
     }
     
@@ -38,8 +38,8 @@ public class MessageController {
     @Operation(summary = "获取消息历史", description = "获取指定会话的消息历史")
     public Result<List<Message>> getMessageHistory(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
                                                   @PathVariable Long conversationId,
-                                                  @RequestParam(defaultValue = "1") Integer page,
-                                                  @RequestParam(defaultValue = "20") Integer size) {
+                                                  @RequestParam(name = "page", defaultValue = "1") Integer page,
+                                                  @RequestParam(name = "size", defaultValue = "20") Integer size) {
         return Result.success(messageService.getMessageHistory(conversationId, userId, page, size));
     }
     

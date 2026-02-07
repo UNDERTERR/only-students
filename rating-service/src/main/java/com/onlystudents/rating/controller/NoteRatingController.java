@@ -27,7 +27,7 @@ public class NoteRatingController {
     public Result<Void> rateNote(
             @Parameter(description = "笔记ID") @PathVariable Long noteId,
             @Parameter(description = "用户ID", hidden = true) @RequestHeader("X-User-Id") Long userId,
-            @Parameter(description = "评分(1-5)") @RequestParam Integer score) {
+            @Parameter(description = "评分(1-5)") @RequestParam(name = "score") Integer score) {
         return ratingService.rateNote(noteId, userId, score);
     }
     

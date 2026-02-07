@@ -23,12 +23,12 @@ public class WithdrawalController {
     @PostMapping("/apply")
     @Operation(summary = "申请提现", description = "创作者申请提现")
     public Result<WithdrawalApplication> applyWithdrawal(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
-                                                      @RequestParam BigDecimal amount,
-                                                      @RequestParam Integer accountType,
-                                                      @RequestParam String accountName,
-                                                      @RequestParam String accountNumber,
-                                                      @RequestParam(required = false) String bankName,
-                                                      @RequestParam(required = false) String branchName) {
+                                                      @RequestParam(name = "amount") BigDecimal amount,
+                                                      @RequestParam(name = "accountType") Integer accountType,
+                                                      @RequestParam(name = "accountName") String accountName,
+                                                      @RequestParam(name = "accountNumber") String accountNumber,
+                                                      @RequestParam(name = "bankName", required = false) String bankName,
+                                                      @RequestParam(name = "branchName", required = false) String branchName) {
         return Result.success(withdrawalService.applyWithdrawal(userId, amount, accountType, 
                                                               accountName, accountNumber, bankName, branchName));
     }
@@ -36,15 +36,15 @@ public class WithdrawalController {
     @GetMapping("/list")
     @Operation(summary = "获取提现列表", description = "获取当前用户的提现申请列表")
     public Result<List<WithdrawalApplication>> getWithdrawalList(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
-                                                               @RequestParam(defaultValue = "1") Integer page,
-                                                               @RequestParam(defaultValue = "20") Integer size) {
+                                                               @RequestParam(name = "page", defaultValue = "1") Integer page,
+                                                               @RequestParam(name = "size", defaultValue = "20") Integer size) {
         return Result.success(withdrawalService.getWithdrawalList(userId, page, size));
     }
     
     @GetMapping("/pending")
     @Operation(summary = "获取待审核提现列表", description = "管理员获取待审核的提现申请列表")
-    public Result<List<WithdrawalApplication>> getPendingWithdrawals(@RequestParam(defaultValue = "1") Integer page,
-                                                                    @RequestParam(defaultValue = "20") Integer size) {
+    public Result<List<WithdrawalApplication>> getPendingWithdrawals(@RequestParam(name = "page", defaultValue = "1") Integer page,
+                                                                    @RequestParam(name = "size", defaultValue = "20") Integer size) {
         return Result.success(withdrawalService.getPendingWithdrawals(page, size));
     }
     
@@ -52,8 +52,8 @@ public class WithdrawalController {
     @Operation(summary = "审核提现", description = "管理员审核提现申请")
     public Result<Void> auditWithdrawal(@PathVariable Long applicationId,
                                        @RequestHeader(CommonConstants.USER_ID_HEADER) Long auditorId,
-                                       @RequestParam Integer status,
-                                       @RequestParam String auditRemark) {
+                                       @RequestParam(name = "status") Integer status,
+                                       @RequestParam(name = "auditRemark") String auditRemark) {
         withdrawalService.auditWithdrawal(applicationId, auditorId, status, auditRemark);
         return Result.success();
     }

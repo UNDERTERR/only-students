@@ -86,44 +86,44 @@ public class SentinelConfig {
 
         // 1. 用户服务限流 - 登录注册接口
         rules.add(new GatewayFlowRule("user-service")
-                .setCount(10) // QPS 10
+                .setCount(200) // QPS 10
                 .setIntervalSec(1)
-                .setBurst(5) // 突发流量
+                .setBurst(100) // 突发流量
         );
 
         // 2. 笔记服务限流 - 查询接口
         rules.add(new GatewayFlowRule("note-service")
-                .setCount(30) // QPS 30
+                .setCount(200) // QPS 30
                 .setIntervalSec(1)
         );
 
         // 3. 搜索服务限流
         rules.add(new GatewayFlowRule("search-service")
-                .setCount(20) // QPS 20
+                .setCount(200) // QPS 20
                 .setIntervalSec(1)
         );
 
         // 4. 评分服务限流
         rules.add(new GatewayFlowRule("rating-service")
-                .setCount(15)
+                .setCount(200)
                 .setIntervalSec(1)
         );
 
         // 5. 评论服务限流
         rules.add(new GatewayFlowRule("comment-service")
-                .setCount(20)
+                .setCount(200)
                 .setIntervalSec(1)
         );
 
         // 6. 文件服务限流 - 上传下载
         rules.add(new GatewayFlowRule("file-service")
-                .setCount(10)
+                .setCount(100)
                 .setIntervalSec(1)
         );
 
         // 7. 支付服务限流 - 严格限制
         rules.add(new GatewayFlowRule("payment-service")
-                .setCount(5) // QPS 5，严格限流
+                .setCount(200) // QPS 5，严格限流
                 .setIntervalSec(1)
         );
 

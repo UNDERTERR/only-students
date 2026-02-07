@@ -50,7 +50,7 @@ public class UserController {
     @PostMapping("/logout")
     @Operation(summary = "用户登出", description = "登出当前设备，不传deviceId则登出当前token对应设备")
     public Result<Void> logout(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
-                               @RequestParam(required = false) String deviceId) {
+                               @RequestParam(name = "deviceId", required = false) String deviceId) {
         userService.logout(userId, deviceId);
         return Result.success();
     }

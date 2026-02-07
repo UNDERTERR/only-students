@@ -62,7 +62,7 @@ public class NoteServiceImpl implements NoteService {
     }
     
     @Override
-    @CacheEvict(value = "notes", key = "#noteId")
+    @CacheEvict(value = "notes", key = "#p0")
     public NoteDTO updateNote(Long noteId, UpdateNoteRequest request, Long userId) {
         Note note = noteMapper.selectById(noteId);
         if (note == null) {
@@ -83,7 +83,7 @@ public class NoteServiceImpl implements NoteService {
     }
     
     @Override
-    @CacheEvict(value = "notes", key = "#noteId")
+    @CacheEvict(value = "notes", key = "#p0")
     public void deleteNote(Long noteId, Long userId) {
         Note note = noteMapper.selectById(noteId);
         if (note == null) {
@@ -102,7 +102,7 @@ public class NoteServiceImpl implements NoteService {
     }
     
     @Override
-    @Cacheable(value = "notes", key = "#noteId", unless = "#result == null")
+    @Cacheable(value = "notes", key = "#p0", unless = "#result == null")
     public NoteDTO getNoteById(Long noteId) {
         Note note = noteMapper.selectById(noteId);
         if (note == null || note.getStatus() != 2) { // 只返回已发布的
@@ -145,7 +145,7 @@ public class NoteServiceImpl implements NoteService {
     }
     
     @Override
-    @Cacheable(value = "hotNotes", key = "#limit", unless = "#result == null || #result.isEmpty()")
+    @Cacheable(value = "hotNotes", key = "#p0", unless = "#result == null || #result.isEmpty()")
     public List<NoteDTO> getHotNotes(Integer limit) {
         if (limit == null || limit > 100) {
             limit = 20;
@@ -155,7 +155,7 @@ public class NoteServiceImpl implements NoteService {
     }
     
     @Override
-    @Cacheable(value = "latestNotes", key = "#limit", unless = "#result == null || #result.isEmpty()")
+    @Cacheable(value = "latestNotes", key = "#p0", unless = "#result == null || #result.isEmpty()")
     public List<NoteDTO> getLatestNotes(Integer limit) {
         if (limit == null || limit > 100) {
             limit = 20;
@@ -181,7 +181,7 @@ public class NoteServiceImpl implements NoteService {
     }
     
     @Override
-    @CacheEvict(value = "notes", key = "#noteId")
+    @CacheEvict(value = "notes", key = "#p0")
     public void publishNote(Long noteId, Long userId) {
         Note note = noteMapper.selectById(noteId);
         if (note == null) {

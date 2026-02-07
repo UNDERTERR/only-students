@@ -27,7 +27,7 @@ public class NoteShareController {
     public Result<NoteShareDTO> createShare(
             @Parameter(description = "笔记ID") @PathVariable Long noteId,
             @Parameter(description = "用户ID", hidden = true) @RequestHeader("X-User-Id") Long userId,
-            @Parameter(description = "分享类型(1-微信 2-QQ 3-链接)") @RequestParam Integer shareType) {
+            @Parameter(description = "分享类型(1-微信 2-QQ 3-链接)") @RequestParam(name = "shareType") Integer shareType) {
         return shareService.createShare(noteId, userId, shareType);
     }
     

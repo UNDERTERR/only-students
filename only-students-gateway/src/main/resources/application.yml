@@ -27,6 +27,13 @@ spring:
         locator:
           enabled: true
           lower-case-service-id: true
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 30s
+        pool:
+          type: elastic
+          max-connections: 1000
+          max-life-time: 30s
       routes:
         # 用户服务
         - id: user-service
@@ -159,7 +166,7 @@ jwt:
 
 # 白名单路径（不需要认证）
 whitelist:
-  paths: /api/user/register,/api/user/login,/api/user/refresh-token,/api/note/list,/api/note/detail/**,/api/search/**,/api/file/preview/**
+  paths: /api/user/register,/api/user/login,/api/user/refresh-token,/api/user/**,/api/note,/api/note/latest,/api/note/hot,/api/note/*,/api/search/**,/api/file/preview/**
 
 # Sentinel配置
 sentinel:

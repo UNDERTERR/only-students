@@ -79,7 +79,7 @@ public class AdminController {
 
     @PutMapping("/user/{adminId}/status")
     @Operation(summary = "更新管理员状态", description = "启用或禁用管理员账号")
-    public Result<Void> updateAdminStatus(@PathVariable Long adminId, @RequestParam Integer status) {
+    public Result<Void> updateAdminStatus(@PathVariable Long adminId, @RequestParam(name = "status") Integer status) {
         adminUserService.updateStatus(adminId, status);
         return Result.success();
     }
@@ -134,8 +134,8 @@ public class AdminController {
 
     @GetMapping("/audit/target")
     @Operation(summary = "获取目标审核记录", description = "获取指定目标的审核记录列表")
-    public Result<List<AuditRecord>> getAuditRecordsByTarget(@RequestParam Long targetId,
-                                                             @RequestParam Integer targetType) {
+    public Result<List<AuditRecord>> getAuditRecordsByTarget(@RequestParam(name = "targetId") Long targetId,
+                                                             @RequestParam(name = "targetType") Integer targetType) {
         return Result.success(auditRecordService.getAuditRecordsByTarget(targetId, targetType));
     }
 
@@ -147,7 +147,7 @@ public class AdminController {
 
     @GetMapping("/audit/pending")
     @Operation(summary = "获取待审核记录", description = "获取待审核的内容记录列表")
-    public Result<List<AuditRecord>> getPendingAuditRecords(@RequestParam(defaultValue = "0") Integer status) {
+    public Result<List<AuditRecord>> getPendingAuditRecords(@RequestParam(name = "status", defaultValue = "0") Integer status) {
         return Result.success(auditRecordService.getPendingAuditRecords(status));
     }
 
