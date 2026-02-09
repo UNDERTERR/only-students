@@ -8,6 +8,7 @@ import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.file.config.MinioConfig;
 import com.onlystudents.file.dto.FileUploadResult;
 import com.onlystudents.file.entity.FileRecord;
+import com.onlystudents.file.enums.FileCategory;
 import com.onlystudents.file.mapper.FileRecordMapper;
 import com.onlystudents.file.service.FileConvertService;
 import com.onlystudents.file.service.FileService;
@@ -49,13 +50,24 @@ public class FileServiceImpl implements FileService {
 
     @Override
     public FileUploadResult uploadFile(MultipartFile file, Long userId) {
+        // 默认上传到 private 目录
+        return uploadFile(file, userId, FileCategory.PRIVATE);
+    }
+    
+    @Override
+    public FileUploadResult uploadFile(MultipartFile file, Long userId, FileCategory category) {
         // 计算MD5
         String md5Hash = calculateMd5(file);
-        return uploadFileWithMd5Check(file, userId, md5Hash);
+        return uploadFileWithMd5Check(file, userId, md5Hash, category);
     }
 
     @Override
     public FileUploadResult uploadFileWithMd5Check(MultipartFile file, Long userId, String md5Hash) {
+        return uploadFileWithMd5Check(file, userId, md5Hash, FileCategory.PRIVATE);
+    }
+    
+    @Override
+    public FileUploadResult uploadFileWithMd5Check(MultipartFile file, Long userId, String md5Hash, FileCategory category) {
         // 检查文件大小
         if (file.getSize() > maxFileSize) {
             throw new BusinessException(ResultCode.FILE_TOO_LARGE);
@@ -89,9 +101,18 @@ public class FileServiceImpl implements FileService {
             return result;
         }
 
+        // 根据分类确定存储路径前缀
+        String prefix = getCategoryPrefix(category, userId);
+        
         // 生成存储文件名
         String fileName = IdUtil.simpleUUID() + "." + fileType;
-        String objectName = LocalDateTime.now().getYear() + "/" + LocalDateTime.now().getMonthValue() + "/" + fileName;
+        String objectName = prefix + "/" + LocalDateTime.now().getYear() + "/" + LocalDateTime.now().getMonthValue() + "/" + fileName;
+        
+        log.info("[文件上传] 开始上传: bucket={}, objectName={}, fileType={}, size={}", 
+                minioConfig.getBucketName(), objectName, fileType, file.getSize());
+        
+        // 记录访问级别
+        boolean isPublic = (category == FileCategory.AVATARS || category == FileCategory.PUBLIC);
 
         try {
             // 上传到MinIO
@@ -114,6 +135,7 @@ public class FileServiceImpl implements FileService {
             record.setUploaderId(userId);
             record.setStorageType(1); // MinIO
             record.setStatus(1);
+            record.setAccessLevel(isPublic ? 1 : 0); // 1-公开，0-私有
 
             fileRecordMapper.insert(record);
 
@@ -142,8 +164,9 @@ public class FileServiceImpl implements FileService {
             return result;
 
         } catch (Exception e) {
-            log.error("文件上传失败", e);
-            throw new BusinessException(ResultCode.FILE_UPLOAD_ERROR);
+            log.error("[文件上传] 上传失败: bucket={}, objectName={}, error={}", 
+                    minioConfig.getBucketName(), objectName, e.getMessage(), e);
+            throw new BusinessException(ResultCode.FILE_UPLOAD_ERROR, "上传到MinIO失败: " + e.getMessage());
         }
     }
 
@@ -226,6 +249,24 @@ public class FileServiceImpl implements FileService {
         fileConvertService.convertToPdf(fileId);
     }
 
+    /**
+     * 根据文件分类获取存储路径前缀
+     */
+    private String getCategoryPrefix(FileCategory category, Long userId) {
+        switch (category) {
+            case AVATARS:
+                return "avatars/" + userId;
+            case PUBLIC:
+                return "public";
+            case PRIVATE:
+                return "private/" + userId;
+            case PAID:
+                return "paid/" + userId;
+            default:
+                return "private/" + userId;
+        }
+    }
+
     private String calculateMd5(MultipartFile file) {
         try {
             return DigestUtil.md5Hex(file.getInputStream());
@@ -263,10 +304,50 @@ public class FileServiceImpl implements FileService {
             } else {
                 log.info("[MinIO 初始化] 桶 " + bucketName + " 已存在，无需创建");
             }
+            
+            // 2. 配置细粒度访问策略
+            setupBucketPolicy(bucketName);
+            
         } catch (Exception e) {
             // 桶初始化失败时，抛出运行时异常让服务启动失败（避免后续上传全报错）
             throw new RuntimeException("[MinIO 初始化失败] 桶 " + bucketName + " 创建失败：" + e.getMessage(), e);
         }
+    }
+    
+    /**
+     * 配置 bucket 细粒度访问策略
+     * - avatars/*: 公开可读（用户头像）
+     * - public/*: 公开可读（笔记封面等公开资源）
+     * - private/*: 私有（个人笔记原稿）
+     * - paid/*: 私有（付费内容）
+     */
+    private void setupBucketPolicy(String bucketName) throws Exception {
+        String policyJson = "{\n" +
+            "  \"Version\": \"2012-10-17\",\n" +
+            "  \"Statement\": [\n" +
+            "    {\n" +
+            "      \"Effect\": \"Allow\",\n" +
+            "      \"Principal\": \"*\",\n" +
+            "      \"Action\": [\"s3:GetObject\"],\n" +
+            "      \"Resource\": [\n" +
+            "        \"arn:aws:s3:::" + bucketName + "/avatars/*\",\n" +
+            "        \"arn:aws:s3:::" + bucketName + "/public/*\"\n" +
+            "      ]\n" +
+            "    }\n" +
+            "  ]\n" +
+            "}";
+        
+        minioClient.setBucketPolicy(
+            SetBucketPolicyArgs.builder()
+                .bucket(bucketName)
+                .config(policyJson)
+                .build()
+        );
+        log.info("[MinIO 策略配置] 已设置细粒度访问策略：\n" +
+                "  - avatars/*: 公开可读\n" +
+                "  - public/*: 公开可读\n" +
+            "  - private/*: 私有\n" +
+                "  - paid/*: 私有");
     }
 
 }
