@@ -29,7 +29,5 @@ public class UserDevice {
     private String ip;
     
     private Integer status;
-    
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createdAt;
+
 }

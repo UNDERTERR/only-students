@@ -2,6 +2,7 @@ package com.onlystudents.report.controller;
 
 import com.onlystudents.common.constants.CommonConstants;
 import com.onlystudents.common.result.Result;
+import com.onlystudents.report.dto.SubmitReportRequest;
 import com.onlystudents.report.entity.Report;
 import com.onlystudents.report.service.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,12 +23,9 @@ public class ReportController {
     @PostMapping("/submit")
     @Operation(summary = "提交举报", description = "提交对笔记、评论或用户的举报")
     public Result<Report> submitReport(@RequestHeader(CommonConstants.USER_ID_HEADER) Long reporterId,
-                                      @RequestParam(name = "targetId") Long targetId,
-                                      @RequestParam(name = "targetType") Integer targetType,
-                                      @RequestParam(name = "reason") Integer reason,
-                                      @RequestParam(name = "description", required = false) String description,
-                                      @RequestParam(name = "evidence", required = false) String evidence) {
-        return Result.success(reportService.submitReport(reporterId, targetId, targetType, reason, description, evidence));
+                                      @RequestBody SubmitReportRequest request) {
+        return Result.success(reportService.submitReport(reporterId, request.getTargetId(), request.getTargetType(), 
+                                                         request.getReason(), request.getDescription(), request.getEvidence()));
     }
     
     @GetMapping("/list")

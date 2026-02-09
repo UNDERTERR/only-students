@@ -26,7 +26,7 @@ public class FileController {
     @PostMapping("/upload")
     @Operation(summary = "上传文件", description = "支持Office文档、PDF、图片等格式，最大200MB")
     public Result<FileUploadResult> uploadFile(@RequestParam("file") MultipartFile file,
-                                                @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId) {
+                                                @RequestParam(CommonConstants.USER_ID_HEADER) Long userId) {
         return Result.success(fileService.uploadFile(file, userId));
     }
     

@@ -6,6 +6,7 @@ import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.common.utils.JwtUtils;
 import com.onlystudents.user.dto.request.LoginRequest;
 import com.onlystudents.user.dto.request.RegisterRequest;
+import com.onlystudents.user.dto.request.UpdateUserRequest;
 import com.onlystudents.user.dto.response.LoginResponse;
 import com.onlystudents.user.dto.response.UserResponse;
 import com.onlystudents.user.entity.User;
@@ -70,7 +71,6 @@ public class UserServiceImpl implements UserService {
         if (user == null) {
             throw new BusinessException(ResultCode.USERNAME_PASSWORD_ERROR);
         }
-        
         // 检查状态
         if (user.getStatus() != 1) {
             throw new BusinessException(ResultCode.USER_DISABLED);
@@ -153,6 +153,47 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponse getCurrentUser(Long userId) {
         return getUserById(userId);
+    }
+    
+    @Override
+    @Transactional
+    @CacheEvict(value = "users", key = "#p0")
+    public UserResponse updateUser(Long userId, UpdateUserRequest request) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.USER_NOT_FOUND);
+        }
+        
+        // 更新非空字段
+        if (request.getNickname() != null) {
+            user.setNickname(request.getNickname());
+        }
+        if (request.getAvatar() != null) {
+            user.setAvatar(request.getAvatar());
+        }
+        if (request.getBio() != null) {
+            user.setBio(request.getBio());
+        }
+        if (request.getEmail() != null) {
+            user.setEmail(request.getEmail());
+        }
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone());
+        }
+        if (request.getEducationLevel() != null) {
+            user.setEducationLevel(request.getEducationLevel());
+        }
+        if (request.getSchoolId() != null) {
+            user.setSchoolId(request.getSchoolId());
+        }
+        if (request.getSchoolName() != null) {
+            user.setSchoolName(request.getSchoolName());
+        }
+        
+        user.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateById(user);
+        
+        return convertToResponse(user);
     }
     
     @Override

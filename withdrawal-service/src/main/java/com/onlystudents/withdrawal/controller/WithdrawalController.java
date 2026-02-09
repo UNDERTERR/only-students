@@ -2,6 +2,7 @@ package com.onlystudents.withdrawal.controller;
 
 import com.onlystudents.common.constants.CommonConstants;
 import com.onlystudents.common.result.Result;
+import com.onlystudents.withdrawal.dto.ApplyWithdrawalRequest;
 import com.onlystudents.withdrawal.entity.WithdrawalApplication;
 import com.onlystudents.withdrawal.service.WithdrawalService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,7 +10,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -23,14 +23,10 @@ public class WithdrawalController {
     @PostMapping("/apply")
     @Operation(summary = "申请提现", description = "创作者申请提现")
     public Result<WithdrawalApplication> applyWithdrawal(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
-                                                      @RequestParam(name = "amount") BigDecimal amount,
-                                                      @RequestParam(name = "accountType") Integer accountType,
-                                                      @RequestParam(name = "accountName") String accountName,
-                                                      @RequestParam(name = "accountNumber") String accountNumber,
-                                                      @RequestParam(name = "bankName", required = false) String bankName,
-                                                      @RequestParam(name = "branchName", required = false) String branchName) {
-        return Result.success(withdrawalService.applyWithdrawal(userId, amount, accountType, 
-                                                              accountName, accountNumber, bankName, branchName));
+                                                       @RequestBody ApplyWithdrawalRequest request) {
+        return Result.success(withdrawalService.applyWithdrawal(userId, request.getAmount(), request.getAccountType(), 
+                                                              request.getAccountName(), request.getAccountNumber(), 
+                                                              request.getBankName(), request.getBranchName()));
     }
     
     @GetMapping("/list")
