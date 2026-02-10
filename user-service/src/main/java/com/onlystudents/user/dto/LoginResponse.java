@@ -1,4 +1,4 @@
-package com.onlystudents.user.dto.response;
+package com.onlystudents.user.dto;
 
 import lombok.Data;
 

@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.onlystudents.note.entity.Note;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Result;
+import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
@@ -44,4 +46,10 @@ public interface NoteMapper extends BaseMapper<Note> {
      */
     @Update("UPDATE note SET rating = #{avgScore}, rating_count = #{count} WHERE id = #{noteId}")
     int updateRatingStats(@Param("noteId") Long noteId, @Param("avgScore") Double avgScore, @Param("count") Integer count);
+    
+    /**
+     * 分页查询已发布的笔记（用于ES全量同步）
+     */
+    @Select("SELECT * FROM note WHERE status = 2 ORDER BY id LIMIT #{offset}, #{limit}")
+    List<Note> selectPublishedNotesByPage(@Param("offset") Integer offset, @Param("limit") Integer limit);
 }

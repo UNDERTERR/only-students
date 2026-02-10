@@ -5,7 +5,7 @@ import com.onlystudents.note.client.UserFeignClient;
 import com.onlystudents.note.elasticsearch.NoteDocument;
 import com.onlystudents.note.entity.Note;
 import com.onlystudents.note.mapper.NoteCategoryMapper;
-import com.onlystudents.note.service.NoteSearchService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -18,8 +18,7 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class NoteSyncListener {
-    
-    private final NoteSearchService noteSearchService;
+
     private final UserFeignClient userFeignClient;
     private final NoteCategoryMapper noteCategoryMapper;
     
@@ -70,8 +69,6 @@ public class NoteSyncListener {
                 }
             }
             document.setCategoryName(categoryName);
-            
-            noteSearchService.saveNote(document);
             log.info("笔记同步到ES成功: noteId={}", note.getId());
         } catch (Exception e) {
             log.error("同步笔记到ES失败: noteId={}", note.getId(), e);

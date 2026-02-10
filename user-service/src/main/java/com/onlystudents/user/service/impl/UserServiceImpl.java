@@ -4,11 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.common.utils.JwtUtils;
-import com.onlystudents.user.dto.request.LoginRequest;
-import com.onlystudents.user.dto.request.RegisterRequest;
-import com.onlystudents.user.dto.request.UpdateUserRequest;
-import com.onlystudents.user.dto.response.LoginResponse;
-import com.onlystudents.user.dto.response.UserResponse;
+import com.onlystudents.user.dto.LoginRequest;
+import com.onlystudents.user.dto.RegisterRequest;
+import com.onlystudents.user.dto.UpdateUserRequest;
+import com.onlystudents.user.dto.LoginResponse;
+import com.onlystudents.user.dto.UserResponse;
 import com.onlystudents.user.entity.User;
 import com.onlystudents.user.entity.UserDevice;
 import com.onlystudents.user.mapper.UserDeviceMapper;
@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -214,6 +215,19 @@ public class UserServiceImpl implements UserService {
         UserDevice device = new UserDevice();
         device.setStatus(0);
         deviceMapper.update(device, wrapper);
+    }
+    
+    @Override
+    public List<UserResponse> searchUsers(String keyword, Integer educationLevel, Integer isCreator, Integer page, Integer size) {
+        log.info("搜索用户：keyword={}, educationLevel={}, isCreator={}, page={}, size={}",
+                keyword, educationLevel, isCreator, page, size);
+        
+        // 调用 Mapper 进行 MySQL 搜索
+        List<User> users = userMapper.searchUsers(keyword, educationLevel, isCreator, (page - 1) * size, size);
+        
+        return users.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
     }
     
     private UserResponse convertToResponse(User user) {

@@ -2,11 +2,11 @@ package com.onlystudents.user.controller;
 
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.constants.CommonConstants;
-import com.onlystudents.user.dto.request.LoginRequest;
-import com.onlystudents.user.dto.request.RegisterRequest;
-import com.onlystudents.user.dto.request.UpdateUserRequest;
-import com.onlystudents.user.dto.response.LoginResponse;
-import com.onlystudents.user.dto.response.UserResponse;
+import com.onlystudents.user.dto.LoginRequest;
+import com.onlystudents.user.dto.RegisterRequest;
+import com.onlystudents.user.dto.UpdateUserRequest;
+import com.onlystudents.user.dto.LoginResponse;
+import com.onlystudents.user.dto.UserResponse;
 import com.onlystudents.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +14,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/user")
@@ -60,6 +62,16 @@ public class UserController {
     @Operation(summary = "获取指定用户信息", description = "根据用户ID获取用户公开信息")
     public Result<UserResponse> getUserById(@PathVariable(name = "userId") Long userId) {
         return Result.success(userService.getUserById(userId));
+    }
+    
+    @GetMapping("/search")
+    @Operation(summary = "搜索用户", description = "根据关键词搜索用户（用户名、昵称、简介）")
+    public Result<List<UserResponse>> searchUsers(@RequestParam(name = "keyword") String keyword,
+                                                   @RequestParam(name = "educationLevel", required = false) Integer educationLevel,
+                                                   @RequestParam(name = "isCreator", required = false) Integer isCreator,
+                                                   @RequestParam(name = "page", defaultValue = "1") Integer page,
+                                                   @RequestParam(name = "size", defaultValue = "10") Integer size) {
+        return Result.success(userService.searchUsers(keyword, educationLevel, isCreator, page, size));
     }
     
     @PostMapping("/logout")

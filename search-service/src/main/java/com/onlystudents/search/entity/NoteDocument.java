@@ -1,5 +1,6 @@
 package com.onlystudents.search.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -20,9 +21,9 @@ public class NoteDocument {
     private Long categoryId;
     private String categoryName;
     private Long userId;
-    private String username;
-    private String nickname;
-    private String userAvatar;
+    private String username;      // 作者用户名
+    private String nickname;      // 作者昵称  
+    private String userAvatar;    // 作者头像
     private Integer educationLevel;
     private Long schoolId;
     private String schoolName;
@@ -39,6 +40,10 @@ public class NoteDocument {
     private Double rating;
     private Integer ratingCount;
     private String coverImage;
+    
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime publishTime;
+    
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 }

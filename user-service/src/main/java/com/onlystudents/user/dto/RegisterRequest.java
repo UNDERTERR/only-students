@@ -1,4 +1,4 @@
-package com.onlystudents.user.dto.request;
+package com.onlystudents.user.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

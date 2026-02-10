@@ -1,16 +1,17 @@
-package com.onlystudents.note.entity;
+package com.onlystudents.search.dto;
 
-import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
+/**
+ * 笔记响应 DTO
+ */
 @Data
-@TableName("note")
-public class Note {
+public class NoteResponse {
 
-    @TableId(type = IdType.AUTO)
     private Long id;
 
     private Long userId;
@@ -53,18 +54,9 @@ public class Note {
 
     private String subject;
 
+    private List<String> tags;
+
     private LocalDateTime publishTime;
 
-    // 用户信息（用于ES搜索，不持久化）
-    @TableField(exist = false)
-    private String username;
-
-    @TableField(exist = false)
-    private String nickname;
-
-    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
-
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedAt;
 }

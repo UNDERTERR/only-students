@@ -10,7 +10,6 @@ import com.onlystudents.note.dto.NoteDTO;
 import com.onlystudents.note.dto.UpdateNoteRequest;
 import com.onlystudents.note.entity.Note;
 import com.onlystudents.note.mapper.NoteMapper;
-import com.onlystudents.note.service.NoteSearchService;
 import com.onlystudents.note.service.NoteService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +31,6 @@ import java.util.stream.Collectors;
 public class NoteServiceImpl implements NoteService {
 
     private final NoteMapper noteMapper;
-    private final NoteSearchService noteSearchService;
     private final SubscriptionFeignClient subscriptionFeignClient;
     private final RabbitTemplate rabbitTemplate;
     private final StringRedisTemplate redisTemplate;
@@ -196,8 +194,6 @@ public class NoteServiceImpl implements NoteService {
         note.setPublishTime(LocalDateTime.now());
         noteMapper.updateById(note);
 
-        // 同步到Elasticsearch
-        noteSearchService.updateNote(note);
         // 异步发送到MQ，由NoteSyncListener处理ES同步
         try {
             rabbitTemplate.convertAndSend("note.exchange", "note.sync", note);
