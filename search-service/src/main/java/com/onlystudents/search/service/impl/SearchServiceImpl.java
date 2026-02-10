@@ -150,8 +150,8 @@ public class SearchServiceImpl implements SearchService {
                         BeanUtils.copyProperties(doc, result);
                         result.setId(doc.getNoteId());
                         result.setAuthorId(doc.getUserId());
-                        result.setAuthorName(doc.getNickname() != null ? doc.getNickname() : doc.getUsername());
-                        result.setAuthorAvatar(doc.getUserAvatar());
+                        result.setAuthorName(doc.getAuthorNickname() != null ? doc.getAuthorNickname() : doc.getAuthorUsername());
+                        result.setAuthorAvatar(doc.getAuthorAvatar());
                         result.setPrice(doc.getPrice() != null ? doc.getPrice().intValue() : 0);
 
                         // 处理高亮
@@ -273,8 +273,8 @@ public class SearchServiceImpl implements SearchService {
                         BeanUtils.copyProperties(doc, result);
                         result.setId(doc.getNoteId());
                         result.setAuthorId(doc.getUserId());
-                        result.setAuthorName(doc.getNickname() != null ? doc.getNickname() : doc.getUsername());
-                        result.setAuthorAvatar(doc.getUserAvatar());
+                        result.setAuthorName(doc.getAuthorNickname() != null ? doc.getAuthorNickname() : doc.getAuthorUsername());
+                        result.setAuthorAvatar(doc.getAuthorAvatar());
                         return result;
                     })
                     .collect(Collectors.toList());

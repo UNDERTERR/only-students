@@ -21,9 +21,9 @@ public class NoteDocument {
     private Long categoryId;
     private String categoryName;
     private Long userId;
-    private String username;      // 作者用户名
-    private String nickname;      // 作者昵称  
-    private String userAvatar;    // 作者头像
+    private String authorUsername;  // 作者用户名
+    private String authorNickname;  // 作者昵称  
+    private String authorAvatar;    // 作者头像
     private Integer educationLevel;
     private Long schoolId;
     private String schoolName;

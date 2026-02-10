@@ -84,10 +84,9 @@ public class ElasticsearchIndexService {
                 .properties("categoryId", p -> p.long_(l -> l))
                 .properties("categoryName", p -> p.keyword(k -> k))
                 .properties("userId", p -> p.long_(l -> l))
-                .properties("username", p -> p.keyword(k -> k))
-                .properties("nickname", p -> p.text(t -> t
-                        .analyzer("ik_max_word")
-                ))
+                .properties("authorUsername", p -> p.keyword(k -> k))      // 作者用户名
+                .properties("authorNickname", p -> p.text(t -> t.analyzer("ik_max_word")))  // 作者昵称
+                .properties("authorAvatar", p -> p.keyword(k -> k))    // 作者头像
                 .properties("educationLevel", p -> p.integer(i -> i))
                 .properties("schoolId", p -> p.long_(l -> l))
                 .properties("schoolName", p -> p.keyword(k -> k))

@@ -11,6 +11,7 @@ import com.onlystudents.user.dto.LoginResponse;
 import com.onlystudents.user.dto.UserResponse;
 import com.onlystudents.user.entity.User;
 import com.onlystudents.user.entity.UserDevice;
+import com.onlystudents.user.event.UserEventPublisher;
 import com.onlystudents.user.mapper.UserDeviceMapper;
 import com.onlystudents.user.mapper.UserMapper;
 import com.onlystudents.user.service.UserService;
@@ -32,10 +33,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     
-    private final UserMapper userMapper;
+private final UserMapper userMapper;
     private final UserDeviceMapper deviceMapper;
     private final JwtUtils jwtUtils;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final UserEventPublisher userEventPublisher;
     
     private static final int MAX_DEVICES = 3;
     
@@ -191,8 +193,11 @@ public class UserServiceImpl implements UserService {
             user.setSchoolName(request.getSchoolName());
         }
         
-        user.setUpdatedAt(LocalDateTime.now());
+user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateById(user);
+        
+        // 发布用户信息更新事件
+        userEventPublisher.publishUserInfoUpdated(user);
         
         return convertToResponse(user);
     }

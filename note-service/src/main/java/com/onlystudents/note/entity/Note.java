@@ -13,7 +13,14 @@ public class Note {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private Long userId;
+private Long userId;
+
+    // 作者信息（冗余存储，用于ES搜索）
+    private String authorUsername;
+
+    private String authorNickname;
+
+    private String authorAvatar;
 
     private String title;
 
@@ -55,12 +62,7 @@ public class Note {
 
     private LocalDateTime publishTime;
 
-    // 用户信息（用于ES搜索，不持久化）
-    @TableField(exist = false)
-    private String username;
-
-    @TableField(exist = false)
-    private String nickname;
+// 移除不持久化的用户信息字段，现在直接存储在数据库中
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
