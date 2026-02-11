@@ -14,10 +14,10 @@ import java.util.List;
 @Mapper
 public interface NoteMapper extends BaseMapper<Note> {
     
-    @Select("SELECT * FROM note WHERE status = 2 ORDER BY hot_score DESC LIMIT #{limit}")
+    @Select("SELECT * FROM note WHERE status = 2 AND visibility = 0 ORDER BY hot_score DESC LIMIT #{limit}")
     List<Note> selectHotNotes(@Param("limit") Integer limit);
     
-    @Select("SELECT * FROM note WHERE status = 2 ORDER BY publish_time DESC LIMIT #{limit}")
+    @Select("SELECT * FROM note WHERE status = 2 AND visibility = 0 ORDER BY publish_time DESC LIMIT #{limit}")
     List<Note> selectLatestNotes(@Param("limit") Integer limit);
     
     @Update("UPDATE note SET view_count = view_count + 1 WHERE id = #{noteId}")
@@ -48,8 +48,9 @@ public interface NoteMapper extends BaseMapper<Note> {
     int updateRatingStats(@Param("noteId") Long noteId, @Param("avgScore") Double avgScore, @Param("count") Integer count);
     
     /**
-     * 分页查询已发布的笔记（用于ES全量同步）
+     * 分页查询已发布的公开笔记（用于ES全量同步）
+     * 只同步公开的笔记（visibility = 0），其他可见性级别的笔记不进入ES
      */
-    @Select("SELECT * FROM note WHERE status = 2 ORDER BY id LIMIT #{offset}, #{limit}")
+    @Select("SELECT * FROM note WHERE status = 2 AND visibility = 0 ORDER BY id LIMIT #{offset}, #{limit}")
     List<Note> selectPublishedNotesByPage(@Param("offset") Integer offset, @Param("limit") Integer limit);
 }

@@ -1,5 +1,7 @@
 package com.onlystudents.note.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -22,13 +24,20 @@ public class RedisCacheConfig {
     
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory factory) {
+        // 创建支持 Java 8 日期时间的 ObjectMapper
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        
+        // 使用自定义 ObjectMapper 创建序列化器
+        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(objectMapper);
+        
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
                 // 设置缓存过期时间（默认5分钟）
                 .entryTtl(Duration.ofMinutes(5))
                 // key使用字符串序列化
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
-                // value使用JSON序列化
-                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()))
+                // value使用JSON序列化（支持 Java 8 日期时间）
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serializer))
                 // 不缓存null值
                 .disableCachingNullValues();
         

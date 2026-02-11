@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS note (
     content TEXT COMMENT '内容摘要',
     cover_image VARCHAR(500) COMMENT '封面图URL',
     category_id BIGINT COMMENT '分类ID',
-    visibility TINYINT DEFAULT 0 COMMENT '可见性：0公开 1仅订阅者 2付费',
+    visibility TINYINT DEFAULT 0 COMMENT '可见性：0公开 1仅订阅可见 2仅付费可见 3订阅后付费可见 4仅自己可见',
     price DECIMAL(10,2) DEFAULT 0.00 COMMENT '价格（付费笔记）',
     original_file_id BIGINT COMMENT '原文件ID（file-service）',
     pdf_file_id BIGINT COMMENT 'PDF文件ID（预览用）',

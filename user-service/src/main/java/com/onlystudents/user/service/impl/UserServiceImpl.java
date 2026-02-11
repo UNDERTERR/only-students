@@ -144,7 +144,7 @@ private final UserMapper userMapper;
     }
     
     @Override
-    @Cacheable(value = "users", key = "#userId", unless = "#result == null")
+    @Cacheable(value = "users", key = "#p0", unless = "#result == null")
     public UserResponse getUserById(Long userId) {
         User user = userMapper.selectById(userId);
         if (user == null) {

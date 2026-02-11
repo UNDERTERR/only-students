@@ -1,6 +1,8 @@
 package com.onlystudents.note.controller;
 
+import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
+import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.common.constants.CommonConstants;
 import com.onlystudents.note.dto.CreateNoteRequest;
 import com.onlystudents.note.dto.NoteDTO;
@@ -11,12 +13,14 @@ import com.onlystudents.note.mapper.NoteMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequestMapping("/note")
 @RequiredArgsConstructor
@@ -61,10 +65,42 @@ public class NoteController {
 
     @PostMapping("/{noteId}/publish")
     @Operation(summary = "发布笔记", description = "将草稿状态笔记发布")
-    public Result<Void> publishNote(@PathVariable(name = "noteId") Long noteId,
-                                    @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId) {
-        noteService.publishNote(noteId, userId);
-        return Result.success();
+    public Result<Void> publishNote(@PathVariable("noteId") Long noteId,
+                                    @RequestHeader(value = CommonConstants.USER_ID_HEADER, required = false) String userIdStr) {
+        log.info("收到发布笔记请求: noteId={}, userIdStr={}", noteId, userIdStr);
+        
+        // 手动转换 userId
+        Long userId = null;
+        if (userIdStr != null && !userIdStr.isEmpty()) {
+            try {
+                userId = Long.parseLong(userIdStr);
+            } catch (NumberFormatException e) {
+                log.warn("发布笔记失败: userId格式错误: {}", userIdStr);
+                return Result.error("用户ID格式错误");
+            }
+        }
+
+        if (userId == null) {
+            log.warn("发布笔记失败: userId为空");
+            return Result.error("请先登录");
+        }
+
+        if (noteId == null) {
+            log.warn("发布笔记失败: noteId为空");
+            return Result.error("笔记ID不能为空");
+        }
+
+        try {
+            noteService.publishNote(noteId, userId);
+            log.info("发布笔记成功: noteId={}", noteId);
+            return Result.success();
+        } catch (BusinessException e) {
+            log.error("发布笔记业务错误: noteId={}, error={}", noteId, e.getMessage());
+            return Result.error(e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            log.error("发布笔记系统错误: noteId={}", noteId, e);
+            return Result.error("发布失败: " + e.getMessage());
+        }
     }
 
     @GetMapping("/hot")

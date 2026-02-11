@@ -53,12 +53,12 @@ public class NoteServiceImpl implements NoteService {
         note.setCommentCount(0);
         note.setShareCount(0);
         note.setHotScore(0.0);
-        
+
         noteMapper.insert(note);
-        
+
         return convertToDTO(note);
     }
-    
+
     @Override
     @CacheEvict(value = "notes", key = "#p0")
     public NoteDTO updateNote(Long noteId, UpdateNoteRequest request, Long userId) {
@@ -79,7 +79,7 @@ public class NoteServiceImpl implements NoteService {
 
         return convertToDTO(note);
     }
-    
+
     @Override
     @CacheEvict(value = "notes", key = "#p0")
     public void deleteNote(Long noteId, Long userId) {
@@ -98,7 +98,7 @@ public class NoteServiceImpl implements NoteService {
         // 清除热门和最新列表缓存
         clearListCache();
     }
-    
+
     @Override
     @Cacheable(value = "notes", key = "#p0", unless = "#result == null")
     public NoteDTO getNoteById(Long noteId) {
@@ -108,22 +108,30 @@ public class NoteServiceImpl implements NoteService {
         }
         return convertToDTO(note);
     }
-    
+
     @Override
     public NoteDTO getNoteDetail(Long noteId, Long userId) {
         Note note = noteMapper.selectById(noteId);
         if (note == null) {
             throw new BusinessException(ResultCode.NOTE_NOT_FOUND);
         }
-        
+
         // 检查可见性
+        // visibility: 0-公开, 1-仅订阅可见, 2-仅付费可见, 3-订阅后付费可见, 4-仅自己可见
         if (note.getStatus() != 2) { // 未发布
             if (!note.getUserId().equals(userId)) {
                 throw new BusinessException(ResultCode.NOTE_NOT_FOUND);
             }
         }
-        
-        if (note.getVisibility() > 0 && !note.getUserId().equals(userId)) {
+
+        // 仅自己可见
+        if (note.getVisibility() == 4 && !note.getUserId().equals(userId)) {
+            throw new BusinessException(ResultCode.NOTE_NOT_FOUND);
+        }
+
+        // 需要订阅或付费的可见性（1, 2, 3）
+        if ((note.getVisibility() == 1 || note.getVisibility() == 2 || note.getVisibility() == 3) 
+                && !note.getUserId().equals(userId)) {
             // 通过Feign调用subscription-service检查是否订阅
             try {
                 Result<Boolean> result = subscriptionFeignClient.checkSubscription(note.getUserId(), userId);
@@ -135,13 +143,13 @@ public class NoteServiceImpl implements NoteService {
                 throw new BusinessException(ResultCode.SUBSCRIPTION_REQUIRED);
             }
         }
-        
+
         // 增加浏览量
         incrementViewCount(noteId);
-        
+
         return convertToDTO(note);
     }
-    
+
     @Override
     @Cacheable(value = "hotNotes", key = "#p0", unless = "#result == null || #result.isEmpty()")
     public List<NoteDTO> getHotNotes(Integer limit) {
@@ -151,7 +159,7 @@ public class NoteServiceImpl implements NoteService {
         List<Note> notes = noteMapper.selectHotNotes(limit);
         return notes.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
-    
+
     @Override
     @Cacheable(value = "latestNotes", key = "#p0", unless = "#result == null || #result.isEmpty()")
     public List<NoteDTO> getLatestNotes(Integer limit) {
@@ -161,23 +169,23 @@ public class NoteServiceImpl implements NoteService {
         List<Note> notes = noteMapper.selectLatestNotes(limit);
         return notes.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
-    
+
     @Override
     public List<NoteDTO> getUserNotes(Long userId) {
         LambdaQueryWrapper<Note> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Note::getUserId, userId);
         wrapper.ne(Note::getStatus, 4); // 排除已删除
         wrapper.orderByDesc(Note::getCreatedAt);
-        
+
         List<Note> notes = noteMapper.selectList(wrapper);
         return notes.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
-    
+
     @Override
     public void incrementViewCount(Long noteId) {
         noteMapper.incrementViewCount(noteId);
     }
-    
+
     @Override
     @CacheEvict(value = "notes", key = "#p0")
     public void publishNote(Long noteId, Long userId) {
@@ -220,7 +228,7 @@ public class NoteServiceImpl implements NoteService {
             log.warn("清除缓存失败", e);
         }
     }
-    
+
     private NoteDTO convertToDTO(Note note) {
         NoteDTO dto = new NoteDTO();
         BeanUtils.copyProperties(note, dto);

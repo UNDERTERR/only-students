@@ -43,6 +43,14 @@ public class AuthFilter implements GlobalFilter, Ordered {
         
         // 检查是否是白名单路径
         if (isWhitelistPath(path)) {
+            // 即使是白名单，如果前端传了 X-User-Id，也要保留
+            String userIdFromHeader = request.getHeaders().getFirst("X-User-Id");
+            if (userIdFromHeader != null && !userIdFromHeader.isEmpty()) {
+                ServerHttpRequest mutatedRequest = request.mutate()
+                        .header("X-User-Id", userIdFromHeader)
+                        .build();
+                return chain.filter(exchange.mutate().request(mutatedRequest).build());
+            }
             return chain.filter(exchange);
         }
         
@@ -64,10 +72,15 @@ public class AuthFilter implements GlobalFilter, Ordered {
             String userId = jwt.getClaim("userId").asString();
             String username = jwt.getSubject();
             
+            // 如果JWT中没有userId，尝试从前端header获取
+            if (userId == null || userId.isEmpty()) {
+                userId = request.getHeaders().getFirst("X-User-Id");
+            }
+            
             // 将用户信息添加到请求头
             ServerHttpRequest mutatedRequest = request.mutate()
-                    .header("X-User-Id", userId)
-                    .header("X-Username", username)
+                    .header("X-User-Id", userId != null ? userId : "")
+                    .header("X-Username", username != null ? username : "")
                     .build();
             
             return chain.filter(exchange.mutate().request(mutatedRequest).build());
