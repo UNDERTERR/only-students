@@ -1,10 +1,6 @@
 package com.onlystudents.user.service;
 
-import com.onlystudents.user.dto.LoginRequest;
-import com.onlystudents.user.dto.RegisterRequest;
-import com.onlystudents.user.dto.UpdateUserRequest;
-import com.onlystudents.user.dto.LoginResponse;
-import com.onlystudents.user.dto.UserResponse;
+import com.onlystudents.user.dto.*;
 
 import java.util.List;
 

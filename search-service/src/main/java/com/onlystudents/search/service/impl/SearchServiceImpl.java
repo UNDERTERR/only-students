@@ -2,11 +2,11 @@ package com.onlystudents.search.service.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery.Builder;
+import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
-
 import co.elastic.clients.elasticsearch.core.search.HighlightField;
-
 import com.onlystudents.search.client.UserClient;
 import com.onlystudents.search.dto.NoteSearchResult;
 import com.onlystudents.search.dto.SearchResult;
@@ -19,8 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery.Builder;
-import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 
 import java.io.IOException;
 import java.util.*;
@@ -50,7 +48,15 @@ public class SearchServiceImpl implements SearchService {
             SearchRequest.Builder requestBuilder = new SearchRequest.Builder()
                     .index("notes")
                     .from((page - 1) * size)
-                    .size(size);
+                    .size(size)
+                    .source(s -> s.filter(f -> f.includes(
+                            "noteId", "title", "content", "tags", "categoryId", "categoryName",
+                            "userId", "authorUsername", "authorNickname", "authorAvatar",
+                            "educationLevel", "schoolId", "schoolName", "subject",
+                            "visibility", "price", "status", "hotScore",
+                            "viewCount", "likeCount", "favoriteCount", "commentCount", "shareCount",
+                            "rating", "ratingCount", "coverImage", "publishTime", "createdAt"
+                    )));
 
             // 构建 bool 查询
             Builder boolQuery = new Builder();
@@ -59,7 +65,7 @@ public class SearchServiceImpl implements SearchService {
             if (keyword != null && !keyword.trim().isEmpty()) {
                 boolQuery.must(m -> m
                         .multiMatch(mm -> mm
-                                .fields("title^3", "content^2", "tags", "username", "nickname")
+                                .fields("title^3", "content^2", "tags", "authorUsername", "authorNickname")
                                 .query(keyword)
                                 .type(TextQueryType.BestFields)
                         )
@@ -125,7 +131,7 @@ public class SearchServiceImpl implements SearchService {
                         requestBuilder.sort(s -> s.field(f -> f.field("price").order(SortOrder.Desc)));
                         break;
                     case 6: // 评分最高
-                        requestBuilder.sort(s -> s.field(f -> f.field("rating").order(SortOrder.Desc)));
+                        requestBuilder.sort(s -> s.field(f -> f.field("ratingAvg").order(SortOrder.Desc)));
                         break;
                     default:
                         requestBuilder.sort(s -> s.score(sc -> sc.order(SortOrder.Desc)));
@@ -140,7 +146,7 @@ public class SearchServiceImpl implements SearchService {
                     NoteDocument.class
             );
             if (response!=null){
-                log.info("elastic执行了！！！");
+                log.info("response:",response);
             }
             // 处理结果
             List<NoteSearchResult> results = response.hits().hits().stream()
@@ -179,6 +185,9 @@ public class SearchServiceImpl implements SearchService {
             searchResult.setSize(size);
             searchResult.setTotalPages((int) Math.ceil((double) searchResult.getTotal() / size));
 
+            if (searchResult!=null){
+                log.info("搜索结果：",searchResult);
+            }
             // 记录搜索历史（异步）
             recordSearchHistory(keyword);
 

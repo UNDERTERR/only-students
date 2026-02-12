@@ -1,6 +1,5 @@
 package com.onlystudents.rating.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;

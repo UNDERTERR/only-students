@@ -1,9 +1,12 @@
 package com.onlystudents.note.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
+import com.onlystudents.common.utils.JsonSerializerUtils;
 import com.onlystudents.note.client.SubscriptionFeignClient;
 import com.onlystudents.note.dto.CreateNoteRequest;
 import com.onlystudents.note.dto.NoteDTO;
@@ -17,7 +20,6 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -202,14 +204,14 @@ public class NoteServiceImpl implements NoteService {
         note.setPublishTime(LocalDateTime.now());
         noteMapper.updateById(note);
 
-        // 异步发送到MQ，由NoteSyncListener处理ES同步
         try {
+
             rabbitTemplate.convertAndSend("note.exchange", "note.sync", note);
-            log.info("笔记 [{}] 已发布，同步消息已发送到MQ", noteId);
+            log.info("笔记 [{}] 已发布，同步消息已发送到MQ", noteId+":"+note);
         } catch (Exception e) {
             log.error("发送笔记同步消息失败: noteId={}", noteId, e);
             // 可以选择抛异常回滚，或者继续执行（最终一致性）
-            // throw new BusinessException(ResultCode.SYSTEM_ERROR, "同步失败");
+            // throw new BusinessException(ResultCode.SYSTEM_ERROR, "同步消息发送失败");
         }
 
         // 清除列表缓存

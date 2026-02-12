@@ -1,13 +1,11 @@
 package com.onlystudents.search.listener;
 
-import com.onlystudents.search.entity.NoteDocument;
-import com.onlystudents.search.event.UserInfoUpdateEvent;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.elasticsearch.core.UpdateRequest;
-import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
-import com.onlystudents.search.config.RabbitMQConfig;
+import com.onlystudents.search.config.RabbitConfig;
+import com.onlystudents.search.entity.NoteDocument;
+import com.onlystudents.search.event.UserInfoUpdateEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -27,7 +25,7 @@ public class UserInfoUpdateEventListener {
     /**
      * 监听用户信息更新事件
      */
-     @RabbitListener(queues = RabbitMQConfig.USER_INFO_UPDATE_QUEUE)
+     @RabbitListener(queues = RabbitConfig.USER_INFO_UPDATE_QUEUE)
     public void handleUserInfoUpdated(UserInfoUpdateEvent event) {
         log.info("收到用户信息更新事件: userId={}, username={}, nickname={}", 
                 event.getUserId(), event.getUsername(), event.getNickname());

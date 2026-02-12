@@ -6,10 +6,8 @@ import co.elastic.clients.elasticsearch.core.IndexRequest;
 import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.search.client.NoteClient;
-import com.onlystudents.search.client.UserClient;
-import com.onlystudents.search.entity.NoteDocument;
 import com.onlystudents.search.dto.NoteResponse;
-import com.onlystudents.search.dto.UserResponse;
+import com.onlystudents.search.entity.NoteDocument;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -102,8 +100,8 @@ public class ElasticsearchIndexService {
                 .properties("shareCount", p -> p.integer(i -> i))
                 .properties("ratingAvg", p -> p.float_(f -> f))
                 .properties("coverImage", p -> p.keyword(k -> k))
-                .properties("publishTime", p -> p.date(d -> d.format("yyyy-MM-dd'T'HH:mm:ss")))
-                .properties("createdAt", p -> p.date(d -> d.format("yyyy-MM-dd'T'HH:mm:ss")))
+                .properties("publishTime", p -> p.date(d -> d))
+                .properties("createdAt", p -> p.date(d -> d))
         );
     }
     

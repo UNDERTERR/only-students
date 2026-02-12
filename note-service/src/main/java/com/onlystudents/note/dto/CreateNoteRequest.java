@@ -9,7 +9,13 @@ import java.util.List;
 public class CreateNoteRequest {
     
     private String title;
-    
+
+    private String authorUsername;
+
+    private String authorNickname;
+
+    private String authorAvatar;
+
     private String content;
     
     private String coverImage;

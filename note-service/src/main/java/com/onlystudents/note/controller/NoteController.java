@@ -1,15 +1,14 @@
 package com.onlystudents.note.controller;
 
+import com.onlystudents.common.constants.CommonConstants;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
-import com.onlystudents.common.result.ResultCode;
-import com.onlystudents.common.constants.CommonConstants;
 import com.onlystudents.note.dto.CreateNoteRequest;
 import com.onlystudents.note.dto.NoteDTO;
 import com.onlystudents.note.dto.UpdateNoteRequest;
 import com.onlystudents.note.entity.Note;
-import com.onlystudents.note.service.NoteService;
 import com.onlystudents.note.mapper.NoteMapper;
+import com.onlystudents.note.service.NoteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

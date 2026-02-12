@@ -1,6 +1,11 @@
 package com.onlystudents.search.config;
 
+import com.onlystudents.common.utils.JsonSerializerUtils;
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -9,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
  * 定义交换机、队列和绑定关系
  */
 @Configuration
-public class RabbitMQConfig {
+public class RabbitConfig {
     
     // 用户信息变更交换机
     public static final String USER_INFO_EXCHANGE = "user.info.exchange";
@@ -40,5 +45,20 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(userInfoUpdateQueue())
                 .to(userInfoExchange())
                 .with(USER_INFO_UPDATE_ROUTING_KEY);
+    }
+
+
+    @Bean
+    public MessageConverter jsonMessageConverter() {
+        return new Jackson2JsonMessageConverter(JsonSerializerUtils.getGlobalObjectMapper());
+    }
+
+
+    @Bean
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
+        RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
+        // 关键1：给生产者绑定JSON转换器
+        rabbitTemplate.setMessageConverter(jsonMessageConverter());
+        return rabbitTemplate;
     }
 }

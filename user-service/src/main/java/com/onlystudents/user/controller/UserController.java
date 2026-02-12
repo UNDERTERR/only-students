@@ -1,12 +1,8 @@
 package com.onlystudents.user.controller;
 
-import com.onlystudents.common.result.Result;
 import com.onlystudents.common.constants.CommonConstants;
-import com.onlystudents.user.dto.LoginRequest;
-import com.onlystudents.user.dto.RegisterRequest;
-import com.onlystudents.user.dto.UpdateUserRequest;
-import com.onlystudents.user.dto.LoginResponse;
-import com.onlystudents.user.dto.UserResponse;
+import com.onlystudents.common.result.Result;
+import com.onlystudents.user.dto.*;
 import com.onlystudents.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

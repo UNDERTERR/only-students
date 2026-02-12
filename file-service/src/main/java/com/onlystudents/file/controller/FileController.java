@@ -1,7 +1,7 @@
 package com.onlystudents.file.controller;
 
-import com.onlystudents.common.result.Result;
 import com.onlystudents.common.constants.CommonConstants;
+import com.onlystudents.common.result.Result;
 import com.onlystudents.file.dto.FileUploadResult;
 import com.onlystudents.file.enums.FileCategory;
 import com.onlystudents.file.service.FileService;

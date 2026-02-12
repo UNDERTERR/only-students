@@ -1,7 +1,6 @@
 package com.onlystudents.search.client;
 
 import com.onlystudents.common.result.Result;
-import com.onlystudents.common.result.Result;
 import com.onlystudents.search.dto.NoteResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;

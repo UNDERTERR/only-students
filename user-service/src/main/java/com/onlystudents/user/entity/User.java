@@ -1,7 +1,6 @@
 package com.onlystudents.user.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
-import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;

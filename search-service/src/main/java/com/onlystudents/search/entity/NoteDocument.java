@@ -1,6 +1,7 @@
 package com.onlystudents.search.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -12,6 +13,7 @@ import java.util.List;
  * 对应 Elasticsearch 中的索引
  */
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class NoteDocument {
     
     private Long noteId;
@@ -40,10 +42,10 @@ public class NoteDocument {
     private Double rating;
     private Integer ratingCount;
     private String coverImage;
-    
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime publishTime;
-    
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime createdAt;
 }

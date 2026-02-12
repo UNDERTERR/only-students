@@ -1,7 +1,7 @@
 package com.onlystudents.search.event;
 
-import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.Data;
 
 import java.time.Instant;
 

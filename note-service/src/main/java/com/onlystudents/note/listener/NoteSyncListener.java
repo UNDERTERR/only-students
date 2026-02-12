@@ -1,11 +1,12 @@
 package com.onlystudents.note.listener;
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch.core.IndexRequest;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.note.client.UserFeignClient;
 import com.onlystudents.note.elasticsearch.NoteDocument;
 import com.onlystudents.note.entity.Note;
 import com.onlystudents.note.mapper.NoteCategoryMapper;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -19,6 +20,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class NoteSyncListener {
 
+    private final ElasticsearchClient elasticsearchClient;
     private final UserFeignClient userFeignClient;
     private final NoteCategoryMapper noteCategoryMapper;
     
@@ -53,8 +55,10 @@ public class NoteSyncListener {
                 log.warn("获取用户信息失败，使用默认信息: userId={}", note.getUserId(), e);
             }
             
-            document.setUsername(username);
-            document.setNickname(nickname);
+            // 使用与search-service一致的字段名
+            document.setAuthorUsername(username);
+            document.setAuthorNickname(nickname);
+            document.setAuthorAvatar(avatar);
             
             // 查询分类名称
             String categoryName = "未分类";
@@ -69,9 +73,19 @@ public class NoteSyncListener {
                 }
             }
             document.setCategoryName(categoryName);
+            
+            // 写入Elasticsearch
+            IndexRequest<NoteDocument> indexRequest = IndexRequest.of(i -> i
+                    .index("notes")
+                    .id(String.valueOf(note.getId()))
+                    .document(document)
+            );
+            elasticsearchClient.index(indexRequest);
+            
             log.info("笔记同步到ES成功: noteId={}", note.getId());
         } catch (Exception e) {
             log.error("同步笔记到ES失败: noteId={}", note.getId(), e);
+            // TODO: 可以发送到死信队列或记录到数据库重试
         }
     }
 }

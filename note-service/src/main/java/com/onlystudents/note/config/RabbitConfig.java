@@ -1,17 +1,25 @@
 package com.onlystudents.note.config;
 
+
+import com.onlystudents.common.utils.JsonSerializerUtils;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
 /**
  * RabbitMQ配置类
  * 定义笔记同步队列、交换机和绑定关系
  */
 @Configuration
 public class RabbitConfig {
+
     /**
      * 笔记同步队列
      */
@@ -70,5 +78,23 @@ public class RabbitConfig {
     @Bean
     public Queue shareCreatedQueue() {
         return new Queue("share.created.queue", true);
+    }
+    
+    /**
+     * JSON消息转换器
+     * 用于将对象序列化为JSON格式发送，支持Java 8日期时间类型
+     */
+    @Bean
+    public MessageConverter jsonMessageConverter() {
+        return new Jackson2JsonMessageConverter(JsonSerializerUtils.getGlobalObjectMapper());
+    }
+
+
+    @Bean
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
+        RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
+        // 关键1：给生产者绑定JSON转换器
+        rabbitTemplate.setMessageConverter(jsonMessageConverter());
+        return rabbitTemplate;
     }
 }
