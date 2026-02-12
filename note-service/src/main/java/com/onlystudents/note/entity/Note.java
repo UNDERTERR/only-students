@@ -43,6 +43,9 @@ public class Note {
 
     private Integer status;
 
+    @TableLogic
+    private Integer deleted;
+
     private Integer viewCount;
 
     private Integer likeCount;

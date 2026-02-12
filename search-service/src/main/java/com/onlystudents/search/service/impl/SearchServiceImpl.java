@@ -118,6 +118,9 @@ public class SearchServiceImpl implements SearchService {
                 }
             }
 
+            // 只搜索未删除的笔记
+            boolQuery.filter(f -> f.term(t -> t.field("deleted").value(0)));
+
             // 只搜索已发布的笔记
             boolQuery.filter(f -> f.term(t -> t.field("status").value(2)));
 

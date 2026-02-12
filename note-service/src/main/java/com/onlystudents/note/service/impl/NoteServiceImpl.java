@@ -94,8 +94,16 @@ public class NoteServiceImpl implements NoteService {
             throw new BusinessException(ResultCode.FORBIDDEN);
         }
 
-        note.setStatus(4); // 已删除
-        noteMapper.updateById(note);
+        // 使用 MyBatis Plus 逻辑删除，会自动设置 deleted=1
+        noteMapper.deleteById(noteId);
+
+        // 发送MQ消息通知删除ES文档
+        try {
+            rabbitTemplate.convertAndSend("note.exchange", "note.delete", noteId);
+            log.info("笔记 [{}] 已删除，删除消息已发送到MQ", noteId);
+        } catch (Exception e) {
+            log.error("发送笔记删除消息失败: noteId={}", noteId, e);
+        }
 
         // 清除热门和最新列表缓存
         clearListCache();
@@ -168,6 +176,7 @@ public class NoteServiceImpl implements NoteService {
         if (limit == null || limit > 100) {
             limit = 20;
         }
+        log.warn("获取首页数据");
         List<Note> notes = noteMapper.selectLatestNotes(limit);
         return notes.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
@@ -176,7 +185,7 @@ public class NoteServiceImpl implements NoteService {
     public List<NoteDTO> getUserNotes(Long userId) {
         LambdaQueryWrapper<Note> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Note::getUserId, userId);
-        wrapper.ne(Note::getStatus, 4); // 排除已删除
+        // @TableLogic 会自动过滤 deleted=1 的记录
         wrapper.orderByDesc(Note::getCreatedAt);
 
         List<Note> notes = noteMapper.selectList(wrapper);
