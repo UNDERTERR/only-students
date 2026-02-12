@@ -4,6 +4,7 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.ElasticsearchTransport;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
+import com.onlystudents.common.utils.JsonSerializerUtils;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,18 +13,18 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class ElasticsearchConfig {
-    
+
     @Value("${spring.elasticsearch.uris:http://localhost:9200}")
     private String elasticsearchUri;
-    
+
     @Bean
     public ElasticsearchClient elasticsearchClient() {
         RestClient restClient = RestClient.builder(
                 HttpHost.create(elasticsearchUri)).build();
-        
+
         ElasticsearchTransport transport = new RestClientTransport(
-                restClient, new JacksonJsonpMapper());
-        
+                restClient, new JacksonJsonpMapper(JsonSerializerUtils.getGlobalObjectMapper()));
+
         return new ElasticsearchClient(transport);
     }
 }

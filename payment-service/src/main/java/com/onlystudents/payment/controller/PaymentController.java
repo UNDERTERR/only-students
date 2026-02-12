@@ -1,8 +1,11 @@
 package com.onlystudents.payment.controller;
 
-import com.onlystudents.common.result.Result;
 import com.onlystudents.common.constants.CommonConstants;
-import com.onlystudents.payment.dto.*;
+import com.onlystudents.common.result.Result;
+import com.onlystudents.payment.dto.CreateOrderRequest;
+import com.onlystudents.payment.dto.OrderDTO;
+import com.onlystudents.payment.dto.PayCallbackRequest;
+import com.onlystudents.payment.dto.WalletDTO;
 import com.onlystudents.payment.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

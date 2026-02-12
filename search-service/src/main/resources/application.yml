@@ -37,6 +37,21 @@ spring:
   elasticsearch:
     uris: http://localhost:9200
 
+# RabbitMQ
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin
+    password: admin123
+    virtual-host: /
+    listener:
+      simple:
+        acknowledge-mode: manual
+        retry:
+          enabled: true
+          initial-delay: 1000
+          max-attempts: 3
+
 # JWT
 jwt:
   secret: OnlyStudentsSecretKey2024

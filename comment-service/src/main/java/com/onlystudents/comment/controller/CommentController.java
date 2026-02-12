@@ -1,10 +1,10 @@
 package com.onlystudents.comment.controller;
 
-import com.onlystudents.common.result.Result;
-import com.onlystudents.common.constants.CommonConstants;
 import com.onlystudents.comment.dto.CommentDTO;
 import com.onlystudents.comment.dto.CreateCommentRequest;
 import com.onlystudents.comment.service.CommentService;
+import com.onlystudents.common.constants.CommonConstants;
+import com.onlystudents.common.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

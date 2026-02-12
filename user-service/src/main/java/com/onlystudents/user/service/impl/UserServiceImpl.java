@@ -4,12 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.common.utils.JwtUtils;
-import com.onlystudents.user.dto.request.LoginRequest;
-import com.onlystudents.user.dto.request.RegisterRequest;
-import com.onlystudents.user.dto.response.LoginResponse;
-import com.onlystudents.user.dto.response.UserResponse;
+import com.onlystudents.user.dto.*;
 import com.onlystudents.user.entity.User;
 import com.onlystudents.user.entity.UserDevice;
+import com.onlystudents.user.event.UserEventPublisher;
 import com.onlystudents.user.mapper.UserDeviceMapper;
 import com.onlystudents.user.mapper.UserMapper;
 import com.onlystudents.user.service.UserService;
@@ -24,16 +22,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     
-    private final UserMapper userMapper;
+private final UserMapper userMapper;
     private final UserDeviceMapper deviceMapper;
     private final JwtUtils jwtUtils;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final UserEventPublisher userEventPublisher;
     
     private static final int MAX_DEVICES = 3;
     
@@ -70,7 +70,6 @@ public class UserServiceImpl implements UserService {
         if (user == null) {
             throw new BusinessException(ResultCode.USERNAME_PASSWORD_ERROR);
         }
-        
         // 检查状态
         if (user.getStatus() != 1) {
             throw new BusinessException(ResultCode.USER_DISABLED);
@@ -141,7 +140,7 @@ public class UserServiceImpl implements UserService {
     }
     
     @Override
-    @Cacheable(value = "users", key = "#userId", unless = "#result == null")
+    @Cacheable(value = "users", key = "#p0", unless = "#result == null")
     public UserResponse getUserById(Long userId) {
         User user = userMapper.selectById(userId);
         if (user == null) {
@@ -153,6 +152,50 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponse getCurrentUser(Long userId) {
         return getUserById(userId);
+    }
+    
+    @Override
+    @Transactional
+    @CacheEvict(value = "users", key = "#p0")
+    public UserResponse updateUser(Long userId, UpdateUserRequest request) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.USER_NOT_FOUND);
+        }
+        
+        // 更新非空字段
+        if (request.getNickname() != null) {
+            user.setNickname(request.getNickname());
+        }
+        if (request.getAvatar() != null) {
+            user.setAvatar(request.getAvatar());
+        }
+        if (request.getBio() != null) {
+            user.setBio(request.getBio());
+        }
+        if (request.getEmail() != null) {
+            user.setEmail(request.getEmail());
+        }
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone());
+        }
+        if (request.getEducationLevel() != null) {
+            user.setEducationLevel(request.getEducationLevel());
+        }
+        if (request.getSchoolId() != null) {
+            user.setSchoolId(request.getSchoolId());
+        }
+        if (request.getSchoolName() != null) {
+            user.setSchoolName(request.getSchoolName());
+        }
+        
+user.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateById(user);
+        
+        // 发布用户信息更新事件
+        userEventPublisher.publishUserInfoUpdated(user);
+        
+        return convertToResponse(user);
     }
     
     @Override
@@ -173,6 +216,19 @@ public class UserServiceImpl implements UserService {
         UserDevice device = new UserDevice();
         device.setStatus(0);
         deviceMapper.update(device, wrapper);
+    }
+    
+    @Override
+    public List<UserResponse> searchUsers(String keyword, Integer educationLevel, Integer isCreator, Integer page, Integer size) {
+        log.info("搜索用户：keyword={}, educationLevel={}, isCreator={}, page={}, size={}",
+                keyword, educationLevel, isCreator, page, size);
+        
+        // 调用 Mapper 进行 MySQL 搜索
+        List<User> users = userMapper.searchUsers(keyword, educationLevel, isCreator, (page - 1) * size, size);
+        
+        return users.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
     }
     
     private UserResponse convertToResponse(User user) {

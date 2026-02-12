@@ -2,6 +2,7 @@ package com.onlystudents.message.controller;
 
 import com.onlystudents.common.constants.CommonConstants;
 import com.onlystudents.common.result.Result;
+import com.onlystudents.message.dto.SendMessageRequest;
 import com.onlystudents.message.entity.Conversation;
 import com.onlystudents.message.entity.Message;
 import com.onlystudents.message.service.MessageService;
@@ -23,9 +24,8 @@ public class MessageController {
     @PostMapping("/send")
     @Operation(summary = "发送消息", description = "向指定用户发送私信")
     public Result<Message> sendMessage(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
-                                       @RequestParam(name = "receiverId") Long receiverId,
-                                       @RequestParam(name = "content") String content) {
-        return Result.success(messageService.sendMessage(userId, receiverId, content));
+                                       @RequestBody SendMessageRequest request) {
+        return Result.success(messageService.sendMessage(userId, request.getReceiverId(), request.getContent()));
     }
     
     @GetMapping("/conversations")

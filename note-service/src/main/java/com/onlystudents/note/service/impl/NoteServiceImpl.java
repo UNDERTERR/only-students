@@ -1,16 +1,18 @@
 package com.onlystudents.note.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
+import com.onlystudents.common.utils.JsonSerializerUtils;
 import com.onlystudents.note.client.SubscriptionFeignClient;
 import com.onlystudents.note.dto.CreateNoteRequest;
 import com.onlystudents.note.dto.NoteDTO;
 import com.onlystudents.note.dto.UpdateNoteRequest;
 import com.onlystudents.note.entity.Note;
 import com.onlystudents.note.mapper.NoteMapper;
-import com.onlystudents.note.service.NoteSearchService;
 import com.onlystudents.note.service.NoteService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +20,6 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -32,7 +33,6 @@ import java.util.stream.Collectors;
 public class NoteServiceImpl implements NoteService {
 
     private final NoteMapper noteMapper;
-    private final NoteSearchService noteSearchService;
     private final SubscriptionFeignClient subscriptionFeignClient;
     private final RabbitTemplate rabbitTemplate;
     private final StringRedisTemplate redisTemplate;
@@ -55,12 +55,12 @@ public class NoteServiceImpl implements NoteService {
         note.setCommentCount(0);
         note.setShareCount(0);
         note.setHotScore(0.0);
-        
+
         noteMapper.insert(note);
-        
+
         return convertToDTO(note);
     }
-    
+
     @Override
     @CacheEvict(value = "notes", key = "#p0")
     public NoteDTO updateNote(Long noteId, UpdateNoteRequest request, Long userId) {
@@ -81,7 +81,7 @@ public class NoteServiceImpl implements NoteService {
 
         return convertToDTO(note);
     }
-    
+
     @Override
     @CacheEvict(value = "notes", key = "#p0")
     public void deleteNote(Long noteId, Long userId) {
@@ -100,7 +100,7 @@ public class NoteServiceImpl implements NoteService {
         // 清除热门和最新列表缓存
         clearListCache();
     }
-    
+
     @Override
     @Cacheable(value = "notes", key = "#p0", unless = "#result == null")
     public NoteDTO getNoteById(Long noteId) {
@@ -110,22 +110,30 @@ public class NoteServiceImpl implements NoteService {
         }
         return convertToDTO(note);
     }
-    
+
     @Override
     public NoteDTO getNoteDetail(Long noteId, Long userId) {
         Note note = noteMapper.selectById(noteId);
         if (note == null) {
             throw new BusinessException(ResultCode.NOTE_NOT_FOUND);
         }
-        
+
         // 检查可见性
+        // visibility: 0-公开, 1-仅订阅可见, 2-仅付费可见, 3-订阅后付费可见, 4-仅自己可见
         if (note.getStatus() != 2) { // 未发布
             if (!note.getUserId().equals(userId)) {
                 throw new BusinessException(ResultCode.NOTE_NOT_FOUND);
             }
         }
-        
-        if (note.getVisibility() > 0 && !note.getUserId().equals(userId)) {
+
+        // 仅自己可见
+        if (note.getVisibility() == 4 && !note.getUserId().equals(userId)) {
+            throw new BusinessException(ResultCode.NOTE_NOT_FOUND);
+        }
+
+        // 需要订阅或付费的可见性（1, 2, 3）
+        if ((note.getVisibility() == 1 || note.getVisibility() == 2 || note.getVisibility() == 3) 
+                && !note.getUserId().equals(userId)) {
             // 通过Feign调用subscription-service检查是否订阅
             try {
                 Result<Boolean> result = subscriptionFeignClient.checkSubscription(note.getUserId(), userId);
@@ -137,13 +145,13 @@ public class NoteServiceImpl implements NoteService {
                 throw new BusinessException(ResultCode.SUBSCRIPTION_REQUIRED);
             }
         }
-        
+
         // 增加浏览量
         incrementViewCount(noteId);
-        
+
         return convertToDTO(note);
     }
-    
+
     @Override
     @Cacheable(value = "hotNotes", key = "#p0", unless = "#result == null || #result.isEmpty()")
     public List<NoteDTO> getHotNotes(Integer limit) {
@@ -153,7 +161,7 @@ public class NoteServiceImpl implements NoteService {
         List<Note> notes = noteMapper.selectHotNotes(limit);
         return notes.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
-    
+
     @Override
     @Cacheable(value = "latestNotes", key = "#p0", unless = "#result == null || #result.isEmpty()")
     public List<NoteDTO> getLatestNotes(Integer limit) {
@@ -163,23 +171,23 @@ public class NoteServiceImpl implements NoteService {
         List<Note> notes = noteMapper.selectLatestNotes(limit);
         return notes.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
-    
+
     @Override
     public List<NoteDTO> getUserNotes(Long userId) {
         LambdaQueryWrapper<Note> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Note::getUserId, userId);
         wrapper.ne(Note::getStatus, 4); // 排除已删除
         wrapper.orderByDesc(Note::getCreatedAt);
-        
+
         List<Note> notes = noteMapper.selectList(wrapper);
         return notes.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
-    
+
     @Override
     public void incrementViewCount(Long noteId) {
         noteMapper.incrementViewCount(noteId);
     }
-    
+
     @Override
     @CacheEvict(value = "notes", key = "#p0")
     public void publishNote(Long noteId, Long userId) {
@@ -196,16 +204,14 @@ public class NoteServiceImpl implements NoteService {
         note.setPublishTime(LocalDateTime.now());
         noteMapper.updateById(note);
 
-        // 同步到Elasticsearch
-        noteSearchService.updateNote(note);
-        // 异步发送到MQ，由NoteSyncListener处理ES同步
         try {
+
             rabbitTemplate.convertAndSend("note.exchange", "note.sync", note);
-            log.info("笔记 [{}] 已发布，同步消息已发送到MQ", noteId);
+            log.info("笔记 [{}] 已发布，同步消息已发送到MQ", noteId+":"+note);
         } catch (Exception e) {
             log.error("发送笔记同步消息失败: noteId={}", noteId, e);
             // 可以选择抛异常回滚，或者继续执行（最终一致性）
-            // throw new BusinessException(ResultCode.SYSTEM_ERROR, "同步失败");
+            // throw new BusinessException(ResultCode.SYSTEM_ERROR, "同步消息发送失败");
         }
 
         // 清除列表缓存
@@ -224,7 +230,7 @@ public class NoteServiceImpl implements NoteService {
             log.warn("清除缓存失败", e);
         }
     }
-    
+
     private NoteDTO convertToDTO(Note note) {
         NoteDTO dto = new NoteDTO();
         BeanUtils.copyProperties(note, dto);

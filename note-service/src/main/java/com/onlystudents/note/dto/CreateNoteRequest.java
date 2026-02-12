@@ -9,14 +9,20 @@ import java.util.List;
 public class CreateNoteRequest {
     
     private String title;
-    
+
+    private String authorUsername;
+
+    private String authorNickname;
+
+    private String authorAvatar;
+
     private String content;
     
     private String coverImage;
     
     private Long categoryId;
     
-    private Integer visibility; // 0-公开, 1-订阅者, 2-付费
+    private Integer visibility; // 0-公开, 1-仅订阅可见, 2-仅付费可见, 3-订阅后付费可见, 4-仅自己可见
     
     private BigDecimal price;
     

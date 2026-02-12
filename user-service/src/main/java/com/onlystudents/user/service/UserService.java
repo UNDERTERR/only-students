@@ -1,9 +1,8 @@
 package com.onlystudents.user.service;
 
-import com.onlystudents.user.dto.request.LoginRequest;
-import com.onlystudents.user.dto.request.RegisterRequest;
-import com.onlystudents.user.dto.response.LoginResponse;
-import com.onlystudents.user.dto.response.UserResponse;
+import com.onlystudents.user.dto.*;
+
+import java.util.List;
 
 public interface UserService {
     
@@ -15,7 +14,14 @@ public interface UserService {
     
     UserResponse getCurrentUser(Long userId);
     
+    UserResponse updateUser(Long userId, UpdateUserRequest request);
+    
     void logout(Long userId, String deviceId);
     
     void logoutAllDevices(Long userId);
+    
+    /**
+     * 搜索用户
+     */
+    List<UserResponse> searchUsers(String keyword, Integer educationLevel, Integer isCreator, Integer page, Integer size);
 }

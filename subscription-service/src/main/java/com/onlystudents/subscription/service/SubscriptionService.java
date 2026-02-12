@@ -1,6 +1,9 @@
 package com.onlystudents.subscription.service;
 
-import com.onlystudents.subscription.dto.*;
+import com.onlystudents.subscription.dto.CreatorConfigDTO;
+import com.onlystudents.subscription.dto.SubscribeRequest;
+import com.onlystudents.subscription.dto.SubscriptionDTO;
+import com.onlystudents.subscription.dto.UpdateCreatorConfigRequest;
 
 import java.util.List;
 

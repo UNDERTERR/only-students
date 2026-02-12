@@ -1,11 +1,8 @@
 package com.onlystudents.user.controller;
 
-import com.onlystudents.common.result.Result;
 import com.onlystudents.common.constants.CommonConstants;
-import com.onlystudents.user.dto.request.LoginRequest;
-import com.onlystudents.user.dto.request.RegisterRequest;
-import com.onlystudents.user.dto.response.LoginResponse;
-import com.onlystudents.user.dto.response.UserResponse;
+import com.onlystudents.common.result.Result;
+import com.onlystudents.user.dto.*;
 import com.onlystudents.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,10 +11,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/user")
 @RequiredArgsConstructor
-@Tag(name = "用户管理", description = "用户注册、登录、登出等接口")
+@Tag(name = "用户管理", description = "用户注册、登录、更新等接口")
 public class UserController {
     
     private final UserService userService;
@@ -41,10 +40,34 @@ public class UserController {
         return Result.success(userService.getCurrentUser(userId));
     }
     
+    /**
+     * 更新用户信息（包含头像）
+     * 头像上传流程：
+     * 1. 前端先调用 POST /api/file/upload 上传图片
+     * 2. 获取返回的 fileUrl
+     * 3. 将 fileUrl 放入 request.avatar 字段调用此接口
+     */
+    @PutMapping
+    @Operation(summary = "更新用户信息", description = "更新当前登录用户的基本信息，avatar字段传入文件上传接口返回的URL")
+    public Result<UserResponse> updateUser(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
+                                          @RequestBody UpdateUserRequest request) {
+        return Result.success(userService.updateUser(userId, request));
+    }
+    
     @GetMapping("/{userId}")
     @Operation(summary = "获取指定用户信息", description = "根据用户ID获取用户公开信息")
-    public Result<UserResponse> getUserById(@PathVariable Long userId) {
+    public Result<UserResponse> getUserById(@PathVariable(name = "userId") Long userId) {
         return Result.success(userService.getUserById(userId));
+    }
+    
+    @GetMapping("/search")
+    @Operation(summary = "搜索用户", description = "根据关键词搜索用户（用户名、昵称、简介）")
+    public Result<List<UserResponse>> searchUsers(@RequestParam(name = "keyword") String keyword,
+                                                   @RequestParam(name = "educationLevel", required = false) Integer educationLevel,
+                                                   @RequestParam(name = "isCreator", required = false) Integer isCreator,
+                                                   @RequestParam(name = "page", defaultValue = "1") Integer page,
+                                                   @RequestParam(name = "size", defaultValue = "10") Integer size) {
+        return Result.success(userService.searchUsers(keyword, educationLevel, isCreator, page, size));
     }
     
     @PostMapping("/logout")

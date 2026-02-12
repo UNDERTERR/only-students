@@ -1,9 +1,7 @@
 package com.onlystudents.analytics.service;
 
-import com.onlystudents.analytics.entity.CreatorSummary;
 import com.onlystudents.analytics.entity.DailyStats;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 

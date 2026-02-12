@@ -10,9 +10,8 @@ import com.onlystudents.file.entity.FileRecord;
 import com.onlystudents.file.mapper.FileConvertTaskMapper;
 import com.onlystudents.file.mapper.FileRecordMapper;
 import com.onlystudents.file.service.FileConvertService;
-import io.minio.GetObjectArgs;
-import io.minio.MinioClient;
-import io.minio.PutObjectArgs;
+import io.minio.*;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -232,5 +231,34 @@ public class FileConvertServiceImpl implements FileConvertService {
         }
         
         log.info("Gotenberg 转换完成: {} bytes", outputFile.length());
+    }
+
+
+    @PostConstruct
+    public void initMinioBucket() {
+        String endpoint = minioConfig.getEndpoint();
+        String bucketName = minioConfig.getBucketName();
+        String accessKey = minioConfig.getAccessKey();
+        String secretKey = minioConfig.getSecretKey();
+        // 1. 校验配置是否完整（避免空值导致初始化失败）
+        if (endpoint == null || accessKey == null || secretKey == null || bucketName == null) {
+            throw new RuntimeException("MinIO 配置不完整，请检查 application.yml 中的 minio 相关配置");
+        }
+        try {
+            boolean bucketExists = minioClient.bucketExists(
+                    BucketExistsArgs.builder().bucket(bucketName).build()
+            );
+            if (!bucketExists) {
+                minioClient.makeBucket(
+                        MakeBucketArgs.builder().bucket(bucketName).build()
+                );
+                log.info("[MinIO 初始化] 桶 " + bucketName + " 不存在，已自动创建");
+            } else {
+                log.info("[MinIO 初始化] 桶 " + bucketName + " 已存在，无需创建");
+            }
+        } catch (Exception e) {
+            // 桶初始化失败时，抛出运行时异常让服务启动失败（避免后续上传全报错）
+            throw new RuntimeException("[MinIO 初始化失败] 桶 " + bucketName + " 创建失败：" + e.getMessage(), e);
+        }
     }
 }

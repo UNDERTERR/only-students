@@ -62,7 +62,12 @@ spring:
           max-active: 200
           max-idle: 100
           min-idle: 20
-
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin      # 你的自定义用户名
+    password: admin123     # 你的自定义密码
+    virtual-host: /
 # MyBatis Plus
 mybatis-plus:
   configuration:

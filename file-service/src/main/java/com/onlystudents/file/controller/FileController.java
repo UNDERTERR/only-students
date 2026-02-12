@@ -1,8 +1,9 @@
 package com.onlystudents.file.controller;
 
-import com.onlystudents.common.result.Result;
 import com.onlystudents.common.constants.CommonConstants;
+import com.onlystudents.common.result.Result;
 import com.onlystudents.file.dto.FileUploadResult;
+import com.onlystudents.file.enums.FileCategory;
 import com.onlystudents.file.service.FileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,16 +27,41 @@ public class FileController {
     @PostMapping("/upload")
     @Operation(summary = "上传文件", description = "支持Office文档、PDF、图片等格式，最大200MB")
     public Result<FileUploadResult> uploadFile(@RequestParam("file") MultipartFile file,
-                                                @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId) {
-        return Result.success(fileService.uploadFile(file, userId));
+                                                @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
+                                                @RequestParam(required = false) String category) {
+        FileCategory fileCategory = parseCategory(category);
+        return Result.success(fileService.uploadFile(file, userId, fileCategory));
     }
     
     @PostMapping("/upload-with-check")
     @Operation(summary = "上传文件（带MD5秒传）", description = "前端计算MD5，后端检查是否已存在相同文件")
     public Result<FileUploadResult> uploadFileWithCheck(@RequestParam("file") MultipartFile file,
                                                          @RequestParam("md5") String md5Hash,
-                                                         @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId) {
-        return Result.success(fileService.uploadFileWithMd5Check(file, userId, md5Hash));
+                                                         @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
+                                                         @RequestParam(required = false) String category) {
+        FileCategory fileCategory = parseCategory(category);
+        return Result.success(fileService.uploadFileWithMd5Check(file, userId, md5Hash, fileCategory));
+    }
+    
+    @PostMapping("/upload/avatar")
+    @Operation(summary = "上传头像", description = "专门用于上传用户头像，自动存放到公开目录")
+    public Result<FileUploadResult> uploadAvatar(@RequestParam("file") MultipartFile file,
+                                                  @RequestParam(CommonConstants.USER_ID_HEADER) Long userId) {
+        return Result.success(fileService.uploadFile(file, userId, FileCategory.AVATARS));
+    }
+    
+    /**
+     * 解析文件分类
+     */
+    private FileCategory parseCategory(String category) {
+        if (category == null || category.isEmpty()) {
+            return FileCategory.PRIVATE;
+        }
+        try {
+            return FileCategory.valueOf(category.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return FileCategory.PRIVATE;
+        }
     }
     
     @GetMapping("/preview/{fileId}")
