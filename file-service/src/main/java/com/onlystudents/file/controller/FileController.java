@@ -46,7 +46,7 @@ public class FileController {
     @PostMapping("/upload/avatar")
     @Operation(summary = "上传头像", description = "专门用于上传用户头像，自动存放到公开目录")
     public Result<FileUploadResult> uploadAvatar(@RequestParam("file") MultipartFile file,
-                                                  @RequestParam(CommonConstants.USER_ID_HEADER) Long userId) {
+                                                  @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId) {
         return Result.success(fileService.uploadFile(file, userId, FileCategory.AVATARS));
     }
     
