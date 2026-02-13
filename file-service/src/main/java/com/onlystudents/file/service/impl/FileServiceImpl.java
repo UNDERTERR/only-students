@@ -234,9 +234,8 @@ public class FileServiceImpl implements FileService {
                     .object(record.getFilePath())
                     .build());
 
-            // 更新数据库状态
-            record.setStatus(2); // 已删除
-            fileRecordMapper.updateById(record);
+            // 使用 MyBatis Plus 逻辑删除，设置 deleted=1
+            fileRecordMapper.deleteById(fileId);
 
         } catch (Exception e) {
             log.error("删除文件失败", e);

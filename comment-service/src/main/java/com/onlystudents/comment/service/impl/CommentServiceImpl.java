@@ -74,8 +74,8 @@ public class CommentServiceImpl implements CommentService {
             throw new BusinessException(ResultCode.FORBIDDEN);
         }
         
-        comment.setStatus(0);
-        commentMapper.updateById(comment);
+        // 使用 MyBatis Plus 逻辑删除，设置 deleted=1
+        commentMapper.deleteById(commentId);
     }
     
     @Override

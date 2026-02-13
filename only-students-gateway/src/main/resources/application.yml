@@ -42,7 +42,7 @@ spring:
             - Path=/api/user/**
           filters:
             - StripPrefix=1
-            
+
         # 笔记服务
         - id: note-service
           uri: lb://note-service
@@ -50,7 +50,7 @@ spring:
             - Path=/api/note/**
           filters:
             - StripPrefix=1
-            
+
         # 文件服务
         - id: file-service
           uri: lb://file-service
@@ -58,7 +58,7 @@ spring:
             - Path=/api/file/**
           filters:
             - StripPrefix=1
-            
+
         # 订阅服务
         - id: subscription-service
           uri: lb://subscription-service
@@ -66,7 +66,7 @@ spring:
             - Path=/api/subscription/**
           filters:
             - StripPrefix=1
-            
+
         # 支付服务
         - id: payment-service
           uri: lb://payment-service
@@ -74,7 +74,7 @@ spring:
             - Path=/api/payment/**
           filters:
             - StripPrefix=1
-            
+
         # 评论服务
         - id: comment-service
           uri: lb://comment-service
@@ -82,7 +82,7 @@ spring:
             - Path=/api/comment/**
           filters:
             - StripPrefix=1
-            
+
         # 评分服务
         - id: rating-service
           uri: lb://rating-service
@@ -90,7 +90,22 @@ spring:
             - Path=/api/rating/**
           filters:
             - StripPrefix=1
-            
+        
+        # 收藏服务（rating-service）
+        - id: rating-service-favorite
+          uri: lb://rating-service
+          predicates:
+            - Path=/api/favorite/**
+          filters:
+            - StripPrefix=1
+#
+#        - id: rating-service-share
+#          uri: lb://rating-service
+#          predicates:
+#           - Path=/api/share/**
+#          filters:
+#           - StripPrefix=1
+#           -
         # 消息服务
         - id: message-service
           uri: lb://message-service
@@ -98,7 +113,7 @@ spring:
             - Path=/api/message/**
           filters:
             - StripPrefix=1
-            
+
         # 通知服务
         - id: notification-service
           uri: lb://notification-service
@@ -106,7 +121,7 @@ spring:
             - Path=/api/notification/**
           filters:
             - StripPrefix=1
-            
+
         # 搜索服务
         - id: search-service
           uri: lb://search-service
@@ -114,7 +129,7 @@ spring:
             - Path=/api/search/**
           filters:
             - StripPrefix=1
-            
+
         # 举报服务
         - id: report-service
           uri: lb://report-service
@@ -122,7 +137,7 @@ spring:
             - Path=/api/report/**
           filters:
             - StripPrefix=1
-            
+
         # 提现服务
         - id: withdrawal-service
           uri: lb://withdrawal-service
@@ -130,7 +145,7 @@ spring:
             - Path=/api/withdrawal/**
           filters:
             - StripPrefix=1
-            
+
         # 数据中心
         - id: analytics-service
           uri: lb://analytics-service
@@ -138,7 +153,7 @@ spring:
             - Path=/api/analytics/**
           filters:
             - StripPrefix=1
-            
+
         # 后台管理
         - id: admin-service
           uri: lb://admin-service

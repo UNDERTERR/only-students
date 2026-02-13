@@ -57,7 +57,6 @@ public class NoteServiceImpl implements NoteService {
         note.setUserId(userId);
         note.setStatus(0); // 草稿状态
         note.setViewCount(0);
-        note.setLikeCount(0);
         note.setFavoriteCount(0);
         note.setCommentCount(0);
         note.setShareCount(0);
@@ -147,43 +146,21 @@ public class NoteServiceImpl implements NoteService {
         if (note == null) {
             throw new BusinessException(ResultCode.NOTE_NOT_FOUND);
         }
-
-        // 检查可见性
         // visibility: 0-公开, 1-仅订阅可见, 2-仅付费可见, 3-订阅后付费可见, 4-仅自己可见
         if (note.getStatus() != 2) { // 未发布
             if (!note.getUserId().equals(userId)) {
                 throw new BusinessException(ResultCode.NOTE_NOT_FOUND);
             }
         }
-
-        // 仅自己可见
         if (note.getVisibility() == 4 && !note.getUserId().equals(userId)) {
             throw new BusinessException(ResultCode.NOTE_NOT_FOUND);
         }
-
-        // 需要订阅或付费的可见性（1, 2, 3）
-        if ((note.getVisibility() == 1 || note.getVisibility() == 2 || note.getVisibility() == 3) 
-                && !note.getUserId().equals(userId)) {
-            // 通过Feign调用subscription-service检查是否订阅
-            try {
-                Result<Boolean> result = subscriptionFeignClient.checkSubscription(note.getUserId(), userId);
-                if (result.getData() == null || !result.getData()) {
-                    throw new BusinessException(ResultCode.SUBSCRIPTION_REQUIRED);
-                }
-            } catch (Exception e) {
-                log.error("检查订阅状态失败: noteId={}, userId={}, creatorId={}", noteId, userId, note.getUserId(), e);
-                throw new BusinessException(ResultCode.SUBSCRIPTION_REQUIRED);
-            }
-        }
-
-        // 增加浏览量
         incrementViewCount(noteId);
-
         return convertToDTO(note);
     }
 
     @Override
-    @Cacheable(value = "hotNotes", key = "#p0", unless = "#result == null || #result.isEmpty()")
+    @Cacheable(value = "hotNotes", key = "'hot_' + #p0 + '_' + #p1", unless = "#result == null || #result.isEmpty()")
     public List<NoteDTO> getHotNotes(Integer limit, Long currentUserId) {
         if (limit == null || limit > 100) {
             limit = 20;
@@ -210,7 +187,7 @@ public class NoteServiceImpl implements NoteService {
     }
 
     @Override
-    @Cacheable(value = "latestNotes", key = "#p0", unless = "#result == null || #result.isEmpty()")
+    @Cacheable(value = "latestNotes", key = "'latest_' + #p0 + '_' + #p1", unless = "#result == null || #result.isEmpty()")
     public List<NoteDTO> getLatestNotes(Integer limit, Long currentUserId) {
         if (limit == null || limit > 100) {
             limit = 20;

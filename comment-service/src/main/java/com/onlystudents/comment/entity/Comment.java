@@ -28,6 +28,9 @@ public class Comment {
     
     private Integer status;
     
+    @TableLogic
+    private Integer deleted;
+    
     private Integer isTop;
     
     @TableField(fill = FieldFill.INSERT)

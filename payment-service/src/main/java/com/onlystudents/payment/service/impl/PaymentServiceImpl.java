@@ -156,6 +156,11 @@ public class PaymentServiceImpl implements PaymentService {
         walletService.addIncome(userId, orderId, amount);
     }
     
+    @Override
+    public boolean checkNotePurchased(Long userId, Long noteId) {
+        return orderMapper.checkNotePurchased(userId, noteId);
+    }
+    
     private OrderDTO convertToDTO(PaymentOrder order) {
         OrderDTO dto = new OrderDTO();
         BeanUtils.copyProperties(order, dto);

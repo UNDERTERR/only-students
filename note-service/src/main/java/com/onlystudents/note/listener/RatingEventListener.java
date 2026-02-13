@@ -1,7 +1,6 @@
 package com.onlystudents.note.listener;
 
 import com.onlystudents.note.event.NoteFavoriteEvent;
-import com.onlystudents.note.event.NoteRatingEvent;
 import com.onlystudents.note.event.NoteShareEvent;
 import com.onlystudents.note.mapper.NoteMapper;
 import lombok.RequiredArgsConstructor;
@@ -55,12 +54,10 @@ public class RatingEventListener {
      * 监听评分事件
      */
     @RabbitListener(queues = "rating.updated.queue")
-    public void handleRatingUpdated(NoteRatingEvent event) {
-        log.info("收到评分事件: noteId={}, userId={}, score={}, avg={}, count={}", 
-                event.getNoteId(), event.getUserId(), event.getScore(), 
-                event.getAverageScore(), event.getRatingCount());
+    public void handleRatingUpdated(com.onlystudents.note.event.NoteRatingEvent event) {
+        log.info("收到评分事件: noteId={}, avg={}, count={}", 
+                event.getNoteId(), event.getAverageScore(), event.getRatingCount());
         try {
-            // 更新平均分和评分人数
             noteMapper.updateRatingStats(event.getNoteId(), 
                     event.getAverageScore(), event.getRatingCount().intValue());
             log.info("更新笔记评分统计成功: noteId={}, avg={}, count={}", 

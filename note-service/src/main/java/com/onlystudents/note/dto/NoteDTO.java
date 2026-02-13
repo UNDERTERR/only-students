@@ -39,7 +39,9 @@ public class NoteDTO {
     
     private Integer viewCount;
     
-    private Integer likeCount;
+    private Integer ratingCount;
+    
+    private BigDecimal averageRating;
     
     private Integer favoriteCount;
     

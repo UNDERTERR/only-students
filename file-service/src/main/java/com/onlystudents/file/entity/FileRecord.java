@@ -32,6 +32,9 @@ public class FileRecord {
     
     private Integer status;
     
+    @TableLogic
+    private Integer deleted;
+    
     /**
      * 访问权限：0-私有，1-公开
      */

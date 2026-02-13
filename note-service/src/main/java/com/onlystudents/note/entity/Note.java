@@ -47,9 +47,11 @@ public class Note {
     private Integer deleted;
 
     private Integer viewCount;
-
-    private Integer likeCount;
-
+    
+    private Integer ratingCount;
+    
+    private BigDecimal averageRating;
+    
     private Integer favoriteCount;
 
     private Integer commentCount;

@@ -32,11 +32,13 @@ CREATE TABLE IF NOT EXISTS message (
     content TEXT NOT NULL COMMENT '消息内容',
     content_type TINYINT DEFAULT 1 COMMENT '内容类型：1文本 2图片 3文件',
     file_url VARCHAR(500) COMMENT '文件URL（图片/文件类型）',
-    status TINYINT DEFAULT 0 COMMENT '状态：0正常 1已撤回 2已删除',
+    status TINYINT DEFAULT 0 COMMENT '状态：0正常 1已撤回',
+    deleted TINYINT DEFAULT 0 COMMENT '是否删除：0未删除 1已删除',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_conversation (conversation_id, created_at),
     INDEX idx_sender (sender_id, created_at),
-    INDEX idx_receiver (receiver_id, created_at)
+    INDEX idx_receiver (receiver_id, created_at),
+    INDEX idx_deleted (deleted)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='消息表';
 
 -- 消息删除记录（用户删除自己的消息视图）
