@@ -68,7 +68,7 @@ public class Note {
 
     private LocalDateTime publishTime;
 
-    @TableField(typeHandler =JacksonTypeHandler.class)
+    @TableField(exist = false)
     private List<String> tags;
 
     @TableField(fill = FieldFill.INSERT)

@@ -1,5 +1,6 @@
 # Wrote .gitignore
 # Compiled class files
+nul
 *.class
 # Log files
 *.log

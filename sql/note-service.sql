@@ -54,7 +54,6 @@ CREATE TABLE IF NOT EXISTS note (
     share_count INT DEFAULT 0 COMMENT '分享数',
     hot_score DOUBLE DEFAULT 0 COMMENT '热度分',
     education_level TINYINT COMMENT '适用学段：1小学 2初中 3高中 4大学 5研究生',
-    tags JSON COMMENT '笔记标签列表',
     school_id BIGINT COMMENT '适用学校ID（可选）',
     school_name VARCHAR(100) COMMENT '适用学校名称',
     subject VARCHAR(50) COMMENT '学科：数学/物理/化学等',

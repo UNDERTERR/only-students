@@ -104,14 +104,16 @@ public class NoteController {
 
     @GetMapping("/hot")
     @Operation(summary = "热门笔记", description = "按热度排序获取笔记列表")
-    public Result<List<NoteDTO>> getHotNotes(@RequestParam(name = "limit", defaultValue = "20") Integer limit) {
-        return Result.success(noteService.getHotNotes(limit));
+    public Result<List<NoteDTO>> getHotNotes(@RequestParam(name = "limit", defaultValue = "20") Integer limit,
+                                              @RequestHeader(value = CommonConstants.USER_ID_HEADER, required = false) Long userId) {
+        return Result.success(noteService.getHotNotes(limit, userId));
     }
 
     @GetMapping("/latest")
     @Operation(summary = "最新笔记", description = "按时间排序获取最新笔记")
-    public Result<List<NoteDTO>> getLatestNotes(@RequestParam(name = "limit", defaultValue = "20") Integer limit) {
-        return Result.success(noteService.getLatestNotes(limit));
+    public Result<List<NoteDTO>> getLatestNotes(@RequestParam(name = "limit", defaultValue = "20") Integer limit,
+                                                 @RequestHeader(value = CommonConstants.USER_ID_HEADER, required = false) Long userId) {
+        return Result.success(noteService.getLatestNotes(limit, userId));
     }
 
     @GetMapping("/user/{userId}")

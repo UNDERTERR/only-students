@@ -18,9 +18,9 @@ public interface NoteService {
     
     NoteDTO getNoteDetail(Long noteId, Long userId);
     
-    List<NoteDTO> getHotNotes(Integer limit);
+    List<NoteDTO> getHotNotes(Integer limit, Long currentUserId);
     
-    List<NoteDTO> getLatestNotes(Integer limit);
+    List<NoteDTO> getLatestNotes(Integer limit, Long currentUserId);
     
     List<NoteDTO> getUserNotes(Long userId);
     
