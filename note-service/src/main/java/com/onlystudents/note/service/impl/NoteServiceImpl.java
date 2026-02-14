@@ -7,6 +7,7 @@ import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.common.utils.JsonSerializerUtils;
+import com.onlystudents.note.client.FileFeignClient;
 import com.onlystudents.note.client.SubscriptionFeignClient;
 import com.onlystudents.note.dto.CreateNoteRequest;
 import com.onlystudents.note.dto.NoteDTO;
@@ -36,6 +37,7 @@ public class NoteServiceImpl implements NoteService {
 
     private final NoteMapper noteMapper;
     private final SubscriptionFeignClient subscriptionFeignClient;
+    private final FileFeignClient fileFeignClient;
     private final RabbitTemplate rabbitTemplate;
     private final StringRedisTemplate redisTemplate;
     private final TagService tagService;
@@ -115,6 +117,9 @@ public class NoteServiceImpl implements NoteService {
             throw new BusinessException(ResultCode.FORBIDDEN);
         }
 
+        // 删除附件文件
+        deleteAttachments(note.getAttachments(), userId);
+
         // 删除标签关联
         tagService.deleteNoteTags(noteId);
 
@@ -127,6 +132,33 @@ public class NoteServiceImpl implements NoteService {
             log.info("笔记 [{}] 已删除，删除消息已发送到MQ", noteId);
         } catch (Exception e) {
             log.error("发送笔记删除消息失败: noteId={}", noteId, e);
+        }
+    }
+
+    /**
+     * 删除附件文件
+     */
+    private void deleteAttachments(String attachmentsJson, Long userId) {
+        if (attachmentsJson == null || attachmentsJson.isEmpty()) {
+            return;
+        }
+
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            List<java.util.Map<String, Object>> attachments = objectMapper.readValue(attachmentsJson, 
+                new com.fasterxml.jackson.core.type.TypeReference<List<java.util.Map<String, Object>>>() {});
+
+            for (java.util.Map<String, Object> att : attachments) {
+                Long fileId = Long.valueOf(att.get("fileId").toString());
+                try {
+                    fileFeignClient.deleteFile(fileId, userId);
+                    log.info("删除文件成功: fileId={}", fileId);
+                } catch (Exception e) {
+                    log.error("删除文件失败: fileId={}", fileId, e);
+                }
+            }
+        } catch (Exception e) {
+            log.error("解析附件列表失败: {}", attachmentsJson, e);
         }
     }
 

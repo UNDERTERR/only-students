@@ -59,6 +59,11 @@ public class FileConvertServiceImpl implements FileConvertService {
             "doc", "docx", "xls", "xlsx", "ppt", "pptx", "odt", "ods", "odp"
     ));
     
+    // 支持直接存储的文本格式（无需转PDF）
+    private static final Set<String> TEXT_TYPES = new HashSet<>(Arrays.asList(
+            "txt", "md", "json", "xml", "csv", "log"
+    ));
+    
     @Override
     public void convertToPdf(Long sourceFileId) {
         FileRecord sourceFile = fileRecordMapper.selectById(sourceFileId);
@@ -68,6 +73,14 @@ public class FileConvertServiceImpl implements FileConvertService {
         }
         
         String fileType = sourceFile.getFileType().toLowerCase();
+        
+        // 文本类型直接存储，无需转换
+        if (TEXT_TYPES.contains(fileType)) {
+            log.info("文件类型[{}]为文本格式，直接存储", fileType);
+            return;
+        }
+        
+        // Office类型需要转换PDF
         if (!OFFICE_TYPES.contains(fileType)) {
             log.info("文件类型[{}]无需转换", fileType);
             return;

@@ -31,9 +31,7 @@ public class NoteDTO {
     
     private BigDecimal price;
     
-    private Long originalFileId;
-    
-    private Long pdfFileId;
+    private String attachments;
     
     private Integer status;
     

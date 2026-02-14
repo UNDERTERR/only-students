@@ -317,7 +317,7 @@ public class FileServiceImpl implements FileService {
      * 配置 bucket 细粒度访问策略
      * - avatars/*: 公开可读（用户头像）
      * - public/*: 公开可读（笔记封面等公开资源）
-     * - private/*: 私有（个人笔记原稿）
+     * - private/*: 公开可读（笔记附件，需要登录后查看）
      * - paid/*: 私有（付费内容）
      */
     private void setupBucketPolicy(String bucketName) throws Exception {
@@ -330,7 +330,8 @@ public class FileServiceImpl implements FileService {
             "      \"Action\": [\"s3:GetObject\"],\n" +
             "      \"Resource\": [\n" +
             "        \"arn:aws:s3:::" + bucketName + "/avatars/*\",\n" +
-            "        \"arn:aws:s3:::" + bucketName + "/public/*\"\n" +
+            "        \"arn:aws:s3:::" + bucketName + "/public/*\",\n" +
+            "        \"arn:aws:s3:::" + bucketName + "/private/*\"\n" +
             "      ]\n" +
             "    }\n" +
             "  ]\n" +
@@ -345,7 +346,7 @@ public class FileServiceImpl implements FileService {
         log.info("[MinIO 策略配置] 已设置细粒度访问策略：\n" +
                 "  - avatars/*: 公开可读\n" +
                 "  - public/*: 公开可读\n" +
-            "  - private/*: 私有\n" +
+                "  - private/*: 公开可读\n" +
                 "  - paid/*: 私有");
     }
 
