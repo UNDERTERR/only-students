@@ -17,6 +17,14 @@ public interface FileService {
      * 上传文件到指定分类
      */
     FileUploadResult uploadFile(MultipartFile file, Long userId, FileCategory category);
+
+    /**
+     * 根据笔记可见性上传文件
+     * @param file 文件
+     * @param userId 用户ID
+     * @param visibility 笔记可见性: 0=公开, 1=订阅可见, 2=付费可见, 3=订阅+付费, 4=仅自己
+     */
+    FileUploadResult uploadFileByVisibility(MultipartFile file, Long userId, Integer visibility);
     
     /**
      * 带MD5校验的文件上传（默认上传到 private 目录）

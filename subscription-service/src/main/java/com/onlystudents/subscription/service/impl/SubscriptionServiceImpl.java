@@ -17,7 +17,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,40 +31,34 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Override
     @Transactional
     public SubscriptionDTO subscribe(SubscribeRequest request, Long subscriberId) {
-        // 检查是否已订阅
-        Subscription exist = subscriptionMapper.selectBySubscriberAndCreator(subscriberId, request.getCreatorId());
-        if (exist != null && exist.getStatus() == 1) {
-            throw new BusinessException(ResultCode.PARAM_ERROR, "已订阅该创作者");
-        }
-        
         // 检查不能订阅自己
         if (subscriberId.equals(request.getCreatorId())) {
             throw new BusinessException(ResultCode.PARAM_ERROR, "不能订阅自己");
         }
-        
+
+        // 检查是否已订阅
+        Subscription exist = subscriptionMapper.selectBySubscriberAndCreator(subscriberId, request.getCreatorId());
+        if (exist != null) {
+            throw new BusinessException(ResultCode.PARAM_ERROR, "已订阅该创作者");
+        }
+
+        // 新建订阅
         Subscription subscription = new Subscription();
         subscription.setSubscriberId(subscriberId);
         subscription.setCreatorId(request.getCreatorId());
-        subscription.setPrice(request.getPrice());
-        subscription.setStatus(1);
-        // 永久有效（价格为0或没有过期时间）
-        subscription.setExpireTime(null);
-        
+
         subscriptionMapper.insert(subscription);
-        
+
         return convertToDTO(subscription);
     }
     
     @Override
     @Transactional
     public void unsubscribe(Long creatorId, Long subscriberId) {
-        Subscription subscription = subscriptionMapper.selectBySubscriberAndCreator(subscriberId, creatorId);
-        if (subscription == null || subscription.getStatus() != 1) {
+        int deleted = subscriptionMapper.deleteBySubscriberAndCreator(subscriberId, creatorId);
+        if (deleted == 0) {
             throw new BusinessException(ResultCode.PARAM_ERROR, "未订阅该创作者");
         }
-        
-        subscription.setStatus(0);
-        subscriptionMapper.updateById(subscription);
     }
     
     @Override
@@ -74,19 +67,12 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             return false;
         }
         Subscription subscription = subscriptionMapper.selectBySubscriberAndCreator(subscriberId, creatorId);
-        if (subscription == null || subscription.getStatus() != 1) {
-            return false;
-        }
-        // 检查是否过期
-        if (subscription.getExpireTime() != null && subscription.getExpireTime().isBefore(LocalDateTime.now())) {
-            return false;
-        }
-        return true;
+        return subscription != null;
     }
     
     @Override
     public List<SubscriptionDTO> getMySubscriptions(Long subscriberId) {
-        List<Subscription> subscriptions = subscriptionMapper.selectActiveSubscriptionsBySubscriber(subscriberId);
+        List<Subscription> subscriptions = subscriptionMapper.selectBySubscriber(subscriberId);
         return subscriptions.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -94,7 +80,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     
     @Override
     public List<SubscriptionDTO> getMySubscribers(Long creatorId) {
-        List<Subscription> subscriptions = subscriptionMapper.selectActiveSubscriptionsByCreator(creatorId);
+        List<Subscription> subscriptions = subscriptionMapper.selectByCreator(creatorId);
         return subscriptions.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -109,10 +95,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public CreatorConfigDTO getCreatorConfig(Long creatorId) {
         CreatorSubscriptionConfig config = configMapper.selectByCreatorId(creatorId);
         if (config == null) {
-            // 返回默认配置
             CreatorConfigDTO dto = new CreatorConfigDTO();
             dto.setCreatorId(creatorId);
-            dto.setPrice(new java.math.BigDecimal("0.00"));
             dto.setIsEnabled(0);
             return dto;
         }

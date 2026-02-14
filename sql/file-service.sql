@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS file_record (
     deleted TINYINT DEFAULT 0 COMMENT '是否删除：0未删除 1已删除',
     access_level TINYINT DEFAULT 0 COMMENT '访问权限：0-私有 1-公开',
     expire_time DATETIME COMMENT '过期时间（临时文件）',
+    pdf_file_id  BIGINT comment 'PDF-id',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_uploader (uploader_id),

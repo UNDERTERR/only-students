@@ -14,21 +14,42 @@ public enum FileCategory {
     /**
      * 公开资源 - 公开可读
      * 存储路径: public/
-     * 例如：笔记封面、公开附件
+     * 例如：公开笔记的附件
      */
     PUBLIC,
     
     /**
      * 私有资源 - 需要认证
      * 存储路径: private/{userId}/
-     * 例如：个人笔记原稿
+     * 例如：仅自己可见的笔记
      */
     PRIVATE,
     
     /**
      * 付费资源 - 需要订阅或购买
      * 存储路径: paid/{creatorId}/
-     * 例如：付费笔记、付费课程
+     * 例如：付费笔记、订阅可见笔记
      */
-    PAID
+    PAID;
+
+    /**
+     * 根据笔记可见性获取文件分类
+     * @param visibility 笔记可见性: 0=公开, 1=订阅可见, 2=付费可见, 3=订阅+付费, 4=仅自己
+     * @return 对应的FileCategory
+     */
+    public static FileCategory fromVisibility(Integer visibility) {
+        if (visibility == null) return PRIVATE;
+        switch (visibility) {
+            case 0:
+                return PUBLIC;
+            case 1:
+            case 2:
+            case 3:
+                return PAID;
+            case 4:
+                return PRIVATE;
+            default:
+                return PRIVATE;
+        }
+    }
 }

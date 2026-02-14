@@ -32,6 +32,14 @@ public class FileController {
         FileCategory fileCategory = parseCategory(category);
         return Result.success(fileService.uploadFile(file, userId, fileCategory));
     }
+
+    @PostMapping("/upload-for-note")
+    @Operation(summary = "上传笔记附件", description = "根据笔记可见性上传到不同目录")
+    public Result<FileUploadResult> uploadFileForNote(@RequestParam("file") MultipartFile file,
+                                                      @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
+                                                      @RequestParam Integer visibility) {
+        return Result.success(fileService.uploadFileByVisibility(file, userId, visibility));
+    }
     
     @PostMapping("/upload-with-check")
     @Operation(summary = "上传文件（带MD5秒传）", description = "前端计算MD5，后端检查是否已存在相同文件")

@@ -62,6 +62,12 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
+    public FileUploadResult uploadFileByVisibility(MultipartFile file, Long userId, Integer visibility) {
+        FileCategory category = FileCategory.fromVisibility(visibility);
+        return uploadFile(file, userId, category);
+    }
+    
+    @Override
     public FileUploadResult uploadFileWithMd5Check(MultipartFile file, Long userId, String md5Hash) {
         return uploadFileWithMd5Check(file, userId, md5Hash, FileCategory.PRIVATE);
     }
