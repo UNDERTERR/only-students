@@ -20,13 +20,7 @@ public interface NoteMapper extends BaseMapper<Note> {
     
     @Update("UPDATE note SET view_count = view_count + 1 WHERE id = #{noteId}")
     int incrementViewCount(@Param("noteId") Long noteId);
-    
-    @Update("UPDATE note SET like_count = like_count + 1 WHERE id = #{noteId}")
-    int incrementLikeCount(@Param("noteId") Long noteId);
-    
-    @Update("UPDATE note SET favorite_count = favorite_count + 1 WHERE id = #{noteId}")
-    int incrementFavoriteCount(@Param("noteId") Long noteId);
-    
+
     /**
      * 更新收藏数（设置为指定值）
      */
@@ -51,4 +45,16 @@ public interface NoteMapper extends BaseMapper<Note> {
      */
     @Select("SELECT * FROM note WHERE deleted = 0 AND status = 2 AND visibility != 4 ORDER BY id LIMIT #{offset}, #{limit}")
     List<Note> selectPublishedNotesByPage(@Param("offset") Integer offset, @Param("limit") Integer limit);
+    
+    /**
+     * 批量查询笔记
+     */
+    @Select("<script>" +
+            "SELECT * FROM note WHERE id IN " +
+            "<foreach collection='ids' item='id' open='(' separator=',' close=')'>" +
+            "#{id}" +
+            "</foreach>" +
+            " AND deleted = 0" +
+            "</script>")
+    List<Note> selectListByIds(@Param("ids") List<Long> ids);
 }

@@ -3,6 +3,7 @@ package com.onlystudents.rating.service.impl;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
+import com.onlystudents.rating.client.NoteFeignClient;
 import com.onlystudents.rating.dto.NoteFavoriteDTO;
 import com.onlystudents.rating.entity.NoteFavorite;
 import com.onlystudents.rating.event.NoteFavoriteEvent;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -25,6 +27,7 @@ public class NoteFavoriteServiceImpl implements NoteFavoriteService {
     
     private final NoteFavoriteMapper favoriteMapper;
     private final RabbitTemplate rabbitTemplate;
+    private final NoteFeignClient noteFeignClient;
     
     @Override
     @Transactional
@@ -91,8 +94,76 @@ public class NoteFavoriteServiceImpl implements NoteFavoriteService {
     @Override
     public Result<List<NoteFavoriteDTO>> getUserFavorites(Long userId) {
         List<NoteFavorite> list = favoriteMapper.selectListByUser(userId);
-        List<NoteFavoriteDTO> dtoList = list.stream().map(this::convertToDTO).collect(Collectors.toList());
+        
+        // 获取所有笔记ID
+        List<Long> noteIds = list.stream().map(NoteFavorite::getNoteId).collect(Collectors.toList());
+        
+        // 批量获取笔记信息
+        Map<Long, Map<String, Object>> noteInfoMap = new java.util.HashMap<>();
+        if (!noteIds.isEmpty()) {
+            try {
+                String idsStr = noteIds.stream().map(String::valueOf).collect(Collectors.joining(","));
+                Result<List<Map<String, Object>>> noteResult = noteFeignClient.getNotesByIds(idsStr);
+                if (noteResult != null && noteResult.getData() != null) {
+                    for (Map<String, Object> note : noteResult.getData()) {
+                        Object idObj = note.get("id");
+                        if (idObj instanceof Number) {
+                            noteInfoMap.put(((Number) idObj).longValue(), note);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("获取笔记信息失败", e);
+            }
+        }
+        
+        final Map<Long, Map<String, Object>> finalNoteInfoMap = noteInfoMap;
+        
+        // 转换并填充笔记信息
+        List<NoteFavoriteDTO> dtoList = list.stream().map(favorite -> {
+            NoteFavoriteDTO dto = new NoteFavoriteDTO();
+            BeanUtils.copyProperties(favorite, dto);
+            
+            // 填充笔记信息
+            Map<String, Object> noteInfo = finalNoteInfoMap.get(favorite.getNoteId());
+            if (noteInfo != null) {
+                dto.setTitle(getStringValue(noteInfo, "title"));
+                dto.setCoverImage(getStringValue(noteInfo, "coverImage"));
+                dto.setAuthorNickname(getStringValue(noteInfo, "authorNickname"));
+                dto.setAuthorAvatar(getStringValue(noteInfo, "authorAvatar"));
+                dto.setViewCount(getIntValue(noteInfo, "viewCount"));
+                dto.setFavoriteCount(getIntValue(noteInfo, "favoriteCount"));
+                dto.setCommentCount(getIntValue(noteInfo, "commentCount"));
+                dto.setAverageRating(getBigDecimalValue(noteInfo, "averageRating"));
+                dto.setRatingCount(getIntValue(noteInfo, "ratingCount"));
+                dto.setTags((List<String>) noteInfo.get("tags"));
+            }
+            
+            return dto;
+        }).collect(Collectors.toList());
+        
         return Result.success(dtoList);
+    }
+    
+    private String getStringValue(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        return value != null ? value.toString() : null;
+    }
+    
+    private Integer getIntValue(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        return null;
+    }
+    
+    private java.math.BigDecimal getBigDecimalValue(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value instanceof Number) {
+            return java.math.BigDecimal.valueOf(((Number) value).doubleValue());
+        }
+        return null;
     }
     
     private NoteFavoriteDTO convertToDTO(NoteFavorite favorite) {

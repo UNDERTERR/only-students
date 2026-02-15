@@ -49,7 +49,7 @@ public class NoteFavoriteController {
     
     @GetMapping("/count/{noteId}")
     @Operation(summary = "获取收藏数", description = "获取笔记的收藏数量")
-    public Result<Long> getFavoriteCount(
+    public Result<Long> getCount(
             @Parameter(description = "笔记ID") @PathVariable Long noteId) {
         return favoriteService.getFavoriteCount(noteId);
     }
