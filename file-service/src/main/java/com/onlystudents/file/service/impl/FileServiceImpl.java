@@ -7,8 +7,10 @@ import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.file.config.MinioConfig;
 import com.onlystudents.file.dto.FileUploadResult;
+import com.onlystudents.file.entity.FileConvertTask;
 import com.onlystudents.file.entity.FileRecord;
 import com.onlystudents.file.enums.FileCategory;
+import com.onlystudents.file.mapper.FileConvertTaskMapper;
 import com.onlystudents.file.mapper.FileRecordMapper;
 import com.onlystudents.file.service.FileConvertService;
 import com.onlystudents.file.service.FileService;
@@ -36,6 +38,7 @@ public class FileServiceImpl implements FileService {
     private final MinioClient minioClient;
     private final MinioConfig minioConfig;
     private final FileRecordMapper fileRecordMapper;
+    private final FileConvertTaskMapper fileConvertTaskMapper;
     private final FileConvertService fileConvertService;
 
     @Value("${file.upload.max-size:209715200}")
@@ -104,6 +107,12 @@ public class FileServiceImpl implements FileService {
                     + minioConfig.getBucketName() + "/"
                     + existFile.getFilePath();
             result.setFileUrl(fileUrl);
+            
+            // 即使是秒传，也尝试触发PDF转换（以防之前没有转换成功）
+            if (OFFICE_TYPES.contains(existFile.getFileType().toLowerCase())) {
+                convertToPdf(existFile.getId());
+            }
+            
             return result;
         }
 
@@ -234,17 +243,40 @@ public class FileServiceImpl implements FileService {
         }
 
         try {
-            // 从MinIO删除
+            // 从MinIO删除源文件
             minioClient.removeObject(RemoveObjectArgs.builder()
                     .bucket(minioConfig.getBucketName())
                     .object(record.getFilePath())
                     .build());
+            log.info("从MinIO删除源文件成功: fileId={}, path={}", fileId, record.getFilePath());
+            
+            // 检查是否有转换任务，如果有则删除PDF文件
+            FileConvertTask convertTask = fileConvertTaskMapper.selectLatestTaskBySourceFileId(fileId);
+            if (convertTask != null && convertTask.getTargetFileId() != null) {
+                FileRecord pdfRecord = fileRecordMapper.selectById(convertTask.getTargetFileId());
+                if (pdfRecord != null) {
+                    // 从MinIO删除PDF文件
+                    try {
+                        minioClient.removeObject(RemoveObjectArgs.builder()
+                                .bucket(minioConfig.getBucketName())
+                                .object(pdfRecord.getFilePath())
+                                .build());
+                        log.info("从MinIO删除PDF文件成功: pdfFileId={}, path={}", pdfRecord.getId(), pdfRecord.getFilePath());
+                    } catch (Exception pdfEx) {
+                        log.warn("从MinIO删除PDF文件失败（可能文件不存在）: pdfFileId={}, error={}", pdfRecord.getId(), pdfEx.getMessage());
+                    }
+                    // 物理删除PDF文件记录（使用自定义SQL绕过逻辑删除）
+                    fileRecordMapper.physicalDeleteById(pdfRecord.getId());
+                    log.info("物理删除PDF文件记录成功: pdfFileId={}", pdfRecord.getId());
+                }
+            }
 
-            // 使用 MyBatis Plus 逻辑删除，设置 deleted=1
-            fileRecordMapper.deleteById(fileId);
+            // 物理删除源文件记录（使用自定义SQL绕过逻辑删除）
+            fileRecordMapper.physicalDeleteById(fileId);
+            log.info("物理删除源文件记录成功: fileId={}", fileId);
 
         } catch (Exception e) {
-            log.error("删除文件失败", e);
+            log.error("删除文件失败: fileId={}", fileId, e);
             throw new BusinessException(ResultCode.ERROR, "删除文件失败");
         }
     }
@@ -252,6 +284,16 @@ public class FileServiceImpl implements FileService {
     @Override
     public void convertToPdf(Long fileId) {
         fileConvertService.convertToPdf(fileId);
+    }
+
+    @Override
+    public Integer getConvertStatus(Long fileId) {
+        return fileConvertService.getConvertStatus(fileId);
+    }
+
+    @Override
+    public Long getPdfFileId(Long sourceFileId) {
+        return fileConvertService.getPdfFileId(sourceFileId);
     }
 
     /**

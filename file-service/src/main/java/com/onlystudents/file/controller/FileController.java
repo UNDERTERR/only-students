@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -16,6 +17,8 @@ import java.io.InputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+
+@Slf4j
 @RestController
 @RequestMapping("/file")
 @RequiredArgsConstructor
@@ -98,9 +101,24 @@ public class FileController {
     }
     
     @DeleteMapping("/{fileId}")
-    @Operation(summary = "删除文件", description = "逻辑删除文件记录")
-    public Result<Void> deleteFile(@PathVariable Long fileId) {
+    @Operation(summary = "删除文件", description = "硬删除文件及关联的PDF文件")
+    public Result<Void> deleteFile(@PathVariable Long fileId,
+                                   @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        log.info("收到删除文件请求: fileId={}, userId={}", fileId, userId);
         fileService.deleteFile(fileId);
         return Result.success();
+    }
+
+    @GetMapping("/convert-status/{fileId}")
+    @Operation(summary = "获取文件转换状态", description = "获取文件的PDF转换状态")
+    public Result<java.util.Map<String, Object>> getConvertStatus(@PathVariable Long fileId) {
+        Integer status = fileService.getConvertStatus(fileId);
+        Long pdfFileId = fileService.getPdfFileId(fileId);
+        
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("status", status);
+        result.put("pdfFileId", pdfFileId);
+        
+        return Result.success(result);
     }
 }
