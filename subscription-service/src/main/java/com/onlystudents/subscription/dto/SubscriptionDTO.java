@@ -14,4 +14,22 @@ public class SubscriptionDTO {
     private Long creatorId;
     
     private LocalDateTime createdAt;
+    
+    // 创作者信息（订阅页面使用）
+    private String creatorNickname;
+    
+    private String creatorUsername;
+    
+    private String creatorAvatar;
+    
+    private String creatorBio;
+    
+    // 订阅者信息（粉丝页面使用）
+    private String subscriberNickname;
+    
+    private String subscriberUsername;
+    
+    private String subscriberAvatar;
+    
+    private String subscriberBio;
 }

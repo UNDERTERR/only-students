@@ -24,4 +24,9 @@ public interface UserService {
      * 搜索用户
      */
     List<UserResponse> searchUsers(String keyword, Integer educationLevel, Integer isCreator, Integer page, Integer size);
+    
+    /**
+     * 批量获取用户
+     */
+    List<UserResponse> getUsersByIds(List<Long> userIds);
 }

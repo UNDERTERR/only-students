@@ -5,6 +5,7 @@ import com.onlystudents.rating.entity.NoteFavorite;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -28,4 +29,28 @@ public interface NoteFavoriteMapper extends BaseMapper<NoteFavorite> {
      */
     @Select("SELECT * FROM note_favorite WHERE user_id = #{userId} ORDER BY created_at DESC")
     List<NoteFavorite> selectListByUser(@Param("userId") Long userId);
+    
+    /**
+     * 查询用户的收藏列表（按收藏夹筛选）
+     */
+    @Select("SELECT * FROM note_favorite WHERE user_id = #{userId} AND folder_id = #{folderId} ORDER BY created_at DESC")
+    List<NoteFavorite> selectListByUserAndFolder(@Param("userId") Long userId, @Param("folderId") Long folderId);
+    
+    /**
+     * 查询用户的收藏总数
+     */
+    @Select("SELECT COUNT(*) FROM note_favorite WHERE user_id = #{userId}")
+    Long countByUserId(@Param("userId") Long userId);
+    
+    /**
+     * 查询用户指定收藏夹的收藏数量
+     */
+    @Select("SELECT COUNT(*) FROM note_favorite WHERE user_id = #{userId} AND folder_id = #{folderId}")
+    Long countByUserAndFolder(@Param("userId") Long userId, @Param("folderId") Long folderId);
+    
+    /**
+     * 清除收藏夹ID（删除收藏夹时调用）
+     */
+    @Update("UPDATE note_favorite SET folder_id = NULL WHERE folder_id = #{folderId} AND user_id = #{userId}")
+    void clearFolderById(@Param("folderId") Long folderId, @Param("userId") Long userId);
 }

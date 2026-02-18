@@ -60,3 +60,7 @@ mybatis-plus:
 # 平台抽成比例（20%）
 platform:
   fee-rate: 0.2
+
+# User service URL for Feign client
+user-service:
+  url: http://localhost:8001

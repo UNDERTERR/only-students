@@ -92,4 +92,18 @@ public class UserController {
         }
         return ip;
     }
+    
+    @GetMapping("/batch/{ids}")
+    @Operation(summary = "批量获取用户信息", description = "根据ID列表批量获取用户信息")
+    public Result<List<UserResponse>> getUsersByIds(@PathVariable(name = "ids") String ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Result.success(List.of());
+        }
+        List<Long> userIds = java.util.Arrays.stream(ids.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Long::parseLong)
+                .toList();
+        return Result.success(userService.getUsersByIds(userIds));
+    }
 }

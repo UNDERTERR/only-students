@@ -231,6 +231,17 @@ user.setUpdatedAt(LocalDateTime.now());
                 .collect(Collectors.toList());
     }
     
+    @Override
+    public List<UserResponse> getUsersByIds(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+        List<User> users = userMapper.selectBatchIds(userIds);
+        return users.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+    
     private UserResponse convertToResponse(User user) {
         UserResponse response = new UserResponse();
         BeanUtils.copyProperties(user, response);

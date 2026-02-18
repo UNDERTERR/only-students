@@ -1,11 +1,14 @@
 package com.onlystudents.rating.controller;
 
 import com.onlystudents.common.result.Result;
+import com.onlystudents.rating.dto.CreateFolderRequest;
+import com.onlystudents.rating.dto.FavoriteFolderDTO;
 import com.onlystudents.rating.dto.NoteFavoriteDTO;
 import com.onlystudents.rating.service.NoteFavoriteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -57,7 +60,45 @@ public class NoteFavoriteController {
     @GetMapping("/my")
     @Operation(summary = "我的收藏", description = "获取当前用户的收藏列表")
     public Result<List<NoteFavoriteDTO>> getMyFavorites(
-            @Parameter(description = "用户ID", hidden = true) @RequestHeader("X-User-Id") Long userId) {
+            @Parameter(description = "用户ID", hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @Parameter(description = "收藏夹ID") @RequestParam(required = false) Long folderId) {
+        if (folderId != null) {
+            return favoriteService.getUserFavorites(userId, folderId);
+        }
         return favoriteService.getUserFavorites(userId);
+    }
+    
+    @GetMapping("/folders")
+    @Operation(summary = "我的收藏夹", description = "获取当前用户的收藏夹列表")
+    public Result<List<FavoriteFolderDTO>> getMyFolders(
+            @Parameter(description = "用户ID", hidden = true) @RequestHeader("X-User-Id") Long userId) {
+        return favoriteService.getUserFolders(userId);
+    }
+    
+    @PostMapping("/folders")
+    @Operation(summary = "创建收藏夹", description = "创建一个新的收藏夹")
+    public Result<FavoriteFolderDTO> createFolder(
+            @Parameter(description = "用户ID", hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @Valid @RequestBody CreateFolderRequest request) {
+        return favoriteService.createFolder(userId, request);
+    }
+    
+    @PutMapping("/note/{noteId}/folder")
+    @Operation(summary = "移动收藏到文件夹", description = "通过笔记ID将收藏移动到指定收藏夹")
+    public Result<Void> moveFavoriteByNoteId(
+            @Parameter(description = "笔记ID") @PathVariable Long noteId,
+            @Parameter(description = "用户ID", hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @Parameter(description = "收藏夹ID") @RequestParam Long folderId) {
+        return favoriteService.moveFavoriteByNoteId(noteId, userId, folderId);
+    }
+
+
+    
+    @DeleteMapping("/folders/{folderId}")
+    @Operation(summary = "删除收藏夹", description = "删除指定收藏夹，笔记不会被取消收藏")
+    public Result<Void> deleteFolder(
+            @Parameter(description = "收藏夹ID") @PathVariable Long folderId,
+            @Parameter(description = "用户ID", hidden = true) @RequestHeader("X-User-Id") Long userId) {
+        return favoriteService.deleteFolder(folderId, userId);
     }
 }

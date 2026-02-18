@@ -4,9 +4,13 @@ import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.rating.client.NoteFeignClient;
+import com.onlystudents.rating.dto.CreateFolderRequest;
+import com.onlystudents.rating.dto.FavoriteFolderDTO;
 import com.onlystudents.rating.dto.NoteFavoriteDTO;
+import com.onlystudents.rating.entity.FavoriteFolder;
 import com.onlystudents.rating.entity.NoteFavorite;
 import com.onlystudents.rating.event.NoteFavoriteEvent;
+import com.onlystudents.rating.mapper.FavoriteFolderMapper;
 import com.onlystudents.rating.mapper.NoteFavoriteMapper;
 import com.onlystudents.rating.service.NoteFavoriteService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +30,7 @@ import java.util.stream.Collectors;
 public class NoteFavoriteServiceImpl implements NoteFavoriteService {
     
     private final NoteFavoriteMapper favoriteMapper;
+    private final FavoriteFolderMapper folderMapper;
     private final RabbitTemplate rabbitTemplate;
     private final NoteFeignClient noteFeignClient;
     
@@ -35,7 +40,12 @@ public class NoteFavoriteServiceImpl implements NoteFavoriteService {
         // 检查是否已收藏
         NoteFavorite exist = favoriteMapper.selectByNoteAndUser(noteId, userId);
         if (exist != null) {
-            return Result.success(); // 已收藏，直接返回成功
+            // 已收藏，更新收藏夹
+            if (folderId != null) {
+                exist.setFolderId(folderId);
+                favoriteMapper.updateById(exist);
+            }
+            return Result.success();
         }
         
         // 创建收藏记录
@@ -166,9 +176,176 @@ public class NoteFavoriteServiceImpl implements NoteFavoriteService {
         return null;
     }
     
-    private NoteFavoriteDTO convertToDTO(NoteFavorite favorite) {
+private NoteFavoriteDTO convertToDTO(NoteFavorite favorite) {
         NoteFavoriteDTO dto = new NoteFavoriteDTO();
         BeanUtils.copyProperties(favorite, dto);
         return dto;
+    }
+    
+    @Override
+    public Result<List<NoteFavoriteDTO>> getUserFavorites(Long userId, Long folderId) {
+        List<NoteFavorite> list;
+        if (folderId == null) {
+            list = favoriteMapper.selectListByUser(userId);
+        } else {
+            list = favoriteMapper.selectListByUserAndFolder(userId, folderId);
+        }
+        
+        return convertToFavoriteDTOList(list);
+    }
+    
+    @Override
+    public Result<List<FavoriteFolderDTO>> getUserFolders(Long userId) {
+        log.info("getUserFolders called, userId: {}", userId);
+        List<FavoriteFolder> folders = folderMapper.selectListByUser(userId);
+        log.info("Found folders: {}, data: {}", folders.size(), folders);
+        
+        // 构建"全部"选项
+        FavoriteFolderDTO allFolder = new FavoriteFolderDTO();
+        allFolder.setId(null);
+        allFolder.setName("全部");
+        allFolder.setIsDefault(1);
+        
+        Long totalCount = favoriteMapper.countByUserId(userId);
+        allFolder.setCount(totalCount.intValue());
+        
+        List<FavoriteFolderDTO> result = new java.util.ArrayList<>();
+        result.add(allFolder);
+        
+        for (FavoriteFolder folder : folders) {
+            FavoriteFolderDTO dto = new FavoriteFolderDTO();
+            BeanUtils.copyProperties(folder, dto);
+            
+            // 查询每个收藏夹的收藏数量
+            Long count = favoriteMapper.countByUserAndFolder(userId, folder.getId());
+            dto.setCount(count.intValue());
+            
+            result.add(dto);
+        }
+        
+        return Result.success(result);
+    }
+    
+    @Override
+    public Result<FavoriteFolderDTO> createFolder(Long userId, CreateFolderRequest request) {
+        FavoriteFolder folder = new FavoriteFolder();
+        folder.setUserId(userId);
+        folder.setName(request.getName());
+        folder.setDescription(request.getDescription());
+        folder.setCount(0);
+        folder.setIsDefault(0);
+        folder.setSortOrder(0);
+        
+        folderMapper.insert(folder);
+        
+        FavoriteFolderDTO dto = new FavoriteFolderDTO();
+        BeanUtils.copyProperties(folder, dto);
+        
+        return Result.success(dto);
+    }
+    
+    @Override
+    public Result<Void> moveFavorite(Long favoriteId, Long userId, Long folderId) {
+        NoteFavorite favorite = favoriteMapper.selectById(favoriteId);
+        if (favorite == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "收藏记录不存在");
+        }
+        
+        if (!favorite.getUserId().equals(userId)) {
+            throw new BusinessException(ResultCode.FORBIDDEN, "无权限操作");
+        }
+        
+        favorite.setFolderId(folderId);
+        favoriteMapper.updateById(favorite);
+        
+        return Result.success();
+    }
+    
+    @Override
+    public Result<Void> moveFavoriteByNoteId(Long noteId, Long userId, Long folderId) {
+        NoteFavorite favorite = favoriteMapper.selectByNoteAndUser(noteId, userId);
+        if (favorite == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "收藏记录不存在");
+        }
+        
+        favorite.setFolderId(folderId);
+        favoriteMapper.updateById(favorite);
+        
+        return Result.success();
+    }
+    
+    private Result<List<NoteFavoriteDTO>> convertToFavoriteDTOList(List<NoteFavorite> list) {
+        if (list == null || list.isEmpty()) {
+            return Result.success(java.util.Collections.emptyList());
+        }
+        
+        List<Long> noteIds = list.stream().map(NoteFavorite::getNoteId).collect(Collectors.toList());
+        
+        Map<Long, Map<String, Object>> noteInfoMap = new java.util.HashMap<>();
+        if (!noteIds.isEmpty()) {
+            try {
+                String idsStr = noteIds.stream().map(String::valueOf).collect(Collectors.joining(","));
+                Result<List<Map<String, Object>>> noteResult = noteFeignClient.getNotesByIds(idsStr);
+                if (noteResult != null && noteResult.getData() != null) {
+                    for (Map<String, Object> note : noteResult.getData()) {
+                        Object idObj = note.get("id");
+                        if (idObj instanceof Number) {
+                            noteInfoMap.put(((Number) idObj).longValue(), note);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("获取笔记信息失败", e);
+            }
+        }
+        
+        final Map<Long, Map<String, Object>> finalNoteInfoMap = noteInfoMap;
+        
+        List<NoteFavoriteDTO> dtoList = list.stream().map(favorite -> {
+            NoteFavoriteDTO dto = new NoteFavoriteDTO();
+            BeanUtils.copyProperties(favorite, dto);
+            
+            Map<String, Object> noteInfo = finalNoteInfoMap.get(favorite.getNoteId());
+            if (noteInfo != null) {
+                dto.setTitle(getStringValue(noteInfo, "title"));
+                dto.setCoverImage(getStringValue(noteInfo, "coverImage"));
+                dto.setAuthorNickname(getStringValue(noteInfo, "authorNickname"));
+                dto.setAuthorAvatar(getStringValue(noteInfo, "authorAvatar"));
+                dto.setViewCount(getIntValue(noteInfo, "viewCount"));
+                dto.setFavoriteCount(getIntValue(noteInfo, "favoriteCount"));
+                dto.setCommentCount(getIntValue(noteInfo, "commentCount"));
+                dto.setAverageRating(getBigDecimalValue(noteInfo, "averageRating"));
+                dto.setRatingCount(getIntValue(noteInfo, "ratingCount"));
+                dto.setTags((List<String>) noteInfo.get("tags"));
+            }
+            
+            return dto;
+        }).collect(Collectors.toList());
+        
+        return Result.success(dtoList);
+    }
+    
+    @Override
+    public Result<Void> deleteFolder(Long folderId, Long userId) {
+        FavoriteFolder folder = folderMapper.selectById(folderId);
+        if (folder == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "收藏夹不存在");
+        }
+        
+        if (!folder.getUserId().equals(userId)) {
+            throw new BusinessException(ResultCode.FORBIDDEN, "无权限操作");
+        }
+        
+        if (folder.getIsDefault() != null && folder.getIsDefault() == 1) {
+            throw new BusinessException(ResultCode.SERVICE_ERROR, "默认收藏夹不能删除");
+        }
+        
+        // 将该收藏夹下的笔记的folderId设为null，但不删除收藏记录
+        favoriteMapper.clearFolderById(folderId, userId);
+        
+        // 删除收藏夹
+        folderMapper.deleteById(folderId);
+        
+        return Result.success();
     }
 }
