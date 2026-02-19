@@ -29,6 +29,14 @@ public class RabbitConfig {
     }
 
     /**
+     * 笔记删除队列
+     */
+    @Bean
+    public Queue noteDeleteQueue() {
+        return new Queue("note.delete.queue", true);
+    }
+
+    /**
      * 笔记交换机
      */
     @Bean
@@ -37,13 +45,23 @@ public class RabbitConfig {
     }
 
     /**
-     * 绑定队列到交换机
+     * 绑定同步队列到交换机
      */
     @Bean
     public Binding noteSyncBinding() {
         return BindingBuilder.bind(noteSyncQueue())
                 .to(noteExchange())
                 .with("note.sync");
+    }
+
+    /**
+     * 绑定删除队列到交换机
+     */
+    @Bean
+    public Binding noteDeleteBinding() {
+        return BindingBuilder.bind(noteDeleteQueue())
+                .to(noteExchange())
+                .with("note.delete");
     }
     
     // ==================== 接收评分服务的事件队列 ====================
@@ -96,5 +114,19 @@ public class RabbitConfig {
         // 关键1：给生产者绑定JSON转换器
         rabbitTemplate.setMessageConverter(jsonMessageConverter());
         return rabbitTemplate;
+    }
+
+    /**
+     * 配置 RabbitListenerContainerFactory 使用 JSON 消息转换器
+     * 用于 @RabbitListener 注解的方法接收消息时自动反序列化
+     */
+    @Bean
+    public org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
+            ConnectionFactory connectionFactory) {
+        org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory factory =
+                new org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(connectionFactory);
+        factory.setMessageConverter(jsonMessageConverter());
+        return factory;
     }
 }

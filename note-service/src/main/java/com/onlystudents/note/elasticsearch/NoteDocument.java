@@ -26,6 +26,7 @@ public class NoteDocument {
     private Integer visibility;
     private BigDecimal price;
     private Integer status;
+    private Integer deleted;
     private Double hotScore;
     private Integer viewCount;
     private Integer likeCount;

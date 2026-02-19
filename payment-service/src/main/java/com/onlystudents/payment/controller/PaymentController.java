@@ -53,4 +53,11 @@ public class PaymentController {
     public Result<WalletDTO> getWallet(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId) {
         return Result.success(paymentService.getWallet(userId));
     }
+    
+    @GetMapping("/check-purchased/{noteId}")
+    @Operation(summary = "检查是否已购买笔记", description = "检查当前用户是否已购买指定笔记")
+    public Result<Boolean> checkPurchased(@PathVariable Long noteId,
+                                          @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId) {
+        return Result.success(paymentService.checkNotePurchased(userId, noteId));
+    }
 }

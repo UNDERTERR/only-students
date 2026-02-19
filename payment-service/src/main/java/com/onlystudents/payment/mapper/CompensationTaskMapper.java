@@ -61,7 +61,7 @@ public interface CompensationTaskMapper extends BaseMapper<CompensationTask> {
     /**
      * 标记任务为放弃（超过最大重试次数）
      */
-    @Update("UPDATE compensation_task SET status = 4, error_msg = #{errorMsg}, updated_at = NOW() WHERE id = #{id}")
+    @Update("UPDATE compensation_task SET deleted = 1, error_msg = #{errorMsg}, updated_at = NOW() WHERE id = #{id}")
     int markAbandoned(@Param("id") Long id, @Param("errorMsg") String errorMsg);
     
     /**

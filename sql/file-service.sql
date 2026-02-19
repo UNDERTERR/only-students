@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS file_record (
     md5_hash VARCHAR(64) COMMENT 'MD5校验值（用于秒传）',
     uploader_id BIGINT NOT NULL COMMENT '上传者ID',
     storage_type TINYINT DEFAULT 1 COMMENT '存储类型：1本地MinIO 2阿里云OSS',
-    status TINYINT DEFAULT 1 COMMENT '状态：0临时 1正常 2已删除',
+    status TINYINT DEFAULT 1 COMMENT '状态：0临时 1正常',
     access_level TINYINT DEFAULT 0 COMMENT '访问权限：0-私有 1-公开',
     expire_time DATETIME COMMENT '过期时间（临时文件）',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

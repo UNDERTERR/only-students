@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS comment (
     content TEXT NOT NULL COMMENT '评论内容',
     like_count INT DEFAULT 0 COMMENT '点赞数',
     reply_count INT DEFAULT 0 COMMENT '回复数（子评论数量）',
-    status TINYINT DEFAULT 1 COMMENT '状态：0已删除 1正常 2审核中 3违规',
+    status TINYINT DEFAULT 1 COMMENT '状态：1正常 2审核中 3违规',
+    deleted TINYINT DEFAULT 0 COMMENT '是否删除：0未删除 1已删除',
     is_top TINYINT DEFAULT 0 COMMENT '是否置顶：0否 1是',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -23,6 +24,7 @@ CREATE TABLE IF NOT EXISTS comment (
     INDEX idx_parent_id (parent_id),
     INDEX idx_root_id (root_id),
     INDEX idx_status (status),
+    INDEX idx_deleted (deleted),
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评论表';
 

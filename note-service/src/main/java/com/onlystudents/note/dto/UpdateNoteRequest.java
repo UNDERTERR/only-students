@@ -20,6 +20,8 @@ public class UpdateNoteRequest {
     
     private BigDecimal price;
     
+    private String attachments;
+    
     private Integer educationLevel;
     
     private Long schoolId;

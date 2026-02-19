@@ -30,8 +30,6 @@ public class NoteResponse {
 
     private Long originalFileId;
 
-    private Long pdfFileId;
-
     private Integer status;
 
     private Integer viewCount;

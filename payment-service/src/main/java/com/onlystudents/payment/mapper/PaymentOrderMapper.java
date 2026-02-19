@@ -15,4 +15,7 @@ public interface PaymentOrderMapper extends BaseMapper<PaymentOrder> {
     
     @Update("UPDATE payment_order SET status = #{status}, pay_time = NOW(), third_party_no = #{thirdPartyNo} WHERE order_no = #{orderNo}")
     int updatePayStatus(@Param("orderNo") String orderNo, @Param("status") Integer status, @Param("thirdPartyNo") String thirdPartyNo);
+    
+    @Select("SELECT COUNT(*) > 0 FROM payment_order WHERE user_id = #{userId} AND target_id = #{noteId} AND target_type = 1 AND status = 1")
+    boolean checkNotePurchased(@Param("userId") Long userId, @Param("noteId") Long noteId);
 }

@@ -37,16 +37,19 @@ public class Note {
 
     private BigDecimal price;
 
-    private Long originalFileId;
-
-    private Long pdfFileId;
+    private String attachments;
 
     private Integer status;
 
+    @TableLogic
+    private Integer deleted;
+
     private Integer viewCount;
-
-    private Integer likeCount;
-
+    
+    private Integer ratingCount;
+    
+    private BigDecimal averageRating;
+    
     private Integer favoriteCount;
 
     private Integer commentCount;
@@ -65,7 +68,7 @@ public class Note {
 
     private LocalDateTime publishTime;
 
-    @TableField(typeHandler =JacksonTypeHandler.class)
+    @TableField(exist = false)
     private List<String> tags;
 
     @TableField(fill = FieldFill.INSERT)

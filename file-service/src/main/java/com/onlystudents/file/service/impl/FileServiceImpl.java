@@ -7,8 +7,10 @@ import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.file.config.MinioConfig;
 import com.onlystudents.file.dto.FileUploadResult;
+import com.onlystudents.file.entity.FileConvertTask;
 import com.onlystudents.file.entity.FileRecord;
 import com.onlystudents.file.enums.FileCategory;
+import com.onlystudents.file.mapper.FileConvertTaskMapper;
 import com.onlystudents.file.mapper.FileRecordMapper;
 import com.onlystudents.file.service.FileConvertService;
 import com.onlystudents.file.service.FileService;
@@ -36,6 +38,7 @@ public class FileServiceImpl implements FileService {
     private final MinioClient minioClient;
     private final MinioConfig minioConfig;
     private final FileRecordMapper fileRecordMapper;
+    private final FileConvertTaskMapper fileConvertTaskMapper;
     private final FileConvertService fileConvertService;
 
     @Value("${file.upload.max-size:209715200}")
@@ -61,6 +64,12 @@ public class FileServiceImpl implements FileService {
         return uploadFileWithMd5Check(file, userId, md5Hash, category);
     }
 
+    @Override
+    public FileUploadResult uploadFileByVisibility(MultipartFile file, Long userId, Integer visibility) {
+        FileCategory category = FileCategory.fromVisibility(visibility);
+        return uploadFile(file, userId, category);
+    }
+    
     @Override
     public FileUploadResult uploadFileWithMd5Check(MultipartFile file, Long userId, String md5Hash) {
         return uploadFileWithMd5Check(file, userId, md5Hash, FileCategory.PRIVATE);
@@ -98,6 +107,12 @@ public class FileServiceImpl implements FileService {
                     + minioConfig.getBucketName() + "/"
                     + existFile.getFilePath();
             result.setFileUrl(fileUrl);
+            
+            // 即使是秒传，也尝试触发PDF转换（以防之前没有转换成功）
+            if (OFFICE_TYPES.contains(existFile.getFileType().toLowerCase())) {
+                convertToPdf(existFile.getId());
+            }
+            
             return result;
         }
 
@@ -228,18 +243,40 @@ public class FileServiceImpl implements FileService {
         }
 
         try {
-            // 从MinIO删除
+            // 从MinIO删除源文件
             minioClient.removeObject(RemoveObjectArgs.builder()
                     .bucket(minioConfig.getBucketName())
                     .object(record.getFilePath())
                     .build());
+            log.info("从MinIO删除源文件成功: fileId={}, path={}", fileId, record.getFilePath());
+            
+            // 检查是否有转换任务，如果有则删除PDF文件
+            FileConvertTask convertTask = fileConvertTaskMapper.selectLatestTaskBySourceFileId(fileId);
+            if (convertTask != null && convertTask.getTargetFileId() != null) {
+                FileRecord pdfRecord = fileRecordMapper.selectById(convertTask.getTargetFileId());
+                if (pdfRecord != null) {
+                    // 从MinIO删除PDF文件
+                    try {
+                        minioClient.removeObject(RemoveObjectArgs.builder()
+                                .bucket(minioConfig.getBucketName())
+                                .object(pdfRecord.getFilePath())
+                                .build());
+                        log.info("从MinIO删除PDF文件成功: pdfFileId={}, path={}", pdfRecord.getId(), pdfRecord.getFilePath());
+                    } catch (Exception pdfEx) {
+                        log.warn("从MinIO删除PDF文件失败（可能文件不存在）: pdfFileId={}, error={}", pdfRecord.getId(), pdfEx.getMessage());
+                    }
+                    // 物理删除PDF文件记录（使用自定义SQL绕过逻辑删除）
+                    fileRecordMapper.physicalDeleteById(pdfRecord.getId());
+                    log.info("物理删除PDF文件记录成功: pdfFileId={}", pdfRecord.getId());
+                }
+            }
 
-            // 更新数据库状态
-            record.setStatus(2); // 已删除
-            fileRecordMapper.updateById(record);
+            // 物理删除源文件记录（使用自定义SQL绕过逻辑删除）
+            fileRecordMapper.physicalDeleteById(fileId);
+            log.info("物理删除源文件记录成功: fileId={}", fileId);
 
         } catch (Exception e) {
-            log.error("删除文件失败", e);
+            log.error("删除文件失败: fileId={}", fileId, e);
             throw new BusinessException(ResultCode.ERROR, "删除文件失败");
         }
     }
@@ -247,6 +284,16 @@ public class FileServiceImpl implements FileService {
     @Override
     public void convertToPdf(Long fileId) {
         fileConvertService.convertToPdf(fileId);
+    }
+
+    @Override
+    public Integer getConvertStatus(Long fileId) {
+        return fileConvertService.getConvertStatus(fileId);
+    }
+
+    @Override
+    public Long getPdfFileId(Long sourceFileId) {
+        return fileConvertService.getPdfFileId(sourceFileId);
     }
 
     /**
@@ -318,7 +365,7 @@ public class FileServiceImpl implements FileService {
      * 配置 bucket 细粒度访问策略
      * - avatars/*: 公开可读（用户头像）
      * - public/*: 公开可读（笔记封面等公开资源）
-     * - private/*: 私有（个人笔记原稿）
+     * - private/*: 公开可读（笔记附件，需要登录后查看）
      * - paid/*: 私有（付费内容）
      */
     private void setupBucketPolicy(String bucketName) throws Exception {
@@ -331,7 +378,8 @@ public class FileServiceImpl implements FileService {
             "      \"Action\": [\"s3:GetObject\"],\n" +
             "      \"Resource\": [\n" +
             "        \"arn:aws:s3:::" + bucketName + "/avatars/*\",\n" +
-            "        \"arn:aws:s3:::" + bucketName + "/public/*\"\n" +
+            "        \"arn:aws:s3:::" + bucketName + "/public/*\",\n" +
+            "        \"arn:aws:s3:::" + bucketName + "/private/*\"\n" +
             "      ]\n" +
             "    }\n" +
             "  ]\n" +
@@ -346,7 +394,7 @@ public class FileServiceImpl implements FileService {
         log.info("[MinIO 策略配置] 已设置细粒度访问策略：\n" +
                 "  - avatars/*: 公开可读\n" +
                 "  - public/*: 公开可读\n" +
-            "  - private/*: 私有\n" +
+                "  - private/*: 公开可读\n" +
                 "  - paid/*: 私有");
     }
 

@@ -50,6 +50,10 @@ spring:
     password: admin123
     virtual-host: /
 
+# Note service URL for Feign client
+note-service:
+  url: http://localhost:8003
+
 # MyBatis Plus
 mybatis-plus:
   configuration:

@@ -3,7 +3,6 @@ package com.onlystudents.subscription.entity;
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -16,14 +15,6 @@ public class Subscription {
     private Long subscriberId;
     
     private Long creatorId;
-    
-    private Integer status;
-    
-    private LocalDateTime expireTime;
-    
-    private Long orderId;
-    
-    private BigDecimal price;
     
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

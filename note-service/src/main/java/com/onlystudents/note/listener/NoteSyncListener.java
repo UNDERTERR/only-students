@@ -24,6 +24,21 @@ public class NoteSyncListener {
     private final UserFeignClient userFeignClient;
     private final NoteCategoryMapper noteCategoryMapper;
     
+    @RabbitListener(queues = "note.delete.queue")
+    public void handleNoteDelete(Long noteId) {
+        log.info("收到笔记删除消息: noteId={}", noteId);
+        try {
+            // 从Elasticsearch删除文档
+            elasticsearchClient.delete(d -> d
+                    .index("notes")
+                    .id(String.valueOf(noteId))
+            );
+            log.info("笔记从ES删除成功: noteId={}", noteId);
+        } catch (Exception e) {
+            log.error("从ES删除笔记失败: noteId={}", noteId, e);
+        }
+    }
+
     @RabbitListener(queues = "note.sync.queue")
     public void handleNoteSync(Note note) {
         log.info("收到笔记同步消息: noteId={}", note.getId());

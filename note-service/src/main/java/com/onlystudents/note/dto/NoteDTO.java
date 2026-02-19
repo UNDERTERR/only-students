@@ -13,6 +13,12 @@ public class NoteDTO {
     
     private Long userId;
     
+    private String authorUsername;
+    
+    private String authorNickname;
+    
+    private String authorAvatar;
+    
     private String title;
     
     private String content;
@@ -25,15 +31,15 @@ public class NoteDTO {
     
     private BigDecimal price;
     
-    private Long originalFileId;
-    
-    private Long pdfFileId;
+    private String attachments;
     
     private Integer status;
     
     private Integer viewCount;
     
-    private Integer likeCount;
+    private Integer ratingCount;
+    
+    private BigDecimal averageRating;
     
     private Integer favoriteCount;
     

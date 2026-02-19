@@ -1,6 +1,5 @@
 package com.onlystudents.file.service.impl;
 
-import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.IdUtil;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.ResultCode;
@@ -19,25 +18,22 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
-/**
- * 文件转换服务实现
- * 使用 Gotenberg HTTP API 进行文档转换（替代本地 LibreOffice）
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -47,20 +43,41 @@ public class FileConvertServiceImpl implements FileConvertService {
     private final FileConvertTaskMapper taskMapper;
     private final MinioClient minioClient;
     private final MinioConfig minioConfig;
-    private final RestTemplate restTemplate = new RestTemplate();
+    
+    @Value("${file.convert.temp-dir:/tmp/file-convert}")
+    private String tempDir;
     
     @Value("${gotenberg.url:http://localhost:3000}")
     private String gotenbergUrl;
     
-    @Value("${file.convert.temp-dir:/tmp/only-students/convert}")
-    private String tempDir;
+    @Value("${file.convert.enabled:true}")
+    private boolean convertEnabled;
+    
+    private final RestTemplate restTemplate = new RestTemplate();
     
     private static final Set<String> OFFICE_TYPES = new HashSet<>(Arrays.asList(
-            "doc", "docx", "xls", "xlsx", "ppt", "pptx", "odt", "ods", "odp"
+            "doc", "docx", "xls", "xlsx", "ppt", "pptx"
     ));
+    
+    private static final Set<String> TEXT_TYPES = new HashSet<>(Arrays.asList(
+            "txt", "md", "json", "xml", "csv", "log"
+    ));
+    
+    @PostConstruct
+    public void init() {
+        try {
+            minioClient.makeBucket(MakeBucketArgs.builder()
+                    .bucket(minioConfig.getBucketName())
+                    .build());
+        } catch (Exception e) {
+            log.info("[MinIO 初始化] 桶已存在");
+        }
+    }
     
     @Override
     public void convertToPdf(Long sourceFileId) {
+        log.info("收到PDF转换请求: sourceFileId={}", sourceFileId);
+        
         FileRecord sourceFile = fileRecordMapper.selectById(sourceFileId);
         if (sourceFile == null) {
             log.error("源文件不存在: {}", sourceFileId);
@@ -68,16 +85,30 @@ public class FileConvertServiceImpl implements FileConvertService {
         }
         
         String fileType = sourceFile.getFileType().toLowerCase();
+        log.info("源文件类型: {}", fileType);
+        
+        // 文本类型直接存储，无需转换
+        if (TEXT_TYPES.contains(fileType)) {
+            log.info("文件类型[{}]为文本格式，直接存储", fileType);
+            return;
+        }
+        
+        // Office类型需要转换PDF
         if (!OFFICE_TYPES.contains(fileType)) {
             log.info("文件类型[{}]无需转换", fileType);
             return;
         }
         
-        // 检查是否已有转换任务
+        // 检查是否已有待处理的转换任务
         FileConvertTask existTask = taskMapper.selectLatestTaskBySourceFileId(sourceFileId);
         if (existTask != null && existTask.getTaskStatus() == 0) {
             log.info("文件[{}]已有待处理的转换任务", sourceFileId);
             return;
+        }
+        
+        // 如果已有完成或失败的任务，创建新任务重试
+        if (existTask != null && (existTask.getTaskStatus() == 2 || existTask.getTaskStatus() == 3)) {
+            log.info("文件[{}]已有转换记录(status={})，创建新任务重试", sourceFileId, existTask.getTaskStatus());
         }
         
         // 创建转换任务
@@ -93,13 +124,17 @@ public class FileConvertServiceImpl implements FileConvertService {
     
     @Override
     public void processConvertTask(Long taskId) {
+        log.info("开始处理转换任务: taskId={}", taskId);
+        
         FileConvertTask task = taskMapper.selectById(taskId);
         if (task == null || task.getTaskStatus() != 0) {
+            log.warn("任务不存在或状态不对: taskId={}, status={}", taskId, task != null ? task.getTaskStatus() : null);
             return;
         }
         
         FileRecord sourceFile = fileRecordMapper.selectById(task.getSourceFileId());
         if (sourceFile == null) {
+            log.error("源文件不存在: {}", task.getSourceFileId());
             task.setTaskStatus(3);
             task.setErrorMsg("源文件不存在");
             task.setCompletedAt(LocalDateTime.now());
@@ -123,64 +158,84 @@ public class FileConvertServiceImpl implements FileConvertService {
             
             // 从MinIO下载文件
             String tempInputPath = tempDir + "/" + IdUtil.simpleUUID() + "." + sourceFile.getFileType();
-            String tempOutputPath = tempDir + "/" + IdUtil.simpleUUID() + ".pdf";
-            
             tempInputFile = new File(tempInputPath);
-            tempOutputFile = new File(tempOutputPath);
             
             try (InputStream is = minioClient.getObject(GetObjectArgs.builder()
                     .bucket(minioConfig.getBucketName())
                     .object(sourceFile.getFilePath())
                     .build())) {
-                Files.copy(is, tempInputFile.toPath());
+                java.nio.file.Files.copy(is, tempInputFile.toPath());
             }
             
-            // 使用 Gotenberg HTTP API 转换
-            convertWithGotenberg(tempInputFile, tempOutputFile);
+            log.info("从MinIO下载文件成功: {}", tempInputPath);
+            
+            // 调用Gotenberg转换
+            String gotenbergConvertUrl = gotenbergUrl + "/forms/libreoffice/convert";
+            log.info("调用Gotenberg转换: {}", gotenbergConvertUrl);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+            
+            FileSystemResource resource = new FileSystemResource(tempInputFile);
+            
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            body.add("file", resource);
+            
+            HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+            
+            byte[] pdfBytes = restTemplate.postForObject(gotenbergConvertUrl, requestEntity, byte[].class);
+            
+            if (pdfBytes == null || pdfBytes.length == 0) {
+                throw new BusinessException(ResultCode.ERROR, "Gotenberg转换返回空结果");
+            }
+            
+            log.info("Gotenberg转换成功，PDF大小: {} bytes", pdfBytes.length);
+            
+            // 保存PDF到临时文件
+            String tempOutputPath = tempDir + "/" + IdUtil.simpleUUID() + ".pdf";
+            tempOutputFile = new File(tempOutputPath);
+            try (FileOutputStream fos = new FileOutputStream(tempOutputFile)) {
+                fos.write(pdfBytes);
+            }
             
             // 上传PDF到MinIO
-            String pdfFileName = IdUtil.simpleUUID() + ".pdf";
-            String pdfObjectName = "pdf/" + LocalDateTime.now().getYear() + "/" + pdfFileName;
+            String pdfObjectName = sourceFile.getFilePath().replaceAll("\\.[^.]+$", ".pdf");
             
-            try (InputStream pdfIs = Files.newInputStream(tempOutputFile.toPath())) {
-                minioClient.putObject(PutObjectArgs.builder()
-                        .bucket(minioConfig.getBucketName())
-                        .object(pdfObjectName)
-                        .stream(pdfIs, tempOutputFile.length(), -1)
-                        .contentType("application/pdf")
-                        .build());
-            }
+            minioClient.putObject(PutObjectArgs.builder()
+                    .bucket(minioConfig.getBucketName())
+                    .object(pdfObjectName)
+                    .stream(new FileInputStream(tempOutputFile), tempOutputFile.length(), -1)
+                    .contentType("application/pdf")
+                    .build());
             
-            // 创建PDF文件记录
+            log.info("PDF上传到MinIO成功: {}", pdfObjectName);
+            
+            // 保存PDF文件记录
             FileRecord pdfRecord = new FileRecord();
-            pdfRecord.setOriginalName(FileUtil.mainName(sourceFile.getOriginalName()) + ".pdf");
-            pdfRecord.setFileName(pdfFileName);
+            pdfRecord.setFileName(tempOutputFile.getName());
+            pdfRecord.setOriginalName(sourceFile.getOriginalName().replaceAll("\\.[^.]+$", ".pdf"));
             pdfRecord.setFilePath(pdfObjectName);
-            pdfRecord.setFileSize(tempOutputFile.length());
             pdfRecord.setFileType("pdf");
             pdfRecord.setMimeType("application/pdf");
+            pdfRecord.setFileSize(tempOutputFile.length());
             pdfRecord.setUploaderId(sourceFile.getUploaderId());
             pdfRecord.setStorageType(1);
             pdfRecord.setStatus(1);
+            pdfRecord.setAccessLevel(sourceFile.getAccessLevel());
             fileRecordMapper.insert(pdfRecord);
             
-            // 更新任务状态
+            // 更新转换任务状态
             task.setTargetFileId(pdfRecord.getId());
             task.setTaskStatus(2);
             task.setCompletedAt(LocalDateTime.now());
             taskMapper.updateById(task);
             
-            // 更新原文件的PDF文件ID
-            sourceFile.setPdfFileId(pdfRecord.getId());
-            fileRecordMapper.updateById(sourceFile);
-            
-            log.info("PDF转换成功: sourceFileId={}, pdfFileId={}", sourceFile.getId(), pdfRecord.getId());
+            log.info("PDF转换成功: sourceFileId={}, pdfFileId={}", task.getSourceFileId(), pdfRecord.getId());
             
         } catch (Exception e) {
-            log.error("PDF转换失败: taskId={}", taskId, e);
+            log.error("PDF转换失败: sourceFileId={}", task.getSourceFileId(), e);
             task.setTaskStatus(3);
             task.setErrorMsg(e.getMessage());
-            task.setRetryCount(task.getRetryCount() + 1);
             task.setCompletedAt(LocalDateTime.now());
             taskMapper.updateById(task);
         } finally {
@@ -194,71 +249,36 @@ public class FileConvertServiceImpl implements FileConvertService {
         }
     }
     
-    /**
-     * 使用 Gotenberg HTTP API 转换文档
-     * 
-     * @param inputFile  输入文件（doc/docx/xls/xlsx等）
-     * @param outputFile 输出PDF文件
-     */
-    private void convertWithGotenberg(File inputFile, File outputFile) throws Exception {
-        log.info("调用 Gotenberg API 转换文件: {} -> PDF", inputFile.getName());
-        
-        // 构建请求
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-        
-        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        body.add("files", new FileSystemResource(inputFile));
-        
-        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
-        
-        // 调用 Gotenberg API
-        String url = gotenbergUrl + "/forms/libreoffice/convert";
-        ResponseEntity<byte[]> response = restTemplate.postForEntity(
-                url, 
-                requestEntity, 
-                byte[].class
-        );
-        
-        if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-            throw new BusinessException(ResultCode.ERROR, 
-                    "Gotenberg转换失败: HTTP " + response.getStatusCode());
-        }
-        
-        // 保存PDF文件
-        try (FileOutputStream fos = new FileOutputStream(outputFile)) {
-            fos.write(response.getBody());
-        }
-        
-        log.info("Gotenberg 转换完成: {} bytes", outputFile.length());
-    }
-
-
-    @PostConstruct
-    public void initMinioBucket() {
-        String endpoint = minioConfig.getEndpoint();
-        String bucketName = minioConfig.getBucketName();
-        String accessKey = minioConfig.getAccessKey();
-        String secretKey = minioConfig.getSecretKey();
-        // 1. 校验配置是否完整（避免空值导致初始化失败）
-        if (endpoint == null || accessKey == null || secretKey == null || bucketName == null) {
-            throw new RuntimeException("MinIO 配置不完整，请检查 application.yml 中的 minio 相关配置");
-        }
+    @Scheduled(fixedDelay = 30000) // 每30秒检查一次
+    public void processPendingTasks() {
+        log.info("开始检查待转换任务...");
         try {
-            boolean bucketExists = minioClient.bucketExists(
-                    BucketExistsArgs.builder().bucket(bucketName).build()
-            );
-            if (!bucketExists) {
-                minioClient.makeBucket(
-                        MakeBucketArgs.builder().bucket(bucketName).build()
-                );
-                log.info("[MinIO 初始化] 桶 " + bucketName + " 不存在，已自动创建");
-            } else {
-                log.info("[MinIO 初始化] 桶 " + bucketName + " 已存在，无需创建");
+            List<FileConvertTask> pendingTasks = taskMapper.selectPendingTasks();
+            log.info("发现 {} 个待转换任务", pendingTasks.size());
+            for (FileConvertTask task : pendingTasks) {
+                log.info("处理待转换任务: taskId={}, sourceFileId={}", task.getId(), task.getSourceFileId());
+                processConvertTask(task.getId());
             }
         } catch (Exception e) {
-            // 桶初始化失败时，抛出运行时异常让服务启动失败（避免后续上传全报错）
-            throw new RuntimeException("[MinIO 初始化失败] 桶 " + bucketName + " 创建失败：" + e.getMessage(), e);
+            log.error("处理待转换任务失败", e);
         }
+    }
+    
+    @Override
+    public Integer getConvertStatus(Long sourceFileId) {
+        FileConvertTask task = taskMapper.selectLatestTaskBySourceFileId(sourceFileId);
+        if (task == null) {
+            return 0;
+        }
+        return task.getTaskStatus();
+    }
+    
+    @Override
+    public Long getPdfFileId(Long sourceFileId) {
+        FileConvertTask task = taskMapper.selectLatestTaskBySourceFileId(sourceFileId);
+        if (task != null && task.getTaskStatus() == 2 && task.getTargetFileId() != null) {
+            return task.getTargetFileId();
+        }
+        return null;
     }
 }

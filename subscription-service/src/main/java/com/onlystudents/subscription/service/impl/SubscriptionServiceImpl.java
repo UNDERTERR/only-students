@@ -1,7 +1,9 @@
 package com.onlystudents.subscription.service.impl;
 
 import com.onlystudents.common.exception.BusinessException;
+import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
+import com.onlystudents.subscription.client.UserFeignClient;
 import com.onlystudents.subscription.dto.CreatorConfigDTO;
 import com.onlystudents.subscription.dto.SubscribeRequest;
 import com.onlystudents.subscription.dto.SubscriptionDTO;
@@ -17,8 +19,8 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -28,44 +30,39 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     
     private final SubscriptionMapper subscriptionMapper;
     private final CreatorSubscriptionConfigMapper configMapper;
+    private final UserFeignClient userFeignClient;
     
     @Override
     @Transactional
     public SubscriptionDTO subscribe(SubscribeRequest request, Long subscriberId) {
-        // 检查是否已订阅
-        Subscription exist = subscriptionMapper.selectBySubscriberAndCreator(subscriberId, request.getCreatorId());
-        if (exist != null && exist.getStatus() == 1) {
-            throw new BusinessException(ResultCode.PARAM_ERROR, "已订阅该创作者");
-        }
-        
         // 检查不能订阅自己
         if (subscriberId.equals(request.getCreatorId())) {
             throw new BusinessException(ResultCode.PARAM_ERROR, "不能订阅自己");
         }
-        
+
+        // 检查是否已订阅
+        Subscription exist = subscriptionMapper.selectBySubscriberAndCreator(subscriberId, request.getCreatorId());
+        if (exist != null) {
+            throw new BusinessException(ResultCode.PARAM_ERROR, "已订阅该创作者");
+        }
+
+        // 新建订阅
         Subscription subscription = new Subscription();
         subscription.setSubscriberId(subscriberId);
         subscription.setCreatorId(request.getCreatorId());
-        subscription.setPrice(request.getPrice());
-        subscription.setStatus(1);
-        // 永久有效（价格为0或没有过期时间）
-        subscription.setExpireTime(null);
-        
+
         subscriptionMapper.insert(subscription);
-        
+
         return convertToDTO(subscription);
     }
     
     @Override
     @Transactional
     public void unsubscribe(Long creatorId, Long subscriberId) {
-        Subscription subscription = subscriptionMapper.selectBySubscriberAndCreator(subscriberId, creatorId);
-        if (subscription == null || subscription.getStatus() != 1) {
+        int deleted = subscriptionMapper.deleteBySubscriberAndCreator(subscriberId, creatorId);
+        if (deleted == 0) {
             throw new BusinessException(ResultCode.PARAM_ERROR, "未订阅该创作者");
         }
-        
-        subscription.setStatus(0);
-        subscriptionMapper.updateById(subscription);
     }
     
     @Override
@@ -74,29 +71,108 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             return false;
         }
         Subscription subscription = subscriptionMapper.selectBySubscriberAndCreator(subscriberId, creatorId);
-        if (subscription == null || subscription.getStatus() != 1) {
-            return false;
-        }
-        // 检查是否过期
-        if (subscription.getExpireTime() != null && subscription.getExpireTime().isBefore(LocalDateTime.now())) {
-            return false;
-        }
-        return true;
+        return subscription != null;
     }
     
     @Override
     public List<SubscriptionDTO> getMySubscriptions(Long subscriberId) {
-        List<Subscription> subscriptions = subscriptionMapper.selectActiveSubscriptionsBySubscriber(subscriberId);
+        List<Subscription> subscriptions = subscriptionMapper.selectBySubscriber(subscriberId);
+        
+        // 获取所有创作者ID
+        List<Long> creatorIds = subscriptions.stream()
+                .map(Subscription::getCreatorId)
+                .distinct()
+                .collect(Collectors.toList());
+        
+        // 批量获取创作者信息
+        Map<Long, Map<String, Object>> userInfoMap = new java.util.HashMap<>();
+        log.info("获取订阅列表，创作者IDs: {}", creatorIds);
+        if (!creatorIds.isEmpty()) {
+            try {
+                String idsStr = creatorIds.stream().map(String::valueOf).collect(Collectors.joining(","));
+                log.info("调用user-service，ids: {}", idsStr);
+                Result<List<Map<String, Object>>> userResult = userFeignClient.getUsersByIds(idsStr);
+                log.info("user-service返回结果: {}", userResult);
+                if (userResult != null && userResult.getData() != null) {
+                    log.info("获取到用户数据条数: {}", userResult.getData().size());
+                    for (Map<String, Object> user : userResult.getData()) {
+                        log.info("用户数据: {}", user);
+                        Object idObj = user.get("id");
+                        if (idObj instanceof Number) {
+                            userInfoMap.put(((Number) idObj).longValue(), user);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("获取创作者信息失败", e);
+            }
+        }
+        
+        // 转换并填充创作者信息
+        Map<Long, Map<String, Object>> finalUserInfoMap = userInfoMap;
         return subscriptions.stream()
-                .map(this::convertToDTO)
+                .map(sub -> {
+                    SubscriptionDTO dto = convertToDTO(sub);
+                    Map<String, Object> userInfo = finalUserInfoMap.get(sub.getCreatorId());
+                    if (userInfo != null) {
+                        dto.setCreatorNickname(getStringValue(userInfo, "nickname"));
+                        dto.setCreatorUsername(getStringValue(userInfo, "username"));
+                        dto.setCreatorAvatar(getStringValue(userInfo, "avatar"));
+                        dto.setCreatorBio(getStringValue(userInfo, "bio"));
+                    }
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
     
     @Override
     public List<SubscriptionDTO> getMySubscribers(Long creatorId) {
-        List<Subscription> subscriptions = subscriptionMapper.selectActiveSubscriptionsByCreator(creatorId);
+        List<Subscription> subscriptions = subscriptionMapper.selectByCreator(creatorId);
+        
+        // 获取所有订阅者ID
+        List<Long> subscriberIds = subscriptions.stream()
+                .map(Subscription::getSubscriberId)
+                .distinct()
+                .collect(Collectors.toList());
+        
+        // 批量获取订阅者信息
+        Map<Long, Map<String, Object>> userInfoMap = new java.util.HashMap<>();
+        log.info("获取粉丝列表，订阅者IDs: {}", subscriberIds);
+        if (!subscriberIds.isEmpty()) {
+            try {
+                String idsStr = subscriberIds.stream().map(String::valueOf).collect(Collectors.joining(","));
+                log.info("调用user-service，ids: {}", idsStr);
+                Result<List<Map<String, Object>>> userResult = userFeignClient.getUsersByIds(idsStr);
+                log.info("user-service返回结果: {}", userResult);
+                if (userResult != null && userResult.getData() != null) {
+                    log.info("获取到用户数据条数: {}", userResult.getData().size());
+                    for (Map<String, Object> user : userResult.getData()) {
+                        log.info("用户数据: {}", user);
+                        Object idObj = user.get("id");
+                        if (idObj instanceof Number) {
+                            userInfoMap.put(((Number) idObj).longValue(), user);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("获取订阅者信息失败", e);
+            }
+        }
+        
+        // 转换并填充订阅者信息
+        Map<Long, Map<String, Object>> finalUserInfoMap = userInfoMap;
         return subscriptions.stream()
-                .map(this::convertToDTO)
+                .map(sub -> {
+                    SubscriptionDTO dto = convertToDTO(sub);
+                    Map<String, Object> userInfo = finalUserInfoMap.get(sub.getSubscriberId());
+                    if (userInfo != null) {
+                        dto.setSubscriberNickname(getStringValue(userInfo, "nickname"));
+                        dto.setSubscriberUsername(getStringValue(userInfo, "username"));
+                        dto.setSubscriberAvatar(getStringValue(userInfo, "avatar"));
+                        dto.setSubscriberBio(getStringValue(userInfo, "bio"));
+                    }
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
     
@@ -109,10 +185,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public CreatorConfigDTO getCreatorConfig(Long creatorId) {
         CreatorSubscriptionConfig config = configMapper.selectByCreatorId(creatorId);
         if (config == null) {
-            // 返回默认配置
             CreatorConfigDTO dto = new CreatorConfigDTO();
             dto.setCreatorId(creatorId);
-            dto.setPrice(new java.math.BigDecimal("0.00"));
             dto.setIsEnabled(0);
             return dto;
         }
@@ -150,5 +224,10 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         CreatorConfigDTO dto = new CreatorConfigDTO();
         BeanUtils.copyProperties(config, dto);
         return dto;
+    }
+    
+    private String getStringValue(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        return value != null ? value.toString() : null;
     }
 }

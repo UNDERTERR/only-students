@@ -37,8 +37,6 @@ public class FileRecord {
      */
     private Integer accessLevel;
     
-    private Long pdfFileId;
-    
     private LocalDateTime expireTime;
     
     @TableField(fill = FieldFill.INSERT)

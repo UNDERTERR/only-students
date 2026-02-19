@@ -63,13 +63,27 @@ public class SearchServiceImpl implements SearchService {
 
             // 关键词搜索（标题、内容、标签）
             if (keyword != null && !keyword.trim().isEmpty()) {
-                boolQuery.must(m -> m
-                        .multiMatch(mm -> mm
-                                .fields("title^3", "content^2", "tags", "authorUsername", "authorNickname")
-                                .query(keyword)
-                                .type(TextQueryType.BestFields)
-                        )
-                );
+                // 对于纯数字且长度<=3的搜索词，使用通配符查询补充
+                if (keyword.matches("\\d+") && keyword.length() <= 3) {
+                    boolQuery.must(m -> m
+                            .bool(b -> b
+                                    .should(s -> s.multiMatch(mm -> mm
+                                            .fields("title^3", "content^2", "tags", "authorUsername", "authorNickname")
+                                            .query(keyword)
+                                            .type(TextQueryType.BestFields)))
+                                    .should(s -> s.wildcard(w -> w.field("title").value("*" + keyword + "*")))
+                                    .should(s -> s.wildcard(w -> w.field("content").value("*" + keyword + "*")))
+                            )
+                    );
+                } else {
+                    boolQuery.must(m -> m
+                            .multiMatch(mm -> mm
+                                    .fields("title^3", "content^2", "tags", "authorUsername", "authorNickname")
+                                    .query(keyword)
+                                    .type(TextQueryType.BestFields)
+                            )
+                    );
+                }
 
                 // 高亮配置
                 Map<String, HighlightField> highlightFields = new HashMap<>();
@@ -103,6 +117,9 @@ public class SearchServiceImpl implements SearchService {
                     // 暂时跳过复杂的价格区间筛选
                 }
             }
+
+            // 只搜索未删除的笔记
+            boolQuery.filter(f -> f.term(t -> t.field("deleted").value(0)));
 
             // 只搜索已发布的笔记
             boolQuery.filter(f -> f.term(t -> t.field("status").value(2)));
@@ -145,9 +162,6 @@ public class SearchServiceImpl implements SearchService {
                     requestBuilder.build(),
                     NoteDocument.class
             );
-            if (response!=null){
-                log.info("response:",response);
-            }
             // 处理结果
             List<NoteSearchResult> results = response.hits().hits().stream()
                     .map(hit -> {
@@ -185,10 +199,6 @@ public class SearchServiceImpl implements SearchService {
             searchResult.setSize(size);
             searchResult.setTotalPages((int) Math.ceil((double) searchResult.getTotal() / size));
 
-            if (searchResult!=null){
-                log.info("搜索结果：",searchResult);
-            }
-            // 记录搜索历史（异步）
             recordSearchHistory(keyword);
 
             return searchResult;

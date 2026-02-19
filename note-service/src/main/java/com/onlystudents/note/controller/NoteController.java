@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -104,14 +105,16 @@ public class NoteController {
 
     @GetMapping("/hot")
     @Operation(summary = "热门笔记", description = "按热度排序获取笔记列表")
-    public Result<List<NoteDTO>> getHotNotes(@RequestParam(name = "limit", defaultValue = "20") Integer limit) {
-        return Result.success(noteService.getHotNotes(limit));
+    public Result<List<NoteDTO>> getHotNotes(@RequestParam(name = "limit", defaultValue = "20") Integer limit,
+                                              @RequestHeader(value = CommonConstants.USER_ID_HEADER, required = false) Long userId) {
+        return Result.success(noteService.getHotNotes(limit, userId));
     }
 
     @GetMapping("/latest")
     @Operation(summary = "最新笔记", description = "按时间排序获取最新笔记")
-    public Result<List<NoteDTO>> getLatestNotes(@RequestParam(name = "limit", defaultValue = "20") Integer limit) {
-        return Result.success(noteService.getLatestNotes(limit));
+    public Result<List<NoteDTO>> getLatestNotes(@RequestParam(name = "limit", defaultValue = "20") Integer limit,
+                                                 @RequestHeader(value = CommonConstants.USER_ID_HEADER, required = false) Long userId) {
+        return Result.success(noteService.getLatestNotes(limit, userId));
     }
 
     @GetMapping("/user/{userId}")
@@ -152,5 +155,32 @@ public class NoteController {
         } catch (Exception e) {
             return Result.error("获取已发布笔记失败: " + e.getMessage());
         }
+    }
+    
+    @GetMapping("/batch")
+    @Operation(summary = "批量获取笔记", description = "根据ID列表批量获取笔记信息")
+    public Result<List<NoteDTO>> getNotesByIds(@RequestParam(name = "ids") String ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Result.success(List.of());
+        }
+        List<Long> noteIds = Arrays.stream(ids.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Long::parseLong)
+                .collect(Collectors.toList());
+        
+        if (noteIds.isEmpty()) {
+            return Result.success(List.of());
+        }
+        
+        List<Note> notes = noteMapper.selectListByIds(noteIds);
+        List<NoteDTO> noteDTOs = notes.stream()
+                .map(note -> {
+                    NoteDTO dto = new NoteDTO();
+                    BeanUtils.copyProperties(note, dto);
+                    return dto;
+                })
+                .collect(Collectors.toList());
+        return Result.success(noteDTOs);
     }
 }

@@ -11,13 +11,13 @@ import java.util.List;
 @Mapper
 public interface CommentMapper extends BaseMapper<Comment> {
     
-    @Select("SELECT * FROM comment WHERE note_id = #{noteId} AND status = 1 AND parent_id = 0 ORDER BY is_top DESC, created_at DESC")
+    @Select("SELECT * FROM comment WHERE note_id = #{noteId} AND deleted = 0 AND status = 1 AND parent_id = 0 ORDER BY is_top DESC, created_at DESC")
     List<Comment> selectRootCommentsByNoteId(Long noteId);
     
-    @Select("SELECT * FROM comment WHERE root_id = #{rootId} AND status = 1 ORDER BY created_at ASC")
+    @Select("SELECT * FROM comment WHERE root_id = #{rootId} AND deleted = 0 AND status = 1 ORDER BY created_at ASC")
     List<Comment> selectRepliesByRootId(Long rootId);
     
-    @Select("SELECT COUNT(*) FROM comment WHERE note_id = #{noteId} AND status = 1")
+    @Select("SELECT COUNT(*) FROM comment WHERE note_id = #{noteId} AND deleted = 0 AND status = 1")
     Integer countByNoteId(Long noteId);
     
     @Update("UPDATE comment SET like_count = like_count + 1 WHERE id = #{commentId}")

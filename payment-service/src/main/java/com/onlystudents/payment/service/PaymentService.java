@@ -23,4 +23,6 @@ public interface PaymentService {
     void createWallet(Long userId);
     
     void addIncome(Long userId, Long orderId, BigDecimal amount);
+    
+    boolean checkNotePurchased(Long userId, Long noteId);
 }

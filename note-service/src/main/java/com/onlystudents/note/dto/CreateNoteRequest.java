@@ -26,7 +26,7 @@ public class CreateNoteRequest {
     
     private BigDecimal price;
     
-    private Long originalFileId;
+    private String attachments;
     
     private Integer educationLevel;
     
