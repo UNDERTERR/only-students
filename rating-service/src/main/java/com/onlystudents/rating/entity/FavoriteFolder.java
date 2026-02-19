@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Data
 @TableName("favorite_folder")
 public class FavoriteFolder {
-    
+    //asd
     @TableId(type = IdType.AUTO)
     private Long id;
     
