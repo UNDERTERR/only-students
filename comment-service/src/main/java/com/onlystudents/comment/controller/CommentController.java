@@ -63,4 +63,11 @@ public class CommentController {
     public Result<Integer> getCommentCount(@PathVariable Long noteId) {
         return Result.success(commentService.getCommentCount(noteId));
     }
+    
+    @GetMapping("/{commentId}")
+    @Operation(summary = "评论详情", description = "获取单条评论的详情，包含根评论和所有回复")
+    public Result<CommentDTO> getCommentDetail(@PathVariable Long commentId,
+                                               @RequestHeader(value = CommonConstants.USER_ID_HEADER, required = false) Long userId) {
+        return Result.success(commentService.getCommentDetail(commentId, userId));
+    }
 }

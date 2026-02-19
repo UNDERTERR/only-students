@@ -1,6 +1,7 @@
 package com.onlystudents.comment.service.impl;
 
 import com.onlystudents.comment.client.UserFeignClient;
+import com.onlystudents.comment.client.UserResponse;
 import com.onlystudents.comment.dto.CommentDTO;
 import com.onlystudents.comment.dto.CreateCommentRequest;
 import com.onlystudents.comment.entity.Comment;
@@ -18,8 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -132,6 +131,34 @@ public class CommentServiceImpl implements CommentService {
         return commentMapper.countByNoteId(noteId);
     }
     
+    @Override
+    public CommentDTO getCommentDetail(Long commentId, Long currentUserId) {
+        Comment comment = commentMapper.selectById(commentId);
+        if (comment == null || comment.getDeleted() == 1) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "评论不存在");
+        }
+        
+        CommentDTO dto = convertToDTO(comment, currentUserId);
+        
+        if (comment.getParentId() == 0 || comment.getParentId() == null) {
+            List<Comment> allReplies = commentMapper.selectRepliesByRootId(commentId);
+            if (allReplies != null && !allReplies.isEmpty()) {
+                dto.setReplies(allReplies.stream()
+                        .map(reply -> convertToDTO(reply, currentUserId))
+                        .collect(Collectors.toList()));
+            }
+        } else {
+            List<Comment> directReplies = commentMapper.selectDirectRepliesByParentId(commentId);
+            if (directReplies != null && !directReplies.isEmpty()) {
+                dto.setReplies(directReplies.stream()
+                        .map(reply -> convertToDTO(reply, currentUserId))
+                        .collect(Collectors.toList()));
+            }
+        }
+        
+        return dto;
+    }
+    
     private CommentDTO convertToDTO(Comment comment, Long currentUserId) {
         CommentDTO dto = new CommentDTO();
         BeanUtils.copyProperties(comment, dto);
@@ -146,16 +173,11 @@ public class CommentServiceImpl implements CommentService {
 
         // 通过 Feign 调用 User-Service 查询用户信息
         try {
-            Result<Map<String, Object>> result = userFeignClient.getUserById(comment.getUserId());
+            Result<UserResponse> result = userFeignClient.getUserById(comment.getUserId());
             if (result != null && result.isSuccess() && result.getData() != null) {
-                Map<String, Object> userData = result.getData();
-                // 优先使用 nickname，如果没有则使用 username
-                String nickname = (String) userData.get("nickname");
-                String username = (String) userData.get("username");
-                dto.setUsername(Objects.toString(nickname != null ? nickname : username, "用户_" + comment.getUserId()));
-                // 设置头像
-                String avatar = (String) userData.get("avatar");
-                dto.setAvatar(avatar != null ? avatar : "");
+                UserResponse user = result.getData();
+                dto.setUsername(user.getNickname() != null ? user.getNickname() : user.getUsername());
+                dto.setAvatar(user.getAvatar() != null ? user.getAvatar() : "");
             } else {
                 dto.setUsername("用户_" + comment.getUserId());
                 dto.setAvatar("");

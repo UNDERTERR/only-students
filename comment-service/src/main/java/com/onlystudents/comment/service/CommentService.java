@@ -18,4 +18,6 @@ public interface CommentService {
     void unlikeComment(Long commentId, Long userId);
     
     Integer getCommentCount(Long noteId);
+    
+    CommentDTO getCommentDetail(Long commentId, Long currentUserId);
 }

@@ -1,12 +1,10 @@
 package com.onlystudents.comment.client.fallback;
 
 import com.onlystudents.comment.client.UserFeignClient;
+import com.onlystudents.comment.client.UserResponse;
 import com.onlystudents.common.result.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * 用户服务 Feign 客户端降级处理类
@@ -17,15 +15,14 @@ import java.util.Map;
 public class UserFeignClientFallback implements UserFeignClient {
 
     @Override
-    public Result<Map<String, Object>> getUserById(Long userId) {
+    public Result<UserResponse> getUserById(Long userId) {
         log.error("调用 user-service 失败，执行降级处理，userId={}", userId);
         
-        // 构建降级用户信息
-        Map<String, Object> fallbackUser = new HashMap<>();
-        fallbackUser.put("id", userId);
-        fallbackUser.put("username", "用户_" + userId);
-        fallbackUser.put("nickname", "用户_" + userId);
-        fallbackUser.put("avatar", "");
+        UserResponse fallbackUser = new UserResponse();
+        fallbackUser.setId(userId);
+        fallbackUser.setUsername("用户_" + userId);
+        fallbackUser.setNickname("用户_" + userId);
+        fallbackUser.setAvatar("");
         
         return Result.success(fallbackUser);
     }

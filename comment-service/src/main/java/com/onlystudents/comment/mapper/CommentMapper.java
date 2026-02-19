@@ -17,6 +17,9 @@ public interface CommentMapper extends BaseMapper<Comment> {
     @Select("SELECT * FROM comment WHERE root_id = #{rootId} AND deleted = 0 AND status = 1 ORDER BY created_at ASC")
     List<Comment> selectRepliesByRootId(Long rootId);
     
+    @Select("SELECT * FROM comment WHERE parent_id = #{parentId} AND deleted = 0 AND status = 1 ORDER BY created_at ASC")
+    List<Comment> selectDirectRepliesByParentId(Long parentId);
+    
     @Select("SELECT COUNT(*) FROM comment WHERE note_id = #{noteId} AND deleted = 0 AND status = 1")
     Integer countByNoteId(Long noteId);
     
