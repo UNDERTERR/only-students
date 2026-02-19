@@ -12,24 +12,27 @@ public class Message {
     @TableId(type = IdType.AUTO)
     private Long id;
     
+    @TableField("conversation_id")
     private Long conversationId;
     
+    @TableField("sender_id")
     private Long senderId;
     
+    @TableField("receiver_id")
     private Long receiverId;
     
     private String content;
     
-    private Integer type;
+    @TableField("content_type")
+    private Integer contentType;
+    
+    @TableField("file_url")
+    private String fileUrl;
     
     private Integer status;
     
+    private Integer deleted;
+    
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
-    
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedAt;
-    
-    @TableLogic
-    private Integer deleted;
 }

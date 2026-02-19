@@ -12,21 +12,32 @@ public class Conversation {
     @TableId(type = IdType.AUTO)
     private Long id;
     
-    private Long userId;
+    @TableField("user_id_1")
+    private Long userId1;
     
-    private Long targetUserId;
+    @TableField("user_id_2")
+    private Long userId2;
     
-    private String targetUsername;
+    @TableField("last_message_id")
+    private Long lastMessageId;
     
-    private String targetAvatar;
-    
-    private String lastMessage;
-    
+    @TableField("last_message_time")
     private LocalDateTime lastMessageTime;
     
-    private Integer unreadCount;
+    @TableField("last_message_preview")
+    private String lastMessagePreview;
     
-    private Integer status;
+    @TableField("user_1_unread_count")
+    private Integer user1UnreadCount;
+    
+    @TableField("user_2_unread_count")
+    private Integer user2UnreadCount;
+    
+    @TableField("user_1_hidden")
+    private Integer user1Hidden;
+    
+    @TableField("user_2_hidden")
+    private Integer user2Hidden;
     
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
@@ -34,6 +45,41 @@ public class Conversation {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
     
-    @TableLogic
-    private Integer deleted;
+    // ========== 非数据库字段 ==========
+    
+    /**
+     * 当前用户视角下的目标用户ID
+     */
+    @TableField(exist = false)
+    private Long targetUserId;
+    
+    /**
+     * 当前用户视角下的目标用户名
+     */
+    @TableField(exist = false)
+    private String targetUserName;
+    
+    /**
+     * 当前用户视角下的目标用户昵称
+     */
+    @TableField(exist = false)
+    private String targetNickname;
+    
+    /**
+     * 当前用户视角下的目标用户头像
+     */
+    @TableField(exist = false)
+    private String targetUserAvatar;
+    
+    /**
+     * 当前用户视角下的未读数
+     */
+    @TableField(exist = false)
+    private Integer unreadCount;
+    
+    /**
+     * 最后一条消息内容（用于前端显示）
+     */
+    @TableField(exist = false)
+    private String lastMessage;
 }

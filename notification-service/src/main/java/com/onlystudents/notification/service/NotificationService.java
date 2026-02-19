@@ -8,7 +8,7 @@ public interface NotificationService {
     
     Notification sendNotification(Long userId, Integer type, String title, String content, String redirectUrl, Long sourceId, Integer sourceType);
     
-    List<Notification> getNotificationList(Long userId, Integer status, Integer page, Integer size);
+    List<Notification> getNotificationList(Long userId, Integer isRead, Integer page, Integer size);
     
     Long getUnreadCount(Long userId);
     

@@ -13,8 +13,6 @@ spring:
         server-addr: localhost:8848
         namespace: public
         group: DEFAULT_GROUP
-        username: nacos
-        password: nacos
       config:
         server-addr: localhost:8848
         file-extension: yaml
@@ -113,6 +111,12 @@ spring:
             - Path=/api/message/**
           filters:
             - StripPrefix=1
+
+        # 消息服务WebSocket
+        - id: message-service-ws
+          uri: ws://localhost:8008
+          predicates:
+            - Path=/ws/message
 
         # 通知服务
         - id: notification-service
