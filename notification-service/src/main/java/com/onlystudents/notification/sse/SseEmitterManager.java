@@ -60,8 +60,8 @@ public class SseEmitterManager {
             emitter.send(SseEmitter.event()
                     .name("connected")
                     .data(Map.of("userId", userId, "message", "SSE连接成功")));
-        } catch (IOException e) {
-            log.error("发送SSE连接成功事件失败", e);
+        } catch (Exception e) {
+            log.warn("发送SSE连接成功事件失败，可能客户端已断开: {}", e.getMessage());
         }
         
         return emitter;

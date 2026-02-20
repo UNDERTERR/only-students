@@ -181,23 +181,16 @@ public class CommentServiceImpl implements CommentService {
             return java.util.Collections.emptyList();
         }
         
-        // 获取所有评论，然后过滤出用户笔记的评论
-        List<Comment> allComments = commentMapper.selectReceivedComments(userId, 0, page * size);
+        // 获取用户笔记的评论（排除自己发的）
+        List<Comment> comments = commentMapper.selectReceivedComments(userId, new java.util.ArrayList<>(userNoteIds), offset, size);
         
-        // 过滤：只保留用户笔记的评论，且不是用户自己发的
-        List<Comment> filteredComments = allComments.stream()
-                .filter(c -> userNoteIds.contains(c.getNoteId()) && !c.getUserId().equals(userId))
-                .skip((long) (page - 1) * size)
-                .limit(size)
-                .collect(Collectors.toList());
-        
-        if (filteredComments == null || filteredComments.isEmpty()) {
+        if (comments == null || comments.isEmpty()) {
             return java.util.Collections.emptyList();
         }
         
         // 获取笔记信息
         final java.util.Map<Long, java.util.Map<String, Object>> noteInfoMap = new java.util.HashMap<>();
-        List<Long> noteIds = filteredComments.stream().map(Comment::getNoteId).distinct().collect(Collectors.toList());
+        List<Long> noteIds = comments.stream().map(Comment::getNoteId).distinct().collect(Collectors.toList());
         if (!noteIds.isEmpty()) {
             try {
                 for (Long noteId : noteIds) {
@@ -213,7 +206,7 @@ public class CommentServiceImpl implements CommentService {
         
         final java.util.Map<Long, java.util.Map<String, Object>> finalNoteInfoMap = noteInfoMap;
         
-        return filteredComments.stream()
+        return comments.stream()
                 .map(comment -> {
                     CommentDTO dto = convertToDTO(comment, userId);
                     // 填充笔记信息
@@ -251,7 +244,7 @@ public class CommentServiceImpl implements CommentService {
             Result<List<Long>> noteIdsResult = noteFeignClient.getNoteIdsByUserId(userId);
             if (noteIdsResult != null && noteIdsResult.getData() != null && !noteIdsResult.getData().isEmpty()) {
                 // 获取这些笔记的所有未读评论数（排除自己发的）
-                return commentMapper.countReceivedCommentsUnread(userId);
+                return commentMapper.countReceivedCommentsUnread(userId, noteIdsResult.getData());
             }
         } catch (Exception e) {
             log.error("获取用户笔记ID列表失败", e);
