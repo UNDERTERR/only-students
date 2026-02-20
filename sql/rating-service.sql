@@ -40,11 +40,13 @@ CREATE TABLE IF NOT EXISTS note_favorite (
     note_id BIGINT NOT NULL COMMENT '笔记ID',
     user_id BIGINT NOT NULL COMMENT '用户ID',
     folder_id BIGINT DEFAULT 0 COMMENT '收藏夹ID（0为默认收藏夹）',
+    is_read TINYINT DEFAULT 0 COMMENT '是否已读：0否 1是',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uk_note_user (note_id, user_id),
     INDEX idx_user_id (user_id),
     INDEX idx_folder_id (folder_id),
-    INDEX idx_created_at (created_at)
+    INDEX idx_created_at (created_at),
+    INDEX idx_note_user_read (note_id, user_id, is_read)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='笔记收藏表';
 
 -- 收藏夹表

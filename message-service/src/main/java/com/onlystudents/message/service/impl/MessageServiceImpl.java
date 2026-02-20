@@ -188,6 +188,50 @@ public class MessageServiceImpl implements MessageService {
     
     @Override
     @Transactional
+    public void markConversationAsRead(Long conversationId, Long userId) {
+        Conversation conversation = conversationMapper.selectById(conversationId);
+        if (conversation == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "会话不存在");
+        }
+        
+        // 检查用户是否参与该会话
+        boolean isUser1 = userId.equals(conversation.getUserId1());
+        boolean isUser2 = userId.equals(conversation.getUserId2());
+        
+        if (!isUser1 && !isUser2) {
+            throw new BusinessException(ResultCode.FORBIDDEN, "无权操作该会话");
+        }
+        
+        // 将该会话的所有未读消息标记为已读
+        messageMapper.markAllAsReadByConversationId(conversationId, userId);
+        
+        // 清零未读数
+        if (isUser1) {
+            conversation.setUser1UnreadCount(0);
+        } else {
+            conversation.setUser2UnreadCount(0);
+        }
+        conversationMapper.updateById(conversation);
+        
+        log.info("用户{}将会话{}的所有消息标记为已读", userId, conversationId);
+    }
+    
+    @Override
+    public Long getTotalUnreadCount(Long userId) {
+        List<Conversation> conversations = conversationMapper.selectByUserId(userId);
+        long total = 0;
+        for (Conversation conv : conversations) {
+            if (userId.equals(conv.getUserId1())) {
+                total += conv.getUser1UnreadCount();
+            } else {
+                total += conv.getUser2UnreadCount();
+            }
+        }
+        return total;
+    }
+    
+    @Override
+    @Transactional
     public void deleteConversation(Long conversationId, Long userId) {
         Conversation conversation = conversationMapper.selectById(conversationId);
         if (conversation == null) {

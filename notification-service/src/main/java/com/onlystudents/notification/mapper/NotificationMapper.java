@@ -21,6 +21,9 @@ public interface NotificationMapper extends BaseMapper<Notification> {
     @Select("SELECT COUNT(*) FROM notification WHERE user_id = #{userId} AND is_read = 0")
     Long countUnreadByUserId(@Param("userId") Long userId);
     
+    @Select("SELECT COUNT(*) FROM notification WHERE user_id = #{userId}")
+    Long countByUserId(@Param("userId") Long userId);
+    
     @Update("UPDATE notification SET is_read = 1, read_time = NOW() WHERE id = #{id}")
     void markAsRead(@Param("id") Long id);
     

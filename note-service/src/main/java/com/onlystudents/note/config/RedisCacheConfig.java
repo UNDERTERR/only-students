@@ -1,5 +1,8 @@
 package com.onlystudents.note.config;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.onlystudents.common.utils.JsonSerializerUtils;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -23,8 +26,16 @@ public class RedisCacheConfig {
     
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory factory) {
+        // 创建支持类型信息的 ObjectMapper
+        ObjectMapper mapper = JsonSerializerUtils.getGlobalObjectMapper();
+        mapper.activateDefaultTyping(
+                LaissezFaireSubTypeValidator.instance,
+                ObjectMapper.DefaultTyping.NON_FINAL,
+                JsonTypeInfo.As.PROPERTY
+        );
+        
         // 使用自定义 ObjectMapper 创建序列化器
-        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(JsonSerializerUtils.getGlobalObjectMapper());
+        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(mapper);
         
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
                 // 设置缓存过期时间（默认5分钟）

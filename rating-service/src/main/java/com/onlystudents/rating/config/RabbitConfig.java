@@ -52,6 +52,11 @@ public class RabbitConfig {
     }
     
     @Bean
+    public Queue ratingFavoriteQueue() {
+        return new Queue("rating.favorite.queue", true);
+    }
+    
+    @Bean
     public Binding favoriteCreatedBinding() {
         return BindingBuilder.bind(favoriteCreatedQueue())
                 .to(ratingExchange())
@@ -63,6 +68,13 @@ public class RabbitConfig {
         return BindingBuilder.bind(favoriteDeletedQueue())
                 .to(ratingExchange())
                 .with("favorite.deleted");
+    }
+    
+    @Bean
+    public Binding ratingFavoriteBinding() {
+        return BindingBuilder.bind(ratingFavoriteQueue())
+                .to(ratingExchange())
+                .with("favorite.created");
     }
     
     // ==================== 评分事件队列 ====================

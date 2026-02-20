@@ -20,4 +20,12 @@ public interface CommentService {
     Integer getCommentCount(Long noteId);
     
     CommentDTO getCommentDetail(Long commentId, Long currentUserId);
+    
+    List<CommentDTO> getReceivedComments(Long userId, Integer page, Integer size);
+    
+    List<CommentDTO> getSentComments(Long userId, Integer page, Integer size);
+    
+    Integer getReceivedCommentUnreadCount(Long userId);
+    
+    void markCommentAsRead(Long commentId);
 }

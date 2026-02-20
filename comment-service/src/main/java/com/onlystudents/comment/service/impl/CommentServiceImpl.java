@@ -1,5 +1,6 @@
 package com.onlystudents.comment.service.impl;
 
+import com.onlystudents.comment.client.NoteFeignClient;
 import com.onlystudents.comment.client.UserFeignClient;
 import com.onlystudents.comment.client.UserResponse;
 import com.onlystudents.comment.dto.CommentDTO;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -29,6 +31,7 @@ public class CommentServiceImpl implements CommentService {
     private final CommentMapper commentMapper;
     private final CommentLikeMapper likeMapper;
     private final UserFeignClient userFeignClient;
+    private final NoteFeignClient noteFeignClient;
     
     @Override
     @Transactional
@@ -157,6 +160,108 @@ public class CommentServiceImpl implements CommentService {
         }
         
         return dto;
+    }
+    
+    @Override
+    public List<CommentDTO> getReceivedComments(Long userId, Integer page, Integer size) {
+        int offset = (page - 1) * size;
+        
+        // 先获取用户的笔记ID列表
+        java.util.Set<Long> userNoteIds = new java.util.HashSet<>();
+        try {
+            Result<java.util.List<Long>> noteIdsResult = noteFeignClient.getNoteIdsByUserId(userId);
+            if (noteIdsResult != null && noteIdsResult.getData() != null) {
+                userNoteIds.addAll(noteIdsResult.getData());
+            }
+        } catch (Exception e) {
+            log.error("获取用户笔记ID列表失败", e);
+        }
+        
+        if (userNoteIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        
+        // 获取所有评论，然后过滤出用户笔记的评论
+        List<Comment> allComments = commentMapper.selectReceivedComments(userId, 0, page * size);
+        
+        // 过滤：只保留用户笔记的评论，且不是用户自己发的
+        List<Comment> filteredComments = allComments.stream()
+                .filter(c -> userNoteIds.contains(c.getNoteId()) && !c.getUserId().equals(userId))
+                .skip((long) (page - 1) * size)
+                .limit(size)
+                .collect(Collectors.toList());
+        
+        if (filteredComments == null || filteredComments.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        
+        // 获取笔记信息
+        final java.util.Map<Long, java.util.Map<String, Object>> noteInfoMap = new java.util.HashMap<>();
+        List<Long> noteIds = filteredComments.stream().map(Comment::getNoteId).distinct().collect(Collectors.toList());
+        if (!noteIds.isEmpty()) {
+            try {
+                for (Long noteId : noteIds) {
+                    Result<Map<String, Object>> result = noteFeignClient.getNoteById(noteId);
+                    if (result != null && result.isSuccess() && result.getData() != null) {
+                        noteInfoMap.put(noteId, result.getData());
+                    }
+                }
+            } catch (Exception e) {
+                log.error("获取笔记信息失败", e);
+            }
+        }
+        
+        final java.util.Map<Long, java.util.Map<String, Object>> finalNoteInfoMap = noteInfoMap;
+        
+        return filteredComments.stream()
+                .map(comment -> {
+                    CommentDTO dto = convertToDTO(comment, userId);
+                    // 填充笔记信息
+                    java.util.Map<String, Object> noteInfo = finalNoteInfoMap.get(comment.getNoteId());
+                    if (noteInfo != null) {
+                        CommentDTO.NoteInfo noteDTO = new CommentDTO.NoteInfo();
+                        noteDTO.setId(((Number) noteInfo.get("id")).longValue());
+                        noteDTO.setTitle((String) noteInfo.get("title"));
+                        noteDTO.setCoverUrl((String) noteInfo.get("coverImage"));
+                        dto.setNote(noteDTO);
+                    }
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public List<CommentDTO> getSentComments(Long userId, Integer page, Integer size) {
+        int offset = (page - 1) * size;
+        List<Comment> comments = commentMapper.selectSentComments(userId, offset, size);
+        
+        if (comments == null || comments.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        
+        return comments.stream()
+                .map(comment -> convertToDTO(comment, userId))
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public Integer getReceivedCommentUnreadCount(Long userId) {
+        // 先获取用户的笔记ID列表
+        try {
+            Result<List<Long>> noteIdsResult = noteFeignClient.getNoteIdsByUserId(userId);
+            if (noteIdsResult != null && noteIdsResult.getData() != null && !noteIdsResult.getData().isEmpty()) {
+                // 获取这些笔记的所有未读评论数（排除自己发的）
+                return commentMapper.countReceivedCommentsUnread(userId);
+            }
+        } catch (Exception e) {
+            log.error("获取用户笔记ID列表失败", e);
+        }
+        return 0;
+    }
+
+    @Override
+    public void markCommentAsRead(Long commentId) {
+        commentMapper.markAsRead(commentId);
     }
     
     private CommentDTO convertToDTO(Comment comment, Long currentUserId) {

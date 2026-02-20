@@ -45,6 +45,9 @@ public class NotificationServiceImpl implements NotificationService {
         // 如果用户在线，通过SSE实时推送
         if (sseEmitterManager.isUserOnline(userId)) {
             sseEmitterManager.sendNotification(userId, notification);
+            // 发送未读数更新
+            Long unreadCount = notificationMapper.countUnreadByUserId(userId);
+            sseEmitterManager.sendUnreadCount(userId, unreadCount);
             log.info("通知已通过SSE推送给用户{}: {}", userId, title);
         } else {
             log.info("通知已存储，用户{}不在线，待登录后查看: {}", userId, title);
@@ -86,6 +89,10 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setReadTime(LocalDateTime.now());
         notificationMapper.updateById(notification);
         
+        // 发送未读数更新
+        Long unreadCount = notificationMapper.countUnreadByUserId(userId);
+        sseEmitterManager.sendUnreadCount(userId, unreadCount);
+        
         log.info("用户{}标记通知{}为已读", userId, notificationId);
     }
     
@@ -93,6 +100,10 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public void markAllAsRead(Long userId) {
         notificationMapper.markAllAsRead(userId);
+        
+        // 发送未读数更新
+        sseEmitterManager.sendUnreadCount(userId, 0L);
+        
         log.info("用户{}标记所有通知为已读", userId);
     }
     

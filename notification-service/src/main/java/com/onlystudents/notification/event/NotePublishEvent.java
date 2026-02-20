@@ -1,4 +1,4 @@
-package com.onlystudents.rating.event;
+package com.onlystudents.notification.event;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,12 +7,12 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 
 /**
- * 笔记收藏事件
+ * 笔记发布事件
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class NoteFavoriteEvent implements Serializable {
+public class NotePublishEvent implements Serializable {
     
     private static final long serialVersionUID = 1L;
     
@@ -20,11 +20,7 @@ public class NoteFavoriteEvent implements Serializable {
     
     private Long userId;
     
-    private Integer action;
+    private String title;
     
-    private Long totalCount;
-    
-    private Long noteAuthorId;
-    
-    private String noteTitle;
+    private String coverImage;
 }

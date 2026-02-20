@@ -1,4 +1,4 @@
-package com.onlystudents.rating.event;
+package com.onlystudents.notification.event;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

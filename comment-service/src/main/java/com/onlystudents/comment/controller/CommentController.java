@@ -70,4 +70,34 @@ public class CommentController {
                                                @RequestHeader(value = CommonConstants.USER_ID_HEADER, required = false) Long userId) {
         return Result.success(commentService.getCommentDetail(commentId, userId));
     }
+    
+    @GetMapping("/received")
+    @Operation(summary = "收到的评论", description = "获取当前用户收到的评论（别人评论我的笔记）")
+    public Result<List<CommentDTO>> getReceivedComments(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
+                                                         @RequestParam(name = "page", defaultValue = "1") Integer page,
+                                                         @RequestParam(name = "size", defaultValue = "20") Integer size) {
+        return Result.success(commentService.getReceivedComments(userId, page, size));
+    }
+    
+    @GetMapping("/sent")
+    @Operation(summary = "发出的评论", description = "获取当前用户发出的评论")
+    public Result<List<CommentDTO>> getSentComments(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
+                                                      @RequestParam(name = "page", defaultValue = "1") Integer page,
+                                                      @RequestParam(name = "size", defaultValue = "20") Integer size) {
+        return Result.success(commentService.getSentComments(userId, page, size));
+    }
+    
+    @GetMapping("/received/count")
+    @Operation(summary = "收到的评论未读数", description = "获取当前用户收到的评论未读数")
+    public Result<Integer> getReceivedCommentCount(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId) {
+        return Result.success(commentService.getReceivedCommentUnreadCount(userId));
+    }
+    
+    @PostMapping("/received/{commentId}/read")
+    @Operation(summary = "标记评论已读", description = "将收到的评论标记为已读")
+    public Result<Void> markCommentAsRead(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
+                                           @PathVariable Long commentId) {
+        commentService.markCommentAsRead(commentId);
+        return Result.success();
+    }
 }

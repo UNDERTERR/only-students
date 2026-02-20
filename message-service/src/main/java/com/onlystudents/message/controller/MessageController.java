@@ -51,6 +51,20 @@ public class MessageController {
         return Result.success();
     }
     
+    @PostMapping("/conversation/{conversationId}/read-all")
+    @Operation(summary = "标记会话全部已读", description = "将指定会话的所有消息标记为已读状态")
+    public Result<Void> markConversationAsRead(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
+                                               @PathVariable Long conversationId) {
+        messageService.markConversationAsRead(conversationId, userId);
+        return Result.success();
+    }
+    
+    @GetMapping("/unread-count")
+    @Operation(summary = "获取私信未读数", description = "获取当前用户所有会话的未读消息总数")
+    public Result<Long> getTotalUnreadCount(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId) {
+        return Result.success(messageService.getTotalUnreadCount(userId));
+    }
+    
     @DeleteMapping("/conversation/{conversationId}")
     @Operation(summary = "删除会话", description = "删除指定的会话及其所有消息")
     public Result<Void> deleteConversation(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,

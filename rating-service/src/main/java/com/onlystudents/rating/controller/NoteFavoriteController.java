@@ -101,4 +101,28 @@ public class NoteFavoriteController {
             @Parameter(description = "用户ID", hidden = true) @RequestHeader("X-User-Id") Long userId) {
         return favoriteService.deleteFolder(folderId, userId);
     }
+    
+    @GetMapping("/my-notifiers")
+    @Operation(summary = "谁收藏了我的笔记", description = "获取收藏了我发布的笔记的用户列表")
+    public Result<List<NoteFavoriteDTO>> getMyNoteFavorites(
+            @Parameter(description = "用户ID", hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @Parameter(description = "页码") @RequestParam(name = "page", defaultValue = "1") Integer page,
+            @Parameter(description = "每页数量") @RequestParam(name = "size", defaultValue = "20") Integer size) {
+        return favoriteService.getMyNoteFavorites(userId, page, size);
+    }
+    
+    @GetMapping("/my-notifiers/count")
+    @Operation(summary = "我的笔记被收藏未读数", description = "获取我的笔记被收藏的未读数量")
+    public Result<Long> getMyNoteFavoriteUnreadCount(
+            @Parameter(description = "用户ID", hidden = true) @RequestHeader("X-User-Id") Long userId) {
+        return favoriteService.getMyNoteFavoriteUnreadCount(userId);
+    }
+    
+    @PostMapping("/my-notifiers/{favoriteId}/read")
+    @Operation(summary = "标记收藏为已读", description = "将我的笔记被收藏的记录标记为已读")
+    public Result<Void> markFavoriteAsRead(
+            @Parameter(description = "收藏记录ID") @PathVariable Long favoriteId,
+            @Parameter(description = "用户ID", hidden = true) @RequestHeader("X-User-Id") Long userId) {
+        return favoriteService.markFavoriteAsRead(favoriteId, userId);
+    }
 }

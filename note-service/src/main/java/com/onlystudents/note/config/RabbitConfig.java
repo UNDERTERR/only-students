@@ -35,7 +35,15 @@ public class RabbitConfig {
     public Queue noteDeleteQueue() {
         return new Queue("note.delete.queue", true);
     }
-
+    
+    /**
+     * 笔记发布成功队列
+     */
+    @Bean
+    public Queue notePublishQueue() {
+        return new Queue("note.publish.queue", true);
+    }
+    
     /**
      * 笔记交换机
      */
@@ -43,7 +51,7 @@ public class RabbitConfig {
     public DirectExchange noteExchange() {
         return new DirectExchange("note.exchange", true, false);
     }
-
+    
     /**
      * 绑定同步队列到交换机
      */
@@ -53,7 +61,7 @@ public class RabbitConfig {
                 .to(noteExchange())
                 .with("note.sync");
     }
-
+    
     /**
      * 绑定删除队列到交换机
      */
@@ -62,6 +70,16 @@ public class RabbitConfig {
         return BindingBuilder.bind(noteDeleteQueue())
                 .to(noteExchange())
                 .with("note.delete");
+    }
+    
+    /**
+     * 绑定发布队列到交换机
+     */
+    @Bean
+    public Binding notePublishBinding() {
+        return BindingBuilder.bind(notePublishQueue())
+                .to(noteExchange())
+                .with("note.publish");
     }
     
     // ==================== 接收评分服务的事件队列 ====================

@@ -20,7 +20,7 @@ public class NoteFavoriteDTO {
     @Schema(description = "笔记ID")
     private Long noteId;
     
-    @Schema(description = "用户ID")
+    @Schema(description = "用户ID（收藏者）")
     private Long userId;
     
     @Schema(description = "收藏夹ID")
@@ -28,6 +28,19 @@ public class NoteFavoriteDTO {
     
     @Schema(description = "收藏时间")
     private LocalDateTime createdAt;
+    
+    @Schema(description = "是否已读")
+    private Boolean isRead;
+    
+    // 收藏者用户信息
+    @Schema(description = "收藏者用户名")
+    private String username;
+    
+    @Schema(description = "收藏者昵称")
+    private String nickname;
+    
+    @Schema(description = "收藏者头像")
+    private String avatar;
     
     // 笔记相关信息
     @Schema(description = "笔记标题")

@@ -31,6 +31,12 @@ spring:
       min-idle: 5
       max-active: 20
       max-wait: 60000
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin
+    password: admin123
+    virtual-host: /
 
 # MyBatis Plus
 mybatis-plus:

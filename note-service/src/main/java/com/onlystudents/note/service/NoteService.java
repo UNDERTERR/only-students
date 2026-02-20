@@ -27,4 +27,6 @@ public interface NoteService {
     void incrementViewCount(Long noteId);
     
     void publishNote(Long noteId, Long userId);
+    
+    List<Long> getNoteIdsByUserId(Long userId);
 }

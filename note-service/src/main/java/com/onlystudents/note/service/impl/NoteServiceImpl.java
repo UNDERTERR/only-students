@@ -13,6 +13,7 @@ import com.onlystudents.note.dto.CreateNoteRequest;
 import com.onlystudents.note.dto.NoteDTO;
 import com.onlystudents.note.dto.UpdateNoteRequest;
 import com.onlystudents.note.entity.Note;
+import com.onlystudents.note.event.NotePublishEvent;
 import com.onlystudents.note.mapper.NoteMapper;
 import com.onlystudents.note.service.NoteService;
 import com.onlystudents.note.service.TagService;
@@ -265,7 +266,7 @@ public class NoteServiceImpl implements NoteService {
     @Override
     @Caching(evict = {
         @CacheEvict(value = "notes", key = "#p0"),
-        @CacheEvict(value = "hotNotes", allEntries = true),
+    @CacheEvict(value = "hotNotes", allEntries = true),
         @CacheEvict(value = "latestNotes", allEntries = true)
     })
     public void publishNote(Long noteId, Long userId) {
@@ -283,14 +284,26 @@ public class NoteServiceImpl implements NoteService {
         noteMapper.updateById(note);
 
         try {
-
+            // 发送笔记同步消息
             rabbitTemplate.convertAndSend("note.exchange", "note.sync", note);
             log.info("笔记 [{}] 已发布，同步消息已发送到MQ", noteId+":"+note);
+            
+            // 发送笔记发布成功通知给作者
+            NotePublishEvent event = new NotePublishEvent(noteId, userId, note.getTitle(), note.getCoverImage());
+            rabbitTemplate.convertAndSend("note.exchange", "note.publish", event);
+            log.info("笔记发布通知事件已发送: noteId={}", noteId);
         } catch (Exception e) {
-            log.error("发送笔记同步消息失败: noteId={}", noteId, e);
-            // 可以选择抛异常回滚，或者继续执行（最终一致性）
-            // throw new BusinessException(ResultCode.SYSTEM_ERROR, "同步消息发送失败");
+            log.error("发送消息失败: noteId={}", noteId, e);
         }
+    }
+    
+    @Override
+    public List<Long> getNoteIdsByUserId(Long userId) {
+        LambdaQueryWrapper<Note> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Note::getUserId, userId);
+        wrapper.select(Note::getId);
+        List<Note> notes = noteMapper.selectList(wrapper);
+        return notes.stream().map(Note::getId).collect(Collectors.toList());
     }
 
     /**

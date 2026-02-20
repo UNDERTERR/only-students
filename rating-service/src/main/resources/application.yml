@@ -54,6 +54,10 @@ spring:
 note-service:
   url: http://localhost:8003
 
+# User service URL for Feign client
+user-service:
+  url: http://localhost:8001
+
 # MyBatis Plus
 mybatis-plus:
   configuration:

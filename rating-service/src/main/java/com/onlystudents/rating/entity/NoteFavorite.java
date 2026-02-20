@@ -20,4 +20,6 @@ public class NoteFavorite {
     
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
+    
+    private Boolean isRead;
 }

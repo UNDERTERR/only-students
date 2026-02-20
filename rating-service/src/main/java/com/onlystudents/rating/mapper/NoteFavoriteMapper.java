@@ -53,4 +53,31 @@ public interface NoteFavoriteMapper extends BaseMapper<NoteFavorite> {
      */
     @Update("UPDATE note_favorite SET folder_id = NULL WHERE folder_id = #{folderId} AND user_id = #{userId}")
     void clearFolderById(@Param("folderId") Long folderId, @Param("userId") Long userId);
+    
+    /**
+     * 获取我的笔记被收藏的记录（分页）
+     */
+    @Select("SELECT nf.* FROM note_favorite nf " +
+            "INNER JOIN note n ON nf.note_id = n.id " +
+            "WHERE n.user_id = #{userId} " +
+            "ORDER BY nf.created_at DESC " +
+            "LIMIT #{offset}, #{limit}")
+    List<NoteFavorite> selectMyNoteFavorites(@Param("userId") Long userId, @Param("offset") Integer offset, @Param("limit") Integer limit);
+    
+    /**
+     * 获取我的笔记被收藏的未读数量
+     */
+    @Select("SELECT COUNT(*) FROM note_favorite nf " +
+            "INNER JOIN note n ON nf.note_id = n.id " +
+            "WHERE n.user_id = #{userId} AND (nf.is_read = 0 OR nf.is_read IS NULL)")
+    Long countMyNoteFavoriteUnread(@Param("userId") Long userId);
+    
+    /**
+     * 标记收藏为已读
+     */
+    @Update("UPDATE note_favorite nf " +
+            "INNER JOIN note n ON nf.note_id = n.id " +
+            "SET nf.is_read = 1 " +
+            "WHERE nf.id = #{favoriteId} AND n.user_id = #{userId}")
+    int markAsRead(@Param("favoriteId") Long favoriteId, @Param("userId") Long userId);
 }
