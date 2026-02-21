@@ -31,21 +31,8 @@ public class NoteFavoriteEventListener {
         return;
     }
 
-    // 创建通知
-    Notification notification = new Notification();
-    notification.setUserId(event.getNoteAuthorId());
-    notification.setType(2); // 2-收藏类型
-    notification.setTitle("有人收藏了你的笔记");
-    notification.setContent("用户收藏了你的笔记: " + (event.getNoteTitle() != null ? event.getNoteTitle() : ""));
-    notification.setTargetId(event.getNoteId());
-    notification.setTargetType(1); // 1-笔记
-    notification.setIsRead(0);
-    notification.setSendChannel(1); // 1-系统通知
-
-    notificationMapper.insert(notification);
-    log.info("创建收藏通知成功: notificationId={}, userId={}", notification.getId(), notification.getUserId());
-
-    // 发送未读计数更新
+    // 收藏已有专门模块，不再插入系统通知
+    // 只发送未读计数更新
     Long unreadCount = notificationMapper.countByUserId(event.getNoteAuthorId());
     sseEmitterManager.sendUnreadCount(event.getNoteAuthorId(), unreadCount);
 }
