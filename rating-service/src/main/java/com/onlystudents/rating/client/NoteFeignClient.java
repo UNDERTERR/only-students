@@ -20,4 +20,7 @@ public interface NoteFeignClient {
     
     @GetMapping(value = "/note/batch", consumes = "application/json")
     Result<List<Map<String, Object>>> getNotesByIds(@RequestParam("ids") String ids);
+    
+    @GetMapping("/note/ids/user/{userId}")
+    Result<List<Long>> getNoteIdsByUserId(@PathVariable("userId") Long userId);
 }

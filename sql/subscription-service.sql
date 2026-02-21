@@ -20,13 +20,13 @@ CREATE TABLE IF NOT EXISTS subscription
     id            BIGINT PRIMARY KEY AUTO_INCREMENT,
     subscriber_id BIGINT NOT NULL COMMENT '订阅者ID',
     creator_id    BIGINT NOT NULL COMMENT '创作者ID',
+    is_read       TINYINT DEFAULT 0 COMMENT '是否已读：0否 1是',
     created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uk_subscriber_creator (subscriber_id, creator_id),
     INDEX idx_creator_id (creator_id),
-    INDEX idx_subscriber_id (subscriber_id)
+    INDEX idx_subscriber_id (subscriber_id),
+    INDEX idx_creator_read (creator_id, is_read)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='订阅关系表';
--- 删除订阅变更历史表（订阅免费后不再需要）
--- DROP TABLE IF EXISTS subscription_history;

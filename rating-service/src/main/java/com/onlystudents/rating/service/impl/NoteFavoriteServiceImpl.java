@@ -400,20 +400,38 @@ private NoteFavoriteDTO convertToDTO(NoteFavorite favorite) {
     
     @Override
     public Result<List<NoteFavoriteDTO>> getMyNoteFavorites(Long userId, Integer page, Integer size) {
-        int offset = (page - 1) * size;
-        List<NoteFavorite> list = favoriteMapper.selectMyNoteFavorites(userId, offset, size);
-        
-        if (list == null || list.isEmpty()) {
+        try {
+            Result<List<Long>> noteIdsResult = noteFeignClient.getNoteIdsByUserId(userId);
+            if (noteIdsResult == null || !noteIdsResult.isSuccess() || noteIdsResult.getData() == null || noteIdsResult.getData().isEmpty()) {
+                return Result.success(java.util.Collections.emptyList());
+            }
+            int offset = (page - 1) * size;
+            List<NoteFavorite> list = favoriteMapper.selectMyNoteFavorites(userId, noteIdsResult.getData(), offset, size);
+            
+            if (list == null || list.isEmpty()) {
+                return Result.success(java.util.Collections.emptyList());
+            }
+            
+            return convertToFavoriteDTOList(list);
+        } catch (Exception e) {
+            log.error("获取我的笔记被收藏记录失败", e);
             return Result.success(java.util.Collections.emptyList());
         }
-        
-        return convertToFavoriteDTOList(list);
     }
     
     @Override
     public Result<Long> getMyNoteFavoriteUnreadCount(Long userId) {
-        Long count = favoriteMapper.countMyNoteFavoriteUnread(userId);
-        return Result.success(count);
+        try {
+            Result<List<Long>> noteIdsResult = noteFeignClient.getNoteIdsByUserId(userId);
+            if (noteIdsResult == null || !noteIdsResult.isSuccess() || noteIdsResult.getData() == null || noteIdsResult.getData().isEmpty()) {
+                return Result.success(0L);
+            }
+            Long count = favoriteMapper.countMyNoteFavoriteUnread(userId, noteIdsResult.getData());
+            return Result.success(count);
+        } catch (Exception e) {
+            log.error("获取未读收藏数失败", e);
+            return Result.success(0L);
+        }
     }
     
     @Override

@@ -26,4 +26,7 @@ public interface SubscriptionMapper extends BaseMapper<Subscription> {
 
     @Delete("DELETE FROM subscription WHERE subscriber_id = #{subscriberId} AND creator_id = #{creatorId}")
     int deleteBySubscriberAndCreator(@Param("subscriberId") Long subscriberId, @Param("creatorId") Long creatorId);
+    
+    @Select("SELECT COUNT(*) FROM subscription WHERE creator_id = #{creatorId} AND (is_read = 0 OR is_read IS NULL)")
+    Integer countUnreadByCreator(Long creatorId);
 }

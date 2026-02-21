@@ -214,6 +214,20 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return convertToConfigDTO(config);
     }
     
+    @Override
+    public Integer getNewFollowerCount(Long creatorId) {
+        return subscriptionMapper.countUnreadByCreator(creatorId);
+    }
+    
+    @Override
+    public void markFollowerAsRead(Long subscriptionId) {
+        Subscription subscription = subscriptionMapper.selectById(subscriptionId);
+        if (subscription != null) {
+            subscription.setIsRead(1);
+            subscriptionMapper.updateById(subscription);
+        }
+    }
+    
     private SubscriptionDTO convertToDTO(Subscription subscription) {
         SubscriptionDTO dto = new SubscriptionDTO();
         BeanUtils.copyProperties(subscription, dto);
