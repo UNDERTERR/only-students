@@ -10,10 +10,15 @@ import com.onlystudents.user.entity.UserDevice;
 import com.onlystudents.user.event.UserEventPublisher;
 import com.onlystudents.user.mapper.UserDeviceMapper;
 import com.onlystudents.user.mapper.UserMapper;
+import com.onlystudents.user.service.SensitiveWordFilterService;
 import com.onlystudents.user.service.UserService;
+import com.onlystudents.user.service.VerificationCodeService;
+import com.onlystudents.user.service.VerificationCodeService.CodeType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -29,33 +34,68 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     
-private final UserMapper userMapper;
+    private final UserMapper userMapper;
     private final UserDeviceMapper deviceMapper;
     private final JwtUtils jwtUtils;
+    private final VerificationCodeService verificationCodeService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final UserEventPublisher userEventPublisher;
-    
+    private final SensitiveWordFilterService sensitiveWordFilterService;
+    private final CacheManager cacheManager;
     private static final int MAX_DEVICES = 3;
     
     @Override
     @Transactional
     public UserResponse register(RegisterRequest request) {
-        // 检查用户名是否已存在
-        if (userMapper.selectByUsername(request.getUsername()) != null) {
-            throw new BusinessException(ResultCode.USER_EXISTS);
+        // 验证验证码
+        CodeType codeType = "EMAIL".equalsIgnoreCase(request.getAccountType()) ? CodeType.REGISTER : CodeType.REGISTER;
+        if (!verificationCodeService.verifyCode(request.getAccount(), request.getSmsCode(), codeType)) {
+            throw new BusinessException(ResultCode.PARAM_ERROR, "验证码错误或已过期");
+        }
+        
+        // 根据账号类型设置邮箱或手机
+        String email = null;
+        String phone = null;
+        if ("EMAIL".equalsIgnoreCase(request.getAccountType())) {
+            email = request.getAccount();
+        } else {
+            phone = request.getAccount();
+        }
+        
+        // 验证邮箱或手机至少有一个
+        if (email == null && phone == null) {
+            throw new BusinessException(ResultCode.PARAM_ERROR, "邮箱或手机号不能为空");
         }
         
         // 检查邮箱是否已存在
-        if (request.getEmail() != null && userMapper.selectByEmail(request.getEmail()) != null) {
+        if (email != null && userMapper.selectByEmail(email) != null) {
             throw new BusinessException(ResultCode.PARAM_ERROR, "邮箱已被注册");
+        }
+        
+        // 检查手机号是否已存在
+        if (phone != null && userMapper.selectByPhone(phone) != null) {
+            throw new BusinessException(ResultCode.PARAM_ERROR, "手机号已被注册");
+        }
+        
+        // 敏感词过滤
+        String filteredNickname = sensitiveWordFilterService.filter(request.getNickname());
+        
+        // 检查昵称是否已存在
+        if (userMapper.selectByNickname(filteredNickname) != null) {
+            throw new BusinessException(ResultCode.PARAM_ERROR, "昵称已被使用");
         }
         
         // 创建用户
         User user = new User();
-        BeanUtils.copyProperties(request, user);
+        user.setEmail(email);
+        user.setPhone(phone);
+        user.setNickname(filteredNickname);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setStatus(1);
         user.setIsCreator(0);
+        user.setEducationLevel(request.getEducationLevel());
+        user.setSchoolId(request.getSchoolId());
+        user.setSchoolName(request.getSchoolName());
         
         userMapper.insert(user);
         
@@ -65,19 +105,42 @@ private final UserMapper userMapper;
     @Override
     @Transactional
     public LoginResponse login(LoginRequest request) {
-        // 查找用户
-        User user = userMapper.selectByUsername(request.getUsername());
-        if (user == null) {
-            throw new BusinessException(ResultCode.USERNAME_PASSWORD_ERROR);
+        User user = null;
+        
+        // 根据登录方式验证
+        if ("SMS_CODE".equalsIgnoreCase(request.getLoginType())) {
+            // 验证码登录
+            if (!verificationCodeService.verifyCode(request.getAccount(), request.getSmsCode(), CodeType.LOGIN)) {
+                throw new BusinessException(ResultCode.PARAM_ERROR, "验证码错误或已过期");
+            }
+            // 查询用户
+            if (request.getAccount().contains("@")) {
+                user = userMapper.selectByEmail(request.getAccount());
+            } else {
+                user = userMapper.selectByPhone(request.getAccount());
+            }
+            if (user == null) {
+                throw new BusinessException(ResultCode.USER_NOT_FOUND, "该账号未注册");
+            }
+        } else {
+            // 密码登录
+            if (request.getAccount().contains("@")) {
+                user = userMapper.selectByEmail(request.getAccount());
+            } else {
+                user = userMapper.selectByPhone(request.getAccount());
+            }
+            if (user == null) {
+                throw new BusinessException(ResultCode.USERNAME_PASSWORD_ERROR, "账号或密码错误");
+            }
+            // 验证密码
+            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                throw new BusinessException(ResultCode.USERNAME_PASSWORD_ERROR, "账号或密码错误");
+            }
         }
+        
         // 检查状态
         if (user.getStatus() != 1) {
             throw new BusinessException(ResultCode.USER_DISABLED);
-        }
-        
-        // 验证密码
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BusinessException(ResultCode.USERNAME_PASSWORD_ERROR);
         }
         
         // 更新最后登录时间
@@ -89,8 +152,8 @@ private final UserMapper userMapper;
             handleDeviceLogin(user.getId(), request);
         }
         
-        // 生成Token
-        String token = jwtUtils.generateToken(user.getId(), user.getUsername());
+        // 生成Token（只存userId）
+        String token = jwtUtils.generateToken(user.getId());
         
         LoginResponse response = new LoginResponse();
         response.setToken(token);
@@ -163,21 +226,16 @@ private final UserMapper userMapper;
             throw new BusinessException(ResultCode.USER_NOT_FOUND);
         }
         
-        // 更新非空字段
+        // 更新非空字段，昵称需要敏感词过滤
         if (request.getNickname() != null) {
-            user.setNickname(request.getNickname());
+            String filteredNickname = sensitiveWordFilterService.filter(request.getNickname());
+            user.setNickname(filteredNickname);
         }
         if (request.getAvatar() != null) {
             user.setAvatar(request.getAvatar());
         }
         if (request.getBio() != null) {
             user.setBio(request.getBio());
-        }
-        if (request.getEmail() != null) {
-            user.setEmail(request.getEmail());
-        }
-        if (request.getPhone() != null) {
-            user.setPhone(request.getPhone());
         }
         if (request.getEducationLevel() != null) {
             user.setEducationLevel(request.getEducationLevel());
@@ -189,7 +247,7 @@ private final UserMapper userMapper;
             user.setSchoolName(request.getSchoolName());
         }
         
-user.setUpdatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateById(user);
         
         // 发布用户信息更新事件
@@ -240,6 +298,37 @@ user.setUpdatedAt(LocalDateTime.now());
         return users.stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
+    }
+    
+    @Override
+    public void incrementFollowerCount(Long userId) {
+        if (userId != null) {
+            log.info("开始增加粉丝数, userId={}", userId);
+            int rows = userMapper.incrementFollowerCount(userId);
+            log.info("增加粉丝数结果, userId={}, rows={}", userId, rows);
+            clearUserCache(userId);
+            log.info("清除缓存完成, userId={}", userId);
+        }
+    }
+    
+    @Override
+    public void decrementFollowerCount(Long userId) {
+        if (userId != null) {
+            userMapper.decrementFollowerCount(userId);
+            clearUserCache(userId);
+        }
+    }
+    
+    @Override
+    public void clearUserCache(Long userId) {
+        log.info("清除用户缓存: userId={}", userId);
+        if (cacheManager != null && userId != null) {
+            Cache cache = cacheManager.getCache("users");
+            if (cache != null) {
+                cache.evict(userId);
+                log.info("用户缓存已清除: userId={}", userId);
+            }
+        }
     }
     
     private UserResponse convertToResponse(User user) {

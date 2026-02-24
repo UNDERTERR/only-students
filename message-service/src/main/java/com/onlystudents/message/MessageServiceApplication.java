@@ -1,8 +1,8 @@
 package com.onlystudents.message;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.onlystudents.common.utils.JwtUtils;
 import com.onlystudents.common.utils.JsonSerializerUtils;
+import com.onlystudents.common.utils.JwtUtils;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -12,11 +12,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {"com.onlystudents.message", "com.onlystudents.common"})
 @EnableDiscoveryClient
 @EnableFeignClients
 @MapperScan("com.onlystudents.message.mapper")
-@Import(JwtUtils.class)
+
 public class MessageServiceApplication {
     
     @Bean

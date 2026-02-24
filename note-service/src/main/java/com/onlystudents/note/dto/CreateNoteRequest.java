@@ -10,8 +10,6 @@ public class CreateNoteRequest {
     
     private String title;
 
-    private String authorUsername;
-
     private String authorNickname;
 
     private String authorAvatar;

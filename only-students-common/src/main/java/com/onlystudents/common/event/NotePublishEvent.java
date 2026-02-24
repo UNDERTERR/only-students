@@ -1,4 +1,4 @@
-package com.onlystudents.note.event;
+package com.onlystudents.common.event;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

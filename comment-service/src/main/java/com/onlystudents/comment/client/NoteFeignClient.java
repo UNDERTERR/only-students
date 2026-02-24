@@ -1,5 +1,6 @@
 package com.onlystudents.comment.client;
 
+import com.onlystudents.comment.client.fallback.NoteFeignClientFallbackFactory;
 import com.onlystudents.common.result.Result;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;

@@ -52,6 +52,17 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         subscription.setCreatorId(request.getCreatorId());
 
         subscriptionMapper.insert(subscription);
+        
+        // 更新创作者的粉丝数
+        try {
+            log.info("开始更新创作者粉丝数, creatorId={}", request.getCreatorId());
+            userFeignClient.incrementFollowerCount(request.getCreatorId());
+            log.info("开始清除创作者缓存, creatorId={}", request.getCreatorId());
+            userFeignClient.clearUserCache(request.getCreatorId());
+            log.info("更新粉丝数完成");
+        } catch (Exception e) {
+            log.error("更新粉丝数失败", e);
+        }
 
         return convertToDTO(subscription);
     }
@@ -62,6 +73,14 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         int deleted = subscriptionMapper.deleteBySubscriberAndCreator(subscriberId, creatorId);
         if (deleted == 0) {
             throw new BusinessException(ResultCode.PARAM_ERROR, "未订阅该创作者");
+        }
+        
+        // 更新创作者的粉丝数
+        try {
+            userFeignClient.decrementFollowerCount(creatorId);
+            userFeignClient.clearUserCache(creatorId);
+        } catch (Exception e) {
+            log.error("更新粉丝数失败", e);
         }
     }
     
@@ -116,7 +135,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                     Map<String, Object> userInfo = finalUserInfoMap.get(sub.getCreatorId());
                     if (userInfo != null) {
                         dto.setCreatorNickname(getStringValue(userInfo, "nickname"));
-                        dto.setCreatorUsername(getStringValue(userInfo, "username"));
                         dto.setCreatorAvatar(getStringValue(userInfo, "avatar"));
                         dto.setCreatorBio(getStringValue(userInfo, "bio"));
                     }
@@ -167,7 +185,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                     Map<String, Object> userInfo = finalUserInfoMap.get(sub.getSubscriberId());
                     if (userInfo != null) {
                         dto.setSubscriberNickname(getStringValue(userInfo, "nickname"));
-                        dto.setSubscriberUsername(getStringValue(userInfo, "username"));
                         dto.setSubscriberAvatar(getStringValue(userInfo, "avatar"));
                         dto.setSubscriberBio(getStringValue(userInfo, "bio"));
                     }

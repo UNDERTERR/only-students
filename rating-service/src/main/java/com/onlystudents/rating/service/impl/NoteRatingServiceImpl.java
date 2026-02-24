@@ -1,11 +1,11 @@
 package com.onlystudents.rating.service.impl;
 
+import com.onlystudents.common.event.NoteRatingEvent;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.rating.dto.NoteRatingDTO;
 import com.onlystudents.rating.entity.NoteRating;
-import com.onlystudents.rating.event.NoteRatingEvent;
 import com.onlystudents.rating.mapper.NoteRatingMapper;
 import com.onlystudents.rating.service.NoteRatingService;
 import lombok.RequiredArgsConstructor;

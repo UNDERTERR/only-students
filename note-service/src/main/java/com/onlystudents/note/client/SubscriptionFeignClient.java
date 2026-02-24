@@ -1,5 +1,6 @@
 package com.onlystudents.note.client;
 
+import com.onlystudents.common.constants.CommonConstants;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.note.client.fallback.SubscriptionFeignClientFallback;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -26,5 +27,5 @@ public interface SubscriptionFeignClient {
      */
     @GetMapping("/subscription/check/{creatorId}")
     Result<Boolean> checkSubscription(@PathVariable("creatorId") Long creatorId,
-                                      @RequestHeader("X-User-Id") Long subscriberId);
+                                      @RequestHeader(CommonConstants.USER_ID_HEADER) Long subscriberId);
 }

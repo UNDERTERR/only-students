@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {"com.onlystudents.comment", "com.onlystudents.common"})
 @EnableDiscoveryClient
 @EnableFeignClients
 @MapperScan("com.onlystudents.comment.mapper")

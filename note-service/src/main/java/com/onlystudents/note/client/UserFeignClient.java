@@ -22,7 +22,7 @@ public interface UserFeignClient {
      * 根据用户ID获取用户信息
      *
      * @param userId 用户ID
-     * @return 用户信息（包含 username, nickname, avatar 等字段）
+     * @return 用户信息（包含 nickname, avatar 等字段）
      */
     @GetMapping("/user/{userId}")
     Result<Map<String, Object>> getUserById(@PathVariable("userId") Long userId);

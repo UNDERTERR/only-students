@@ -51,7 +51,7 @@ public class SearchServiceImpl implements SearchService {
                     .size(size)
                     .source(s -> s.filter(f -> f.includes(
                             "noteId", "title", "content", "tags", "categoryId", "categoryName",
-                            "userId", "authorUsername", "authorNickname", "authorAvatar",
+                            "userId", "authorNickname", "authorAvatar",
                             "educationLevel", "schoolId", "schoolName", "subject",
                             "visibility", "price", "status", "hotScore",
                             "viewCount", "likeCount", "favoriteCount", "commentCount", "shareCount",
@@ -68,7 +68,7 @@ public class SearchServiceImpl implements SearchService {
                     boolQuery.must(m -> m
                             .bool(b -> b
                                     .should(s -> s.multiMatch(mm -> mm
-                                            .fields("title^3", "content^2", "tags", "authorUsername", "authorNickname")
+                                            .fields("title^3", "content^2", "tags", "authorNickname")
                                             .query(keyword)
                                             .type(TextQueryType.BestFields)))
                                     .should(s -> s.wildcard(w -> w.field("title").value("*" + keyword + "*")))
@@ -78,7 +78,7 @@ public class SearchServiceImpl implements SearchService {
                 } else {
                     boolQuery.must(m -> m
                             .multiMatch(mm -> mm
-                                    .fields("title^3", "content^2", "tags", "authorUsername", "authorNickname")
+                                    .fields("title^3", "content^2", "tags", "authorNickname")
                                     .query(keyword)
                                     .type(TextQueryType.BestFields)
                             )
@@ -170,7 +170,7 @@ public class SearchServiceImpl implements SearchService {
                         BeanUtils.copyProperties(doc, result);
                         result.setId(doc.getNoteId());
                         result.setAuthorId(doc.getUserId());
-                        result.setAuthorName(doc.getAuthorNickname() != null ? doc.getAuthorNickname() : doc.getAuthorUsername());
+                        result.setAuthorName(doc.getAuthorNickname());
                         result.setAuthorAvatar(doc.getAuthorAvatar());
                         result.setPrice(doc.getPrice() != null ? doc.getPrice().intValue() : 0);
 
@@ -292,7 +292,7 @@ public class SearchServiceImpl implements SearchService {
                         BeanUtils.copyProperties(doc, result);
                         result.setId(doc.getNoteId());
                         result.setAuthorId(doc.getUserId());
-                        result.setAuthorName(doc.getAuthorNickname() != null ? doc.getAuthorNickname() : doc.getAuthorUsername());
+                        result.setAuthorName(doc.getAuthorNickname());
                         result.setAuthorAvatar(doc.getAuthorAvatar());
                         return result;
                     })

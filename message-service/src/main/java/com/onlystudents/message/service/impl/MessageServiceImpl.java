@@ -3,11 +3,11 @@ package com.onlystudents.message.service.impl;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
+import com.onlystudents.message.client.UserServiceClient;
 import com.onlystudents.message.dto.UserInfoDTO;
 import com.onlystudents.message.dto.WebSocketMessage;
 import com.onlystudents.message.entity.Conversation;
 import com.onlystudents.message.entity.Message;
-import com.onlystudents.message.client.UserServiceClient;
 import com.onlystudents.message.handler.WebSocketSessionManager;
 import com.onlystudents.message.mapper.ConversationMapper;
 import com.onlystudents.message.mapper.MessageMapper;
@@ -133,13 +133,11 @@ public class MessageServiceImpl implements MessageService {
                 Result<UserInfoDTO> userResult = userServiceClient.getUserById(targetId);
                 if (userResult != null && userResult.getCode() == 200 && userResult.getData() != null) {
                     UserInfoDTO userData = userResult.getData();
-                    conv.setTargetUserName(userData.getUsername());
                     conv.setTargetNickname(userData.getNickname());
                     conv.setTargetUserAvatar(userData.getAvatar());
                 }
             } catch (Exception e) {
                 log.warn("获取用户{}信息失败: {}", targetId, e.getMessage());
-                conv.setTargetUserName("用户" + targetId);
             }
         }
         

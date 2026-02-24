@@ -46,9 +46,7 @@ public class NoteSyncListener {
             NoteDocument document = new NoteDocument();
             BeanUtils.copyProperties(note, document);
             document.setNoteId(note.getId());
-            
-            // 通过Feign查询用户信息
-            String username = "用户_" + note.getUserId();
+
             String nickname = "用户_" + note.getUserId();
             String avatar = "";
             
@@ -56,9 +54,6 @@ public class NoteSyncListener {
                 Result<Map<String, Object>> userResult = userFeignClient.getUserById(note.getUserId());
                 if (userResult.getData() != null) {
                     Map<String, Object> userData = userResult.getData();
-                    if (userData.get("username") != null) {
-                        username = userData.get("username").toString();
-                    }
                     if (userData.get("nickname") != null) {
                         nickname = userData.get("nickname").toString();
                     }
@@ -69,9 +64,6 @@ public class NoteSyncListener {
             } catch (Exception e) {
                 log.warn("获取用户信息失败，使用默认信息: userId={}", note.getUserId(), e);
             }
-            
-            // 使用与search-service一致的字段名
-            document.setAuthorUsername(username);
             document.setAuthorNickname(nickname);
             document.setAuthorAvatar(avatar);
             

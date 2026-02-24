@@ -53,12 +53,4 @@ public class RabbitConfig {
         return new Jackson2JsonMessageConverter(JsonSerializerUtils.getGlobalObjectMapper());
     }
 
-
-    @Bean
-    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
-        RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
-        // 关键1：给生产者绑定JSON转换器
-        rabbitTemplate.setMessageConverter(jsonMessageConverter());
-        return rabbitTemplate;
-    }
 }

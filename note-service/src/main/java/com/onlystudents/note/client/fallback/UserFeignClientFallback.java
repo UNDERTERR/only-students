@@ -23,7 +23,6 @@ public class UserFeignClientFallback implements UserFeignClient {
         // 构建降级用户信息
         Map<String, Object> fallbackUser = new HashMap<>();
         fallbackUser.put("id", userId);
-        fallbackUser.put("username", "用户_" + userId);
         fallbackUser.put("nickname", "用户_" + userId);
         fallbackUser.put("avatar", "");
         

@@ -1,6 +1,5 @@
 package com.onlystudents.note.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.onlystudents.note.entity.NoteTag;
 import com.onlystudents.note.entity.NoteTagRelation;
 import com.onlystudents.note.mapper.NoteTagMapper;

@@ -27,8 +27,8 @@ public class UserInfoUpdateEventListener {
      */
      @RabbitListener(queues = RabbitConfig.USER_INFO_UPDATE_QUEUE)
     public void handleUserInfoUpdated(UserInfoUpdateEvent event) {
-        log.info("收到用户信息更新事件: userId={}, username={}, nickname={}", 
-                event.getUserId(), event.getUsername(), event.getNickname());
+        log.info("收到用户信息更新事件: userId={}, nickname={}", 
+                event.getUserId(), event.getNickname());
         
         try {
             // 查询该用户的所有笔记

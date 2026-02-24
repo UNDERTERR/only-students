@@ -33,9 +33,6 @@ public class NoteFavoriteDTO {
     private Boolean isRead;
     
     // 收藏者用户信息
-    @Schema(description = "收藏者用户名")
-    private String username;
-    
     @Schema(description = "收藏者昵称")
     private String nickname;
     

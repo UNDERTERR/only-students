@@ -24,11 +24,10 @@ CREATE TABLE IF NOT EXISTS school
 CREATE TABLE IF NOT EXISTS user
 (
     id              BIGINT PRIMARY KEY AUTO_INCREMENT,
-    username        VARCHAR(50) UNIQUE NOT NULL COMMENT '用户名',
     password        VARCHAR(255)       NOT NULL COMMENT '加密密码（BCrypt）',
-    email           VARCHAR(100) UNIQUE COMMENT '邮箱',
-    phone           VARCHAR(20) UNIQUE COMMENT '手机号',
-    nickname        VARCHAR(50) COMMENT '昵称',
+    email           VARCHAR(100) COMMENT '邮箱',
+    phone           VARCHAR(20) COMMENT '手机号',
+    nickname        VARCHAR(50) NOT NULL COMMENT '昵称',
     avatar          VARCHAR(500) COMMENT '头像URL',
     bio             TEXT COMMENT '个人简介',
     education_level TINYINT COMMENT '学段：1小学 2初中 3高中 4大学 5研究生',
@@ -45,6 +44,7 @@ CREATE TABLE IF NOT EXISTS user
     INDEX idx_school_id (school_id),
     INDEX idx_is_creator (is_creator),
     INDEX idx_status (status),
+    INDEX idx_nickname (nickname),
     CONSTRAINT fk_user_school FOREIGN KEY (school_id) REFERENCES school (id) ON DELETE SET NULL
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4

@@ -23,12 +23,23 @@ public class JwtUtils {
     @Value("${jwt.expiration:86400000}")
     private Long expiration;
 
-    public String generateToken(Long userId, String username) {
+    public String generateToken(Long userId) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiration);
 
         return JWT.create()
-                .withSubject(username)
+                .withClaim("userId", userId)
+                .withIssuedAt(now)
+                .withExpiresAt(expiryDate)
+                .sign(Algorithm.HMAC256(secret));
+    }
+
+    public String generateToken(Long userId, String nickName) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + expiration);
+
+        return JWT.create()
+                .withSubject(nickName)
                 .withClaim("userId", userId)
                 .withIssuedAt(now)
                 .withExpiresAt(expiryDate)

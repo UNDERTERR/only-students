@@ -1,8 +1,11 @@
 package com.onlystudents.note.config;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.onlystudents.common.utils.JsonSerializerUtils;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -23,30 +26,39 @@ import java.time.Duration;
 @Configuration
 @EnableCaching
 public class RedisCacheConfig {
-    
+
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory factory) {
-        // 创建支持类型信息的 ObjectMapper
-        ObjectMapper mapper = JsonSerializerUtils.getGlobalObjectMapper();
+
+        // 🔥 不要用全局的
+        ObjectMapper mapper = new ObjectMapper();
+
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+        // 只给 Redis 用
         mapper.activateDefaultTyping(
                 LaissezFaireSubTypeValidator.instance,
                 ObjectMapper.DefaultTyping.NON_FINAL,
                 JsonTypeInfo.As.PROPERTY
         );
-        
-        // 使用自定义 ObjectMapper 创建序列化器
-        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(mapper);
-        
+
+        GenericJackson2JsonRedisSerializer serializer =
+                new GenericJackson2JsonRedisSerializer(mapper);
+
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
-                // 设置缓存过期时间（默认5分钟）
                 .entryTtl(Duration.ofMinutes(5))
-                // key使用字符串序列化
-                .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
-                // value使用JSON序列化（支持 Java 8 日期时间）
-                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serializer))
-                // 不缓存null值
+                .serializeKeysWith(
+                        RedisSerializationContext.SerializationPair.fromSerializer(
+                                new StringRedisSerializer()
+                        )
+                )
+                .serializeValuesWith(
+                        RedisSerializationContext.SerializationPair.fromSerializer(serializer)
+                )
                 .disableCachingNullValues();
-        
+
         return RedisCacheManager.builder(factory)
                 .cacheDefaults(config)
                 .build();

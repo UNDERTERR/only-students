@@ -106,4 +106,25 @@ public class UserController {
                 .toList();
         return Result.success(userService.getUsersByIds(userIds));
     }
+    
+    @PostMapping("/follower-count/increment/{userId}")
+    @Operation(summary = "增加粉丝数", description = "增加指定用户的粉丝数")
+    public Result<Void> incrementFollowerCount(@PathVariable(name = "userId") Long userId) {
+        userService.incrementFollowerCount(userId);
+        return Result.success();
+    }
+    
+    @PostMapping("/follower-count/decrement/{userId}")
+    @Operation(summary = "减少粉丝数", description = "减少指定用户的粉丝数")
+    public Result<Void> decrementFollowerCount(@PathVariable(name = "userId") Long userId) {
+        userService.decrementFollowerCount(userId);
+        return Result.success();
+    }
+    
+    @DeleteMapping("/cache/{userId}")
+    @Operation(summary = "清除用户缓存", description = "清除指定用户的缓存")
+    public Result<Void> clearUserCache(@PathVariable(name = "userId") Long userId) {
+        userService.clearUserCache(userId);
+        return Result.success();
+    }
 }

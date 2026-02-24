@@ -1,9 +1,8 @@
 package com.onlystudents.rating.dto;
 
-import lombok.Data;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.Data;
 
 /**
  * 创建收藏夹请求

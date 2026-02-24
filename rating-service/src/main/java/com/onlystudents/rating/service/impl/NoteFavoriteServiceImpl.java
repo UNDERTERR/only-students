@@ -1,5 +1,6 @@
 package com.onlystudents.rating.service.impl;
 
+import com.onlystudents.common.event.NoteFavoriteEvent;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
@@ -10,7 +11,6 @@ import com.onlystudents.rating.dto.FavoriteFolderDTO;
 import com.onlystudents.rating.dto.NoteFavoriteDTO;
 import com.onlystudents.rating.entity.FavoriteFolder;
 import com.onlystudents.rating.entity.NoteFavorite;
-import com.onlystudents.rating.event.NoteFavoriteEvent;
 import com.onlystudents.rating.mapper.FavoriteFolderMapper;
 import com.onlystudents.rating.mapper.NoteFavoriteMapper;
 import com.onlystudents.rating.service.NoteFavoriteService;
@@ -73,14 +73,11 @@ public class NoteFavoriteServiceImpl implements NoteFavoriteService {
         favorite.setUserId(userId);
         favorite.setFolderId(folderId);
         favoriteMapper.insert(favorite);
-        
-        // 获取当前收藏总数
-        Long totalCount = favoriteMapper.countByNoteId(noteId);
-        
+
         // 发送事件（包含笔记作者ID和标题）
-        NoteFavoriteEvent event = new NoteFavoriteEvent(noteId, userId, 1, totalCount, noteAuthorId, noteTitle);
+        NoteFavoriteEvent event = new NoteFavoriteEvent(noteId, userId, 1, noteAuthorId, noteTitle);
         rabbitTemplate.convertAndSend("rating.exchange", "favorite.created", event);
-        log.info("发送收藏事件: noteId={}, userId={}, total={}, authorId={}", noteId, userId, totalCount, noteAuthorId);
+        log.info("发送收藏事件: noteId={}, userId={},  authorId={}", noteId, userId, noteAuthorId);
         
         return Result.success();
     }
@@ -97,13 +94,10 @@ public class NoteFavoriteServiceImpl implements NoteFavoriteService {
         // 删除收藏记录
         favoriteMapper.deleteById(favorite.getId());
         
-        // 获取当前收藏总数
-        Long totalCount = favoriteMapper.countByNoteId(noteId);
-        
         // 发送事件
-        NoteFavoriteEvent event = new NoteFavoriteEvent(noteId, userId, 0, totalCount, null, null);
+        NoteFavoriteEvent event = new NoteFavoriteEvent(noteId, userId, 0 , null ,null);
         rabbitTemplate.convertAndSend("rating.exchange", "favorite.deleted", event);
-        log.info("发送取消收藏事件: noteId={}, userId={}, total={}", noteId, userId, totalCount);
+        log.info("发送取消收藏事件: noteId={}, userId={}", noteId, userId);
         
         return Result.success();
     }
@@ -348,7 +342,6 @@ private NoteFavoriteDTO convertToDTO(NoteFavorite favorite) {
             // 填充用户信息（收藏者）
             Map<String, Object> userInfo = finalUserInfoMap.get(favorite.getUserId());
             if (userInfo != null) {
-                dto.setUsername(getStringValue(userInfo, "username"));
                 dto.setNickname(getStringValue(userInfo, "nickname"));
                 dto.setAvatar(getStringValue(userInfo, "avatar"));
             }

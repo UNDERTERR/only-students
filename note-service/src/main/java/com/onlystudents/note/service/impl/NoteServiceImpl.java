@@ -1,19 +1,16 @@
 package com.onlystudents.note.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onlystudents.common.exception.BusinessException;
-import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
-import com.onlystudents.common.utils.JsonSerializerUtils;
 import com.onlystudents.note.client.FileFeignClient;
 import com.onlystudents.note.client.SubscriptionFeignClient;
 import com.onlystudents.note.dto.CreateNoteRequest;
 import com.onlystudents.note.dto.NoteDTO;
 import com.onlystudents.note.dto.UpdateNoteRequest;
 import com.onlystudents.note.entity.Note;
-import com.onlystudents.note.event.NotePublishEvent;
+import com.onlystudents.common.event.NotePublishEvent;
 import com.onlystudents.note.mapper.NoteMapper;
 import com.onlystudents.note.service.NoteService;
 import com.onlystudents.note.service.TagService;
@@ -51,8 +48,8 @@ public class NoteServiceImpl implements NoteService {
 
     @Override
     @Caching(evict = {
-        @CacheEvict(value = "hotNotes", allEntries = true),
-        @CacheEvict(value = "latestNotes", allEntries = true)
+            @CacheEvict(value = "hotNotes", allEntries = true),
+            @CacheEvict(value = "latestNotes", allEntries = true)
     })
     public NoteDTO createNote(CreateNoteRequest request, Long userId) {
         Note note = new Note();
@@ -77,9 +74,9 @@ public class NoteServiceImpl implements NoteService {
 
     @Override
     @Caching(evict = {
-        @CacheEvict(value = "notes", key = "#p0"),
-        @CacheEvict(value = "hotNotes", allEntries = true),
-        @CacheEvict(value = "latestNotes", allEntries = true)
+            @CacheEvict(value = "notes", key = "#p0"),
+            @CacheEvict(value = "hotNotes", allEntries = true),
+            @CacheEvict(value = "latestNotes", allEntries = true)
     })
     public NoteDTO updateNote(Long noteId, UpdateNoteRequest request, Long userId) {
         Note note = noteMapper.selectById(noteId);
@@ -104,9 +101,9 @@ public class NoteServiceImpl implements NoteService {
 
     @Override
     @Caching(evict = {
-        @CacheEvict(value = "notes", key = "#p0"),
-        @CacheEvict(value = "hotNotes", allEntries = true),
-        @CacheEvict(value = "latestNotes", allEntries = true)
+            @CacheEvict(value = "notes", key = "#p0"),
+            @CacheEvict(value = "hotNotes", allEntries = true),
+            @CacheEvict(value = "latestNotes", allEntries = true)
     })
     public void deleteNote(Long noteId, Long userId) {
         Note note = noteMapper.selectById(noteId);
@@ -146,8 +143,9 @@ public class NoteServiceImpl implements NoteService {
 
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            List<java.util.Map<String, Object>> attachments = objectMapper.readValue(attachmentsJson, 
-                new com.fasterxml.jackson.core.type.TypeReference<List<java.util.Map<String, Object>>>() {});
+            List<java.util.Map<String, Object>> attachments = objectMapper.readValue(attachmentsJson,
+                    new com.fasterxml.jackson.core.type.TypeReference<List<java.util.Map<String, Object>>>() {
+                    });
 
             for (java.util.Map<String, Object> att : attachments) {
                 Long fileId = Long.valueOf(att.get("fileId").toString());
@@ -198,10 +196,10 @@ public class NoteServiceImpl implements NoteService {
         if (limit == null || limit > 100) {
             limit = 20;
         }
-        
+
         // 查询公开的笔记
         List<Note> publicNotes = noteMapper.selectHotNotes(limit);
-        
+
         // 如果用户已登录，还需要查询该用户的所有已发布笔记（无论可见性）
         if (currentUserId != null) {
             LambdaQueryWrapper<Note> wrapper = new LambdaQueryWrapper<>();
@@ -210,12 +208,12 @@ public class NoteServiceImpl implements NoteService {
             wrapper.orderByDesc(Note::getHotScore);
             wrapper.last("LIMIT " + limit);
             List<Note> userNotes = noteMapper.selectList(wrapper);
-            
+
             // 合并并去重（用户的笔记优先）
             publicNotes.removeIf(note -> userNotes.stream().anyMatch(u -> u.getId().equals(note.getId())));
             publicNotes.addAll(0, userNotes);
         }
-        
+
         return publicNotes.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
@@ -226,24 +224,19 @@ public class NoteServiceImpl implements NoteService {
             limit = 20;
         }
         log.info("获取首页数据，当前用户: {}", currentUserId);
-        
+
         // 查询公开的笔记
         List<Note> publicNotes = noteMapper.selectLatestNotes(limit);
-        
+
         // 如果用户已登录，还需要查询该用户的所有已发布笔记（无论可见性）
         if (currentUserId != null) {
-            LambdaQueryWrapper<Note> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(Note::getUserId, currentUserId);
-            wrapper.eq(Note::getStatus, 2); // 已发布
-            wrapper.orderByDesc(Note::getPublishTime);
-            wrapper.last("LIMIT " + limit);
-            List<Note> userNotes = noteMapper.selectList(wrapper);
-            
+            List<Note> userNotes = noteMapper.selectUserLatestNotes(currentUserId, limit);
+
             // 合并并去重（用户的笔记优先）
             publicNotes.removeIf(note -> userNotes.stream().anyMatch(u -> u.getId().equals(note.getId())));
             publicNotes.addAll(0, userNotes);
         }
-        
+
         return publicNotes.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
@@ -251,7 +244,6 @@ public class NoteServiceImpl implements NoteService {
     public List<NoteDTO> getUserNotes(Long userId) {
         LambdaQueryWrapper<Note> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Note::getUserId, userId);
-        // @TableLogic 会自动过滤 deleted=1 的记录
         wrapper.orderByDesc(Note::getCreatedAt);
 
         List<Note> notes = noteMapper.selectList(wrapper);
@@ -265,9 +257,9 @@ public class NoteServiceImpl implements NoteService {
 
     @Override
     @Caching(evict = {
-        @CacheEvict(value = "notes", key = "#p0"),
-    @CacheEvict(value = "hotNotes", allEntries = true),
-        @CacheEvict(value = "latestNotes", allEntries = true)
+            @CacheEvict(value = "notes", key = "#p0"),
+            @CacheEvict(value = "hotNotes", allEntries = true),
+            @CacheEvict(value = "latestNotes", allEntries = true)
     })
     public void publishNote(Long noteId, Long userId) {
         Note note = noteMapper.selectById(noteId);
@@ -286,8 +278,8 @@ public class NoteServiceImpl implements NoteService {
         try {
             // 发送笔记同步消息
             rabbitTemplate.convertAndSend("note.exchange", "note.sync", note);
-            log.info("笔记 [{}] 已发布，同步消息已发送到MQ", noteId+":"+note);
-            
+            log.info("笔记 [{}] 已发布，同步消息已发送到MQ", noteId + ":" + note);
+
             // 发送笔记发布成功通知给作者
             NotePublishEvent event = new NotePublishEvent(noteId, userId, note.getTitle(), note.getCoverImage());
             rabbitTemplate.convertAndSend("note.exchange", "note.publish", event);
@@ -296,7 +288,7 @@ public class NoteServiceImpl implements NoteService {
             log.error("发送消息失败: noteId={}", noteId, e);
         }
     }
-    
+
     @Override
     public List<Long> getNoteIdsByUserId(Long userId) {
         LambdaQueryWrapper<Note> wrapper = new LambdaQueryWrapper<>();
@@ -322,11 +314,11 @@ public class NoteServiceImpl implements NoteService {
     private NoteDTO convertToDTO(Note note) {
         NoteDTO dto = new NoteDTO();
         BeanUtils.copyProperties(note, dto);
-        
+
         // 加载标签
         List<String> tags = tagService.getNoteTags(note.getId());
         dto.setTags(tags);
-        
+
         return dto;
     }
 }

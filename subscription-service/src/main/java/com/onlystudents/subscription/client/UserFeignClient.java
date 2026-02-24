@@ -2,8 +2,10 @@ package com.onlystudents.subscription.client;
 
 import com.onlystudents.common.result.Result;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 
 import java.util.List;
 import java.util.Map;
@@ -16,4 +18,13 @@ public interface UserFeignClient {
     
     @GetMapping("/user/batch/{ids}")
     Result<List<Map<String, Object>>> getUsersByIds(@PathVariable("ids") String ids);
+    
+    @PostMapping("/user/follower-count/increment/{userId}")
+    Result<Void> incrementFollowerCount(@PathVariable("userId") Long userId);
+    
+    @PostMapping("/user/follower-count/decrement/{userId}")
+    Result<Void> decrementFollowerCount(@PathVariable("userId") Long userId);
+    
+    @DeleteMapping("/user/cache/{userId}")
+    Result<Void> clearUserCache(@PathVariable("userId") Long userId);
 }

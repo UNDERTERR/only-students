@@ -1,9 +1,11 @@
-package com.onlystudents.comment.client;
+package com.onlystudents.comment.client.fallback;
 
+import com.onlystudents.comment.client.NoteFeignClient;
+import com.onlystudents.common.result.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
-import com.onlystudents.common.result.Result;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;

@@ -1,6 +1,5 @@
 package com.onlystudents.notification.listener;
 
-import com.onlystudents.notification.entity.Notification;
 import com.onlystudents.notification.event.NoteFavoriteEvent;
 import com.onlystudents.notification.mapper.NotificationMapper;
 import com.onlystudents.notification.sse.SseEmitterManager;

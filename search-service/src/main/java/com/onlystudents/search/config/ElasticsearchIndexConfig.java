@@ -84,8 +84,6 @@ public class ElasticsearchIndexConfig {
                 .properties("categoryName", p -> p.keyword(k -> k))
                 // userId
                 .properties("userId", p -> p.long_(l -> l))
-                // username
-                .properties("username", p -> p.keyword(k -> k))
                 // nickname（使用 IK 分词器）
                 .properties("nickname", p -> p.text(t -> t
                         .analyzer("ik_max_word")

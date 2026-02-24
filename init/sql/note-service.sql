@@ -35,7 +35,6 @@ CREATE TABLE IF NOT EXISTS note_tag (
 CREATE TABLE IF NOT EXISTS note (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL COMMENT '创作者ID',
-    auther_username VARCHAR(50) COMMENT '作者用户名',
     auther_nickname VARCHAR(50) COMMENT '作者昵称',
     auther_avatar VARCHAR(500) COMMENT '作者头像',
     title VARCHAR(200) NOT NULL COMMENT '标题',
@@ -62,7 +61,6 @@ CREATE TABLE IF NOT EXISTS note (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_user_id (user_id),
-    INDEX idx_auther_username (auther_username),
     INDEX idx_auther_nickname (auther_nickname),
     INDEX idx_category_id (category_id),
     INDEX idx_status (status),

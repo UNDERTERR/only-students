@@ -29,4 +29,19 @@ public interface UserService {
      * 批量获取用户
      */
     List<UserResponse> getUsersByIds(List<Long> userIds);
+    
+    /**
+     * 增加粉丝数
+     */
+    void incrementFollowerCount(Long userId);
+    
+    /**
+     * 减少粉丝数
+     */
+    void decrementFollowerCount(Long userId);
+    
+    /**
+     * 清除用户缓存
+     */
+    void clearUserCache(Long userId);
 }

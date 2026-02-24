@@ -1,5 +1,6 @@
 package com.onlystudents.rating.controller;
 
+import com.onlystudents.common.constants.CommonConstants;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.rating.dto.NoteRatingDTO;
 import com.onlystudents.rating.service.NoteRatingService;
@@ -26,7 +27,7 @@ public class NoteRatingController {
     @Operation(summary = "评分笔记", description = "给笔记打分(1-5星)")
     public Result<Void> rateNote(
             @Parameter(description = "笔记ID") @PathVariable Long noteId,
-            @Parameter(description = "用户ID", hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @Parameter(description = "用户ID", hidden = true) @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
             @Parameter(description = "评分(1-5)") @RequestParam(name = "score") Integer score) {
         return ratingService.rateNote(noteId, userId, score);
     }
@@ -49,14 +50,14 @@ public class NoteRatingController {
     @Operation(summary = "获取我的评分", description = "获取当前用户对笔记的评分")
     public Result<NoteRatingDTO> getMyRating(
             @Parameter(description = "笔记ID") @PathVariable Long noteId,
-            @Parameter(description = "用户ID", hidden = true) @RequestHeader("X-User-Id") Long userId) {
+            @Parameter(description = "用户ID", hidden = true) @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId) {
         return ratingService.getUserRating(noteId, userId);
     }
     
     @GetMapping("/my")
     @Operation(summary = "我的评分", description = "获取当前用户的所有评分")
     public Result<List<NoteRatingDTO>> getMyRatings(
-            @Parameter(description = "用户ID", hidden = true) @RequestHeader("X-User-Id") Long userId) {
+            @Parameter(description = "用户ID", hidden = true) @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId) {
         return ratingService.getUserRatings(userId);
     }
 }

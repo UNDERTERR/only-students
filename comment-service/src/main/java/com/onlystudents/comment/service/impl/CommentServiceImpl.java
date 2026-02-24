@@ -2,7 +2,7 @@ package com.onlystudents.comment.service.impl;
 
 import com.onlystudents.comment.client.NoteFeignClient;
 import com.onlystudents.comment.client.UserFeignClient;
-import com.onlystudents.comment.client.UserResponse;
+import com.onlystudents.comment.dto.UserResponse;
 import com.onlystudents.comment.dto.CommentDTO;
 import com.onlystudents.comment.dto.CreateCommentRequest;
 import com.onlystudents.comment.entity.Comment;
@@ -274,15 +274,15 @@ public class CommentServiceImpl implements CommentService {
             Result<UserResponse> result = userFeignClient.getUserById(comment.getUserId());
             if (result != null && result.isSuccess() && result.getData() != null) {
                 UserResponse user = result.getData();
-                dto.setUsername(user.getNickname() != null ? user.getNickname() : user.getUsername());
+                dto.setNickname(user.getNickname() != null ? user.getNickname() : "用户_" + comment.getUserId());
                 dto.setAvatar(user.getAvatar() != null ? user.getAvatar() : "");
             } else {
-                dto.setUsername("用户_" + comment.getUserId());
+                dto.setNickname("用户_" + comment.getUserId());
                 dto.setAvatar("");
             }
         } catch (Exception e) {
             log.error("查询用户信息失败，commentId={}, userId={}", comment.getId(), comment.getUserId(), e);
-            dto.setUsername("用户_" + comment.getUserId());
+            dto.setNickname("用户_" + comment.getUserId());
             dto.setAvatar("");
         }
 

@@ -52,13 +52,7 @@ public class Conversation {
      */
     @TableField(exist = false)
     private Long targetUserId;
-    
-    /**
-     * 当前用户视角下的目标用户名
-     */
-    @TableField(exist = false)
-    private String targetUserName;
-    
+
     /**
      * 当前用户视角下的目标用户昵称
      */

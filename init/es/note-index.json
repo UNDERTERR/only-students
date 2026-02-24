@@ -49,9 +49,6 @@
       "user_id": {
         "type": "long"
       },
-      "username": {
-        "type": "keyword"
-      },
       "nickname": {
         "type": "text",
         "analyzer": "ik_max_word"

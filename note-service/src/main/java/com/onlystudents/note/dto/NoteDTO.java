@@ -13,8 +13,6 @@ public class NoteDTO {
     
     private Long userId;
     
-    private String authorUsername;
-    
     private String authorNickname;
     
     private String authorAvatar;

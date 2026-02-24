@@ -1,7 +1,7 @@
 package com.onlystudents.comment.client.fallback;
 
 import com.onlystudents.comment.client.UserFeignClient;
-import com.onlystudents.comment.client.UserResponse;
+import com.onlystudents.comment.dto.UserResponse;
 import com.onlystudents.common.result.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -20,7 +20,6 @@ public class UserFeignClientFallback implements UserFeignClient {
         
         UserResponse fallbackUser = new UserResponse();
         fallbackUser.setId(userId);
-        fallbackUser.setUsername("用户_" + userId);
         fallbackUser.setNickname("用户_" + userId);
         fallbackUser.setAvatar("");
         

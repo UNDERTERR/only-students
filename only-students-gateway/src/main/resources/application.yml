@@ -4,30 +4,31 @@ server:
 spring:
   application:
     name: gateway-service
+  profiles:
+    active: dev   # 以后切环境只改这里
   config:
     import:
-      - optional:nacos:application-${spring.profiles.active:}.yaml
+      - optional:nacos:gateway-service-${spring.profiles.active}.yaml
   cloud:
     nacos:
       discovery:
         server-addr: localhost:8848
-        namespace: public
+        namespace: ""
         group: DEFAULT_GROUP
       config:
         server-addr: localhost:8848
         file-extension: yaml
-        namespace: public
+        namespace: ""
         group: DEFAULT_GROUP
-        import-check:
-          enabled: false
     gateway:
       discovery:
         locator:
           enabled: true
           lower-case-service-id: true
       httpclient:
-        connect-timeout: 5000
-        response-timeout: 30s
+        response-timeout: 30000
+        import-check:
+          enabled: false
         pool:
           type: elastic
           max-connections: 1000
@@ -37,7 +38,7 @@ spring:
         - id: user-service
           uri: lb://user-service
           predicates:
-            - Path=/api/user/**
+            - Path=/api/user/**,/api/sms/**
           filters:
             - StripPrefix=1
 
@@ -96,14 +97,6 @@ spring:
             - Path=/api/favorite/**
           filters:
             - StripPrefix=1
-#
-#        - id: rating-service-share
-#          uri: lb://rating-service
-#          predicates:
-#           - Path=/api/share/**
-#          filters:
-#           - StripPrefix=1
-#           -
         # 消息服务
         - id: message-service
           uri: lb://message-service
@@ -185,7 +178,7 @@ jwt:
 
 # 白名单路径（不需要认证）
 whitelist:
-  paths: /api/user/register,/api/user/login,/api/user/refresh-token,/api/user/**,/api/note,/api/note/latest,/api/note/hot,/api/note/*,/api/search/**,/api/file/preview/**
+  paths: /api/sms/send,/api/user/register,/api/user/login,/api/user/refresh-token,/api/user/**,/api/note,/api/note/latest,/api/note/hot,/api/note/*,/api/search/**,/api/file/preview/**
 
 # Sentinel配置
 sentinel:

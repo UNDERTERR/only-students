@@ -7,10 +7,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.context.annotation.Import;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {"com.onlystudents.admin", "com.onlystudents.common"})
 @EnableDiscoveryClient
 @MapperScan("com.onlystudents.admin.mapper")
-@Import(JwtUtils.class)
+
 public class AdminServiceApplication {
 
     public static void main(String[] args) {

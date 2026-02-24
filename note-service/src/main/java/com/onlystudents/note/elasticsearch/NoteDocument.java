@@ -16,7 +16,6 @@ public class NoteDocument {
     private Long categoryId;
     private String categoryName;
     private Long userId;
-    private String authorUsername;  // 对应search-service的mapping
     private String authorNickname;  // 对应search-service的mapping
     private String authorAvatar;    // 对应search-service的mapping
     private Integer educationLevel;

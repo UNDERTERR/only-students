@@ -44,7 +44,8 @@ public interface CommentMapper extends BaseMapper<Comment> {
     
     @Select("<script>" +
             "SELECT COUNT(*) FROM comment WHERE deleted = 0 AND status = 1 " +
-            "<if test='noteIds != null and noteIds.size() > 0'>AND note_id IN " +
+            "<if test='noteIds != null and noteIds.size() > 0'>" +
+            "AND note_id IN " +
             "<foreach collection='noteIds' item='id' open='(' separator=',' close=')'>#{id}</foreach></if> " +
             "AND user_id != #{userId} " +
             "AND (is_read = 0 OR is_read IS NULL)" +
