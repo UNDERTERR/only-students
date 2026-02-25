@@ -1,6 +1,7 @@
 package com.onlystudents.rating.service.impl;
 
-import com.onlystudents.common.event.NoteFavoriteEvent;
+import com.onlystudents.common.event.note.NoteFavoriteEvent;
+import com.onlystudents.common.event.notification.FavoriteNotificationEvent;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
@@ -53,6 +54,7 @@ public class NoteFavoriteServiceImpl implements NoteFavoriteService {
         // 获取笔记信息
         Long noteAuthorId = null;
         String noteTitle = null;
+        String noteCoverImage = null;
         try {
             Result<Map<String, Object>> noteResult = noteFeignClient.getNoteById(noteId);
             if (noteResult != null && noteResult.getData() != null) {
@@ -62,6 +64,7 @@ public class NoteFavoriteServiceImpl implements NoteFavoriteService {
                     noteAuthorId = ((Number) authorIdObj).longValue();
                 }
                 noteTitle = (String) noteInfo.get("title");
+                noteCoverImage = (String) noteInfo.get("coverImage");
             }
         } catch (Exception e) {
             log.error("获取笔记信息失败", e);
@@ -74,10 +77,24 @@ public class NoteFavoriteServiceImpl implements NoteFavoriteService {
         favorite.setFolderId(folderId);
         favoriteMapper.insert(favorite);
 
-        // 发送事件（包含笔记作者ID和标题）
+        // 发送事件到 note-service（更新收藏数）
         NoteFavoriteEvent event = new NoteFavoriteEvent(noteId, userId, 1, noteAuthorId, noteTitle);
         rabbitTemplate.convertAndSend("rating.exchange", "favorite.created", event);
-        log.info("发送收藏事件: noteId={}, userId={},  authorId={}", noteId, userId, noteAuthorId);
+        log.info("发送收藏事件: noteId={}, userId={}, authorId={}", noteId, userId, noteAuthorId);
+        
+        // 发送通知事件到 notification-service
+        if (noteAuthorId != null && !noteAuthorId.equals(userId)) {
+            FavoriteNotificationEvent notifyEvent = new FavoriteNotificationEvent(
+                favorite.getId(),
+                userId,
+                noteAuthorId,
+                noteId,
+                noteTitle,
+                noteCoverImage
+            );
+            rabbitTemplate.convertAndSend("notification.exchange", "favorite.notify", notifyEvent);
+            log.info("发送收藏通知事件成功: favoriteId={}, fromUserId={}, toUserId={}", favorite.getId(), userId, noteAuthorId);
+        }
         
         return Result.success();
     }

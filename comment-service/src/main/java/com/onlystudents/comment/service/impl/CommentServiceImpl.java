@@ -13,8 +13,10 @@ import com.onlystudents.comment.service.CommentService;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
+import com.onlystudents.common.event.notification.CommentNotificationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +34,7 @@ public class CommentServiceImpl implements CommentService {
     private final CommentLikeMapper likeMapper;
     private final UserFeignClient userFeignClient;
     private final NoteFeignClient noteFeignClient;
+    private final RabbitTemplate rabbitTemplate;
     
     @Override
     @Transactional
@@ -59,6 +62,38 @@ public class CommentServiceImpl implements CommentService {
         // 如果是回复，增加父评论的回复数
         if (comment.getParentId() != 0) {
             commentMapper.incrementReplyCount(comment.getParentId());
+        }
+        
+        // 发布评论通知事件
+        log.info("========== 开始处理评论通知事件 ==========");
+        try {
+            Result<Map<String, Object>> noteResult = noteFeignClient.getNoteById(comment.getNoteId());
+            log.info("获取笔记信息结果: {}", noteResult);
+            if (noteResult != null && noteResult.isSuccess() && noteResult.getData() != null) {
+                Map<String, Object> noteData = noteResult.getData();
+                Object authorIdObj = noteData.get("userId");
+                Long noteAuthorId = authorIdObj != null ? ((Number) authorIdObj).longValue() : null;
+                log.info("笔记信息: noteAuthorId={}, userId={}, 条件={}", noteAuthorId, userId, noteAuthorId != null && !noteAuthorId.equals(userId));
+                
+                if (noteAuthorId != null && !noteAuthorId.equals(userId)) {
+                    String noteTitle = (String) noteData.get("title");
+                    
+                    CommentNotificationEvent event = new CommentNotificationEvent(
+                        comment.getId(),
+                        userId,
+                        noteAuthorId,
+                        comment.getNoteId(),
+                        comment.getContent(),
+                        noteTitle
+                    );
+                    
+                    log.info("准备发布评论通知事件: {}", event);
+                    rabbitTemplate.convertAndSend("notification.exchange", "comment.notify", event);
+                    log.info("发布评论通知事件成功: commentId={}, toUserId={}", comment.getId(), noteAuthorId);
+                }
+            }
+        } catch (Exception e) {
+            log.error("发布评论通知事件失败", e);
         }
         
         return convertToDTO(comment, userId);

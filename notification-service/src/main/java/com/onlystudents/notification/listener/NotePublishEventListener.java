@@ -1,13 +1,14 @@
 package com.onlystudents.notification.listener;
 
 import com.onlystudents.notification.entity.Notification;
-import com.onlystudents.notification.event.NotePublishEvent;
+import com.onlystudents.common.event.note.NotePublishEvent;
 import com.onlystudents.notification.mapper.NotificationMapper;
 import com.onlystudents.notification.sse.SseEmitterManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component
@@ -18,6 +19,7 @@ public class NotePublishEventListener {
     private final SseEmitterManager sseEmitterManager;
     
     @RabbitListener(queues = "note.publish.queue")
+    @Transactional
     public void handleNotePublishEvent(NotePublishEvent event) {
         log.info("收到笔记发布事件: {}", event);
         

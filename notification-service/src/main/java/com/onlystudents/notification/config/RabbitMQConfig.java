@@ -12,6 +12,59 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitMQConfig {
+    
+    // ========== 收藏通知队列 ==========
+    @Bean
+    public Queue favoriteNotifyQueue() {
+        return QueueBuilder.durable("favorite.notify.queue").build();
+    }
+    
+    // ========== 评论通知队列 ==========
+    @Bean
+    public Queue commentNotifyQueue() {
+        return QueueBuilder.durable("comment.notify.queue").build();
+    }
+    
+    // ========== 粉丝通知队列 ==========
+    @Bean
+    public Queue followerNotifyQueue() {
+        return QueueBuilder.durable("follower.notify.queue").build();
+    }
+    
+    // ========== 私信通知队列 ==========
+    @Bean
+    public Queue messageNotifyQueue() {
+        return QueueBuilder.durable("message.notify.queue").build();
+    }
+    
+    // ========== 交换机 ==========
+    @Bean
+    public TopicExchange notificationExchange() {
+        return new TopicExchange("notification.exchange", true, false);
+    }
+    
+    // ========== 绑定 ==========
+    @Bean
+    public Binding favoriteNotifyBinding(@Qualifier("favoriteNotifyQueue") Queue queue, @Qualifier("notificationExchange") TopicExchange exchange) {
+        return BindingBuilder.bind(queue).to(exchange).with("favorite.notify");
+    }
+    
+    @Bean
+    public Binding commentNotifyBinding(@Qualifier("commentNotifyQueue") Queue queue, @Qualifier("notificationExchange") TopicExchange exchange) {
+        return BindingBuilder.bind(queue).to(exchange).with("comment.notify");
+    }
+    
+    @Bean
+    public Binding followerNotifyBinding(@Qualifier("followerNotifyQueue") Queue queue, @Qualifier("notificationExchange") TopicExchange exchange) {
+        return BindingBuilder.bind(queue).to(exchange).with("follower.notify");
+    }
+    
+    @Bean
+    public Binding messageNotifyBinding(@Qualifier("messageNotifyQueue") Queue queue, @Qualifier("notificationExchange") TopicExchange exchange) {
+        return BindingBuilder.bind(queue).to(exchange).with("message.notify");
+    }
+    
+    // ========== 旧配置（兼容） ==========
     @Bean
     public Queue favoriteQueue() {
         return QueueBuilder.durable("favorite.created.queue").build();

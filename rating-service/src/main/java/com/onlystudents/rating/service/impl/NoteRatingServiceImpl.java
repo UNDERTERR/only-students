@@ -1,6 +1,6 @@
 package com.onlystudents.rating.service.impl;
 
-import com.onlystudents.common.event.NoteRatingEvent;
+import com.onlystudents.common.event.note.NoteRatingEvent;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;

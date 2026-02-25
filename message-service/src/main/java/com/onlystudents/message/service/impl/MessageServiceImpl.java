@@ -3,6 +3,7 @@ package com.onlystudents.message.service.impl;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
+import com.onlystudents.common.event.notification.MessageNotificationEvent;
 import com.onlystudents.message.client.UserServiceClient;
 import com.onlystudents.message.dto.UserInfoDTO;
 import com.onlystudents.message.dto.WebSocketMessage;
@@ -14,6 +15,7 @@ import com.onlystudents.message.mapper.MessageMapper;
 import com.onlystudents.message.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class MessageServiceImpl implements MessageService {
     private final MessageMapper messageMapper;
     private final WebSocketSessionManager sessionManager;
     private final UserServiceClient userServiceClient;
+    private final RabbitTemplate rabbitTemplate;
     
     @Override
     @Transactional
@@ -82,6 +85,22 @@ public class MessageServiceImpl implements MessageService {
                     ))
                     .build());
             log.info("消息已通过WebSocket推送给用户{}", receiverId);
+        }
+        
+        // 发布私信通知事件
+        try {
+            MessageNotificationEvent event = new MessageNotificationEvent(
+                message.getId(),
+                senderId,
+                receiverId,
+                conversation.getId(),
+                content
+            );
+            
+            rabbitTemplate.convertAndSend("notification.exchange", "message.notify", event);
+            log.info("发布私信通知事件成功: messageId={}, toUserId={}", message.getId(), receiverId);
+        } catch (Exception e) {
+            log.error("发布私信通知事件失败", e);
         }
         
         return message;

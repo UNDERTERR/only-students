@@ -5,10 +5,15 @@ spring:
   application:
     name: message-service
   profiles:
-    active: dev   # 以后切环境只改这里
+    active: dev   # 以后切环境只这里
   config:
     import:
       - optional:nacos:message-service-${spring.profiles.active}.yaml
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
   cloud:
     nacos:
       discovery:

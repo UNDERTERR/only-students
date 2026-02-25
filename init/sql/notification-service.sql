@@ -54,3 +54,64 @@ CREATE TABLE IF NOT EXISTS system_announcement (
     INDEX idx_is_top (is_top),
     INDEX idx_time_range (start_time, end_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统公告表';
+
+-- 评论通知表
+CREATE TABLE IF NOT EXISTS comment_notification (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    from_user_id BIGINT NOT NULL COMMENT '评论者ID',
+    to_user_id BIGINT NOT NULL COMMENT '被评论者ID（笔记作者）',
+    note_id BIGINT NOT NULL COMMENT '笔记ID',
+    comment_id BIGINT NOT NULL COMMENT '评论ID',
+    is_read TINYINT DEFAULT 0 COMMENT '是否已读：0否 1是',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_to_user (to_user_id),
+    INDEX idx_to_user_read (to_user_id, is_read),
+    INDEX idx_created_at (created_at),
+    INDEX idx_from_user (from_user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评论通知表';
+
+-- 收藏通知表
+CREATE TABLE IF NOT EXISTS favorite_notification (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    from_user_id BIGINT NOT NULL COMMENT '收藏者ID',
+    to_user_id BIGINT NOT NULL COMMENT '被收藏者ID（笔记作者）',
+    note_id BIGINT NOT NULL COMMENT '笔记ID',
+    favorite_id BIGINT NOT NULL COMMENT '收藏记录ID',
+    is_read TINYINT DEFAULT 0 COMMENT '是否已读：0否 1是',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_to_user (to_user_id),
+    INDEX idx_to_user_read (to_user_id, is_read),
+    INDEX idx_created_at (created_at),
+    INDEX idx_from_user (from_user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='收藏通知表';
+
+-- 私信通知表
+CREATE TABLE IF NOT EXISTS message_notification (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    from_user_id BIGINT NOT NULL COMMENT '发送者ID',
+    to_user_id BIGINT NOT NULL COMMENT '接收者ID',
+    conversation_id BIGINT NOT NULL COMMENT '会话ID',
+    message_id BIGINT NOT NULL COMMENT '消息ID',
+    is_read TINYINT DEFAULT 0 COMMENT '是否已读：0否 1是',
+    is_deleted TINYINT DEFAULT 0 COMMENT '是否删除：0否 1是（逻辑删除）',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_to_user (to_user_id),
+    INDEX idx_to_user_read (to_user_id, is_read),
+    INDEX idx_conversation (conversation_id),
+    INDEX idx_created_at (created_at),
+    INDEX idx_from_user (from_user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='私信通知表';
+
+-- 粉丝关注通知表
+CREATE TABLE IF NOT EXISTS follower_notification (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    from_user_id BIGINT NOT NULL COMMENT '关注者ID',
+    to_user_id BIGINT NOT NULL COMMENT '被关注者ID',
+    subscription_id BIGINT NOT NULL COMMENT '关注记录ID',
+    is_read TINYINT DEFAULT 0 COMMENT '是否已读：0否 1是',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_to_user (to_user_id),
+    INDEX idx_to_user_read (to_user_id, is_read),
+    INDEX idx_created_at (created_at),
+    INDEX idx_from_user (from_user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='粉丝关注通知表';

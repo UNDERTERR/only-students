@@ -1,7 +1,7 @@
 package com.onlystudents.rating.service.impl;
 
 import cn.hutool.core.util.IdUtil;
-import com.onlystudents.common.event.NoteShareEvent;
+import com.onlystudents.common.event.note.NoteShareEvent;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;

@@ -3,6 +3,7 @@ package com.onlystudents.subscription.service.impl;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
+import com.onlystudents.common.event.notification.FollowerNotificationEvent;
 import com.onlystudents.subscription.client.UserFeignClient;
 import com.onlystudents.subscription.dto.CreatorConfigDTO;
 import com.onlystudents.subscription.dto.SubscribeRequest;
@@ -15,6 +16,7 @@ import com.onlystudents.subscription.mapper.SubscriptionMapper;
 import com.onlystudents.subscription.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final SubscriptionMapper subscriptionMapper;
     private final CreatorSubscriptionConfigMapper configMapper;
     private final UserFeignClient userFeignClient;
+    private final RabbitTemplate rabbitTemplate;
     
     @Override
     @Transactional
@@ -63,7 +66,22 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         } catch (Exception e) {
             log.error("更新粉丝数失败", e);
         }
-
+        
+        // 发布粉丝通知事件
+        try {
+            FollowerNotificationEvent event = new FollowerNotificationEvent(
+                subscription.getId(),
+                subscriberId,
+                request.getCreatorId()
+            );
+            
+            log.info("准备发布粉丝通知事件: {}", event);
+            rabbitTemplate.convertAndSend("notification.exchange", "follower.notify", event);
+            log.info("发布粉丝通知事件成功: subscriptionId={}, toUserId={}", subscription.getId(), request.getCreatorId());
+        } catch (Exception e) {
+            log.error("发布粉丝通知事件失败", e);
+        }
+        
         return convertToDTO(subscription);
     }
     

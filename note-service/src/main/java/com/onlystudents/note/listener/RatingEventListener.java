@@ -1,10 +1,10 @@
 package com.onlystudents.note.listener;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.onlystudents.common.event.NoteRatingEvent;
+import com.onlystudents.common.event.note.NoteRatingEvent;
 import com.onlystudents.common.utils.JsonSerializerUtils;
-import com.onlystudents.common.event.NoteFavoriteEvent;
-import com.onlystudents.common.event.NoteShareEvent;
+import com.onlystudents.common.event.note.NoteFavoriteEvent;
+import com.onlystudents.common.event.note.NoteShareEvent;
 import com.onlystudents.note.mapper.NoteMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

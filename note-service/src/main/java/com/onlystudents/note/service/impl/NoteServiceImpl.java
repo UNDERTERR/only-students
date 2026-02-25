@@ -4,13 +4,15 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.ResultCode;
+import com.onlystudents.common.result.Result;
 import com.onlystudents.note.client.FileFeignClient;
 import com.onlystudents.note.client.SubscriptionFeignClient;
+import com.onlystudents.note.client.UserFeignClient;
 import com.onlystudents.note.dto.CreateNoteRequest;
 import com.onlystudents.note.dto.NoteDTO;
 import com.onlystudents.note.dto.UpdateNoteRequest;
 import com.onlystudents.note.entity.Note;
-import com.onlystudents.common.event.NotePublishEvent;
+import com.onlystudents.common.event.note.NotePublishEvent;
 import com.onlystudents.note.mapper.NoteMapper;
 import com.onlystudents.note.service.NoteService;
 import com.onlystudents.note.service.TagService;
@@ -26,6 +28,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -36,6 +39,7 @@ public class NoteServiceImpl implements NoteService {
     private final NoteMapper noteMapper;
     private final SubscriptionFeignClient subscriptionFeignClient;
     private final FileFeignClient fileFeignClient;
+    private final UserFeignClient userFeignClient;
     private final RabbitTemplate rabbitTemplate;
     private final StringRedisTemplate redisTemplate;
     private final TagService tagService;
@@ -314,6 +318,20 @@ public class NoteServiceImpl implements NoteService {
     private NoteDTO convertToDTO(Note note) {
         NoteDTO dto = new NoteDTO();
         BeanUtils.copyProperties(note, dto);
+
+        // 如果 authorAvatar 为空，尝试通过 userId 获取用户信息
+        if (dto.getAuthorAvatar() == null || dto.getAuthorAvatar().isEmpty()) {
+            try {
+                Result<Map<String, Object>> userResult = userFeignClient.getUserById(note.getUserId());
+                if (userResult != null && userResult.getData() != null) {
+                    Map<String, Object> userData = userResult.getData();
+                    dto.setAuthorNickname((String) userData.get("nickname"));
+                    dto.setAuthorAvatar((String) userData.get("avatar"));
+                }
+            } catch (Exception e) {
+                log.error("获取用户信息失败: userId={}", note.getUserId(), e);
+            }
+        }
 
         // 加载标签
         List<String> tags = tagService.getNoteTags(note.getId());
