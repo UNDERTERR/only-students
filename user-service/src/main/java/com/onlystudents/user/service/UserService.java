@@ -44,4 +44,14 @@ public interface UserService {
      * 清除用户缓存
      */
     void clearUserCache(Long userId);
+    
+    /**
+     * 验证码重置密码
+     */
+    void resetPasswordByCode(String account, String verifyCode, String newPassword);
+    
+    /**
+     * 修改密码（需要旧密码）
+     */
+    void changePassword(Long userId, String oldPassword, String newPassword);
 }

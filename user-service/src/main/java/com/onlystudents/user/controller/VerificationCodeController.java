@@ -29,7 +29,13 @@ public class VerificationCodeController {
     @Operation(summary = "发送验证码", description = "向邮箱或手机号发送验证码")
     public Result<Void> sendCode(@Valid @RequestBody SendCodeRequest request) {
         try {
-            CodeType type = CodeType.valueOf(request.getType().toUpperCase());
+            // 兼容前端发送的类型名称
+            String typeStr = request.getType().toUpperCase();
+            // RESET_PASSWORD -> RESET_PWD
+            if ("RESET_PASSWORD".equals(typeStr)) {
+                typeStr = "RESET_PWD";
+            }
+            CodeType type = CodeType.valueOf(typeStr);
             verificationCodeService.sendCode(request.getAccount(), type);
             return Result.success();
         } catch (IllegalArgumentException e) {

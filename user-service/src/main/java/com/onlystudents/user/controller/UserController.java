@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
@@ -82,6 +83,21 @@ public class UserController {
     @Operation(summary = "登出所有设备", description = "强制登出用户所有登录设备")
     public Result<Void> logoutAllDevices(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId) {
         userService.logoutAllDevices(userId);
+        return Result.success();
+    }
+    
+    @PostMapping("/reset-password")
+    @Operation(summary = "验证码重置密码", description = "通过验证码重置密码，不需要登录")
+    public Result<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        userService.resetPasswordByCode(request.getAccount(), request.getVerifyCode(), request.getNewPassword());
+        return Result.success();
+    }
+    
+    @PostMapping("/change-password")
+    @Operation(summary = "修改密码", description = "修改当前登录用户的密码，需要旧密码")
+    public Result<Void> changePassword(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
+                                       @Valid @RequestBody ChangePasswordRequest request) {
+        userService.changePassword(userId, request.getOldPassword(), request.getNewPassword());
         return Result.success();
     }
     

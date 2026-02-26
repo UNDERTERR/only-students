@@ -25,7 +25,8 @@ public class VerificationCodeService {
     public enum CodeType {
         REGISTER,    // 注册
         LOGIN,       // 登录
-        RESET_PWD    // 忘记密码
+        RESET_PWD,   // 忘记密码
+        BIND         // 绑定手机/邮箱
     }
 
     /**

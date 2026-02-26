@@ -2,12 +2,14 @@ package com.onlystudents.file.controller;
 
 import com.onlystudents.common.constants.CommonConstants;
 import com.onlystudents.common.result.Result;
+import com.onlystudents.file.dto.CropImageRequest;
 import com.onlystudents.file.dto.FileUploadResult;
 import com.onlystudents.file.enums.FileCategory;
 import com.onlystudents.file.service.FileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -119,6 +121,20 @@ public class FileController {
         result.put("status", status);
         result.put("pdfFileId", pdfFileId);
         
+        return Result.success(result);
+    }
+    
+    @PostMapping("/crop-image")
+    @Operation(summary = "裁剪图片", description = "根据指定坐标裁剪图片，返回裁剪后的图片URL")
+    public Result<FileUploadResult> cropImage(@Valid @RequestBody CropImageRequest request) {
+        FileUploadResult result = fileService.cropImage(
+                request.getImageUrl(),
+                request.getX(),
+                request.getY(),
+                request.getWidth(),
+                request.getHeight(),
+                request.getScale() != null ? request.getScale() : 1.0f
+        );
         return Result.success(result);
     }
 }
