@@ -4,21 +4,6 @@
 
 USE only_students_note;
 
--- 笔记分类表
-CREATE TABLE IF NOT EXISTS note_category (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(50) NOT NULL COMMENT '分类名称',
-    parent_id BIGINT DEFAULT 0 COMMENT '父分类ID（0为顶级）',
-    sort_order INT DEFAULT 0 COMMENT '排序',
-    icon VARCHAR(200) COMMENT '图标URL',
-    description VARCHAR(255) COMMENT '分类描述',
-    status TINYINT DEFAULT 1 COMMENT '状态：0禁用 1正常',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_parent_id (parent_id),
-    INDEX idx_sort_order (sort_order)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='笔记分类表';
-
 -- 笔记标签表
 CREATE TABLE IF NOT EXISTS note_tag (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -40,7 +25,6 @@ CREATE TABLE IF NOT EXISTS note (
     title VARCHAR(200) NOT NULL COMMENT '标题',
     content TEXT COMMENT '内容摘要',
     cover_image VARCHAR(500) COMMENT '封面图URL',
-    category_id BIGINT COMMENT '分类ID',
     visibility TINYINT DEFAULT 0 COMMENT '可见性：0公开 1仅订阅可见 2仅付费可见 3订阅后付费可见 4仅自己可见',
     price DECIMAL(10,2) DEFAULT 0.00 COMMENT '价格（付费笔记）',
     attachments JSON COMMENT '附件列表：[{fileId, fileName, fileType, fileUrl, pdfUrl}]',
@@ -55,14 +39,12 @@ CREATE TABLE IF NOT EXISTS note (
     education_level TINYINT COMMENT '适用学段：1小学 2初中 3高中 4大学 5研究生',
     school_id BIGINT COMMENT '适用学校ID（可选）',
     school_name VARCHAR(100) COMMENT '适用学校名称',
-    subject VARCHAR(50) COMMENT '学科：数学/物理/化学等',
     publish_time DATETIME COMMENT '发布时间',
     deleted TINYINT DEFAULT 0 COMMENT '是否删除：0未删除 1已删除',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_user_id (user_id),
     INDEX idx_auther_nickname (auther_nickname),
-    INDEX idx_category_id (category_id),
     INDEX idx_status (status),
     INDEX idx_visibility (visibility),
     INDEX idx_deleted (deleted),
@@ -70,10 +52,8 @@ CREATE TABLE IF NOT EXISTS note (
     INDEX idx_publish_time (publish_time),
     INDEX idx_education_level (education_level),
     INDEX idx_school_id (school_id),
-    INDEX idx_subject (subject),
     INDEX idx_price (price),
-    FULLTEXT INDEX ft_title (title) WITH PARSER ngram,
-    CONSTRAINT fk_note_category FOREIGN KEY (category_id) REFERENCES note_category(id) ON DELETE SET NULL
+    FULLTEXT INDEX ft_title (title) WITH PARSER ngram
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='笔记表';
 
 -- 笔记标签关联表
@@ -102,15 +82,3 @@ CREATE TABLE IF NOT EXISTS note_view_history (
     INDEX idx_view_time (view_time),
     CONSTRAINT fk_history_note FOREIGN KEY (note_id) REFERENCES note(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='笔记浏览历史表';
-
--- 初始化分类数据
-INSERT INTO note_category (name, parent_id, sort_order, description) VALUES
-('全部', 0, 0, '所有笔记'),
-('数学', 0, 1, '数学相关笔记'),
-('物理', 0, 2, '物理相关笔记'),
-('化学', 0, 3, '化学相关笔记'),
-('英语', 0, 4, '英语学习笔记'),
-('语文', 0, 5, '语文相关笔记'),
-('编程', 0, 6, '计算机编程笔记'),
-('考研', 0, 7, '考研复习资料'),
-('高考', 0, 8, '高考复习资料');

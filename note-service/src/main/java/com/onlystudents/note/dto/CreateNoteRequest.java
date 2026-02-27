@@ -18,8 +18,6 @@ public class CreateNoteRequest {
     
     private String coverImage;
     
-    private Long categoryId;
-    
     private Integer visibility; // 0-公开, 1-仅订阅可见, 2-仅付费可见, 3-订阅后付费可见, 4-仅自己可见
     
     private BigDecimal price;
@@ -31,8 +29,6 @@ public class CreateNoteRequest {
     private Long schoolId;
     
     private String schoolName;
-    
-    private String subject;
     
     private List<String> tags;
 }

@@ -9,12 +9,11 @@ CREATE TABLE IF NOT EXISTS school
 (
     id              BIGINT PRIMARY KEY AUTO_INCREMENT,
     name            VARCHAR(100) NOT NULL COMMENT '学校名称',
-    education_level TINYINT      NOT NULL COMMENT '学段：1小学 2初中 3高中 4大学 5研究生',
     province        VARCHAR(50) COMMENT '省份',
     city            VARCHAR(50) COMMENT '城市',
+    population      INT      DEFAULT 0 COMMENT '用户数量',
     status          TINYINT  DEFAULT 1 COMMENT '状态：0禁用 1正常',
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_education_level (education_level),
     INDEX idx_name (name)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -30,7 +29,7 @@ CREATE TABLE IF NOT EXISTS user
     nickname        VARCHAR(50) NOT NULL COMMENT '昵称',
     avatar          VARCHAR(500) COMMENT '头像URL',
     bio             TEXT COMMENT '个人简介',
-    education_level TINYINT COMMENT '学段：1小学 2初中 3高中 4大学 5研究生',
+    education_level TINYINT COMMENT '学段：1小学 2初中 3高中 4大学 5硕士 6博士',
     school_id       BIGINT COMMENT '学校ID',
     school_name     VARCHAR(100) COMMENT '学校名称（可选填）',
     is_creator      TINYINT  DEFAULT 0 COMMENT '是否创作者：0否 1是',
@@ -70,12 +69,3 @@ CREATE TABLE IF NOT EXISTS user_device
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='用户设备表';
-
--- 初始化学校数据示例
-INSERT INTO school (name, education_level, province, city)
-VALUES ('北京大学', 4, '北京市', '北京市'),
-       ('清华大学', 4, '北京市', '北京市'),
-       ('人民大学附属中学', 3, '北京市', '北京市'),
-       ('华南师范大学附属中学', 3, '广东省', '广州市'),
-       ('深圳市南山外国语学校', 2, '广东省', '深圳市'),
-       ('杭州市学军小学', 1, '浙江省', '杭州市');

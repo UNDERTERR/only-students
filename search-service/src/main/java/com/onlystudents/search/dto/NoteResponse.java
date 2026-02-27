@@ -22,8 +22,6 @@ public class NoteResponse {
 
     private String coverImage;
 
-    private Long categoryId;
-
     private Integer visibility;
 
     private BigDecimal price;
@@ -31,6 +29,8 @@ public class NoteResponse {
     private Long originalFileId;
 
     private Integer status;
+
+    private Integer deleted;
 
     private Integer viewCount;
 
@@ -49,8 +49,6 @@ public class NoteResponse {
     private Long schoolId;
 
     private String schoolName;
-
-    private String subject;
 
     private List<String> tags;
 

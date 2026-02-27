@@ -23,8 +23,6 @@ public class NoteDTO {
     
     private String coverImage;
     
-    private Long categoryId;
-    
     private Integer visibility;
     
     private BigDecimal price;
@@ -52,8 +50,6 @@ public class NoteDTO {
     private Long schoolId;
     
     private String schoolName;
-    
-    private String subject;
     
     private List<String> tags;
     

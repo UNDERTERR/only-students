@@ -78,30 +78,28 @@ public class ElasticsearchIndexConfig {
                 ))
                 // tags - 标签
                 .properties("tags", p -> p.keyword(k -> k))
-                // categoryId
-                .properties("categoryId", p -> p.long_(l -> l))
-                // categoryName
-                .properties("categoryName", p -> p.keyword(k -> k))
                 // userId
                 .properties("userId", p -> p.long_(l -> l))
-                // nickname（使用 IK 分词器）
-                .properties("nickname", p -> p.text(t -> t
+                // authorNickname（使用 IK 分词器）
+                .properties("authorNickname", p -> p.text(t -> t
                         .analyzer("ik_max_word")
                 ))
+                // authorAvatar
+                .properties("authorAvatar", p -> p.keyword(k -> k))
                 // educationLevel
                 .properties("educationLevel", p -> p.integer(i -> i))
                 // schoolId
                 .properties("schoolId", p -> p.long_(l -> l))
                 // schoolName
                 .properties("schoolName", p -> p.keyword(k -> k))
-                // subject
-                .properties("subject", p -> p.keyword(k -> k))
                 // visibility
                 .properties("visibility", p -> p.integer(i -> i))
                 // price
                 .properties("price", p -> p.scaledFloat(s -> s.scalingFactor(100.0)))
                 // status
                 .properties("status", p -> p.integer(i -> i))
+                // deleted
+                .properties("deleted", p -> p.integer(i -> i))
                 // hotScore
                 .properties("hotScore", p -> p.double_(d -> d))
                 // viewCount

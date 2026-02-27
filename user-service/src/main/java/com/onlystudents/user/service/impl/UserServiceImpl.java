@@ -7,9 +7,11 @@ import com.onlystudents.common.utils.JwtUtils;
 import com.onlystudents.user.dto.*;
 import com.onlystudents.user.entity.User;
 import com.onlystudents.user.entity.UserDevice;
+import com.onlystudents.user.entity.School;
 import com.onlystudents.user.event.UserEventPublisher;
 import com.onlystudents.user.mapper.UserDeviceMapper;
 import com.onlystudents.user.mapper.UserMapper;
+import com.onlystudents.user.mapper.SchoolMapper;
 import com.onlystudents.user.service.SensitiveWordFilterService;
 import com.onlystudents.user.service.UserService;
 import com.onlystudents.user.service.VerificationCodeService;
@@ -36,6 +38,7 @@ public class UserServiceImpl implements UserService {
     
     private final UserMapper userMapper;
     private final UserDeviceMapper deviceMapper;
+    private final SchoolMapper schoolMapper;
     private final JwtUtils jwtUtils;
     private final VerificationCodeService verificationCodeService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -94,10 +97,25 @@ public class UserServiceImpl implements UserService {
         user.setStatus(1);
         user.setIsCreator(0);
         user.setEducationLevel(request.getEducationLevel());
-        user.setSchoolId(request.getSchoolId());
-        user.setSchoolName(request.getSchoolName());
         
+        Long schoolId = request.getSchoolId();
+        String schoolName = request.getSchoolName();
+        
+        if (schoolId == null && schoolName != null && !schoolName.isEmpty()) {
+            School existingSchool = schoolMapper.selectByName(schoolName);
+            if (existingSchool != null) {
+                schoolId = existingSchool.getId();
+            }
+        }
+        
+        user.setSchoolId(schoolId);
+        user.setSchoolName(schoolName);
+
         userMapper.insert(user);
+
+        if (schoolId != null || (schoolName != null && !schoolName.isEmpty())) {
+            handleSchoolPopulationForRegister(schoolId, schoolName);
+        }
         
         return convertToResponse(user);
     }
@@ -240,11 +258,27 @@ public class UserServiceImpl implements UserService {
         if (request.getEducationLevel() != null) {
             user.setEducationLevel(request.getEducationLevel());
         }
-        if (request.getSchoolId() != null) {
-            user.setSchoolId(request.getSchoolId());
+        
+        Long newSchoolId = request.getSchoolId();
+        String newSchoolName = request.getSchoolName();
+        
+        if (newSchoolId == null && newSchoolName != null && !newSchoolName.isEmpty()) {
+            School existingSchool = schoolMapper.selectByName(newSchoolName);
+            if (existingSchool != null) {
+                newSchoolId = existingSchool.getId();
+            }
         }
-        if (request.getSchoolName() != null) {
-            user.setSchoolName(request.getSchoolName());
+        
+        if (newSchoolId != null || (newSchoolName != null && !newSchoolName.isEmpty())) {
+            handleSchoolPopulation(user, newSchoolId, newSchoolName);
+            user.setSchoolId(newSchoolId);
+        } else if (newSchoolId == null && newSchoolName == null && user.getSchoolId() != null) {
+            handleSchoolClear(user);
+        }
+        if (newSchoolName != null) {
+            user.setSchoolName(newSchoolName);
+        } else if (newSchoolName == null && user.getSchoolName() != null) {
+            user.setSchoolName(null);
         }
         
         // 处理绑定手机号或邮箱（需要验证码）
@@ -413,5 +447,80 @@ public class UserServiceImpl implements UserService {
         UserResponse response = new UserResponse();
         BeanUtils.copyProperties(user, response);
         return response;
+    }
+
+    private void handleSchoolPopulation(User user, Long newSchoolId, String newSchoolName) {
+        Long oldSchoolId = user.getSchoolId();
+
+        if (oldSchoolId != null && (newSchoolId == null || !oldSchoolId.equals(newSchoolId))) {
+            School oldSchool = schoolMapper.selectById(oldSchoolId);
+            if (oldSchool != null && oldSchool.getPopulation() > 0) {
+                schoolMapper.decrementPopulation(oldSchoolId);
+                log.info("用户更换/清除学校，原学校ID={}人数-1", oldSchoolId);
+            }
+        }
+
+        if (newSchoolName != null && !newSchoolName.isEmpty()) {
+            School school = null;
+            
+            if (newSchoolId != null) {
+                school = schoolMapper.selectById(newSchoolId);
+            }
+            
+            if (school == null) {
+                school = schoolMapper.selectByName(newSchoolName);
+            }
+            
+            if (school != null) {
+                if (oldSchoolId == null || !oldSchoolId.equals(school.getId())) {
+                    schoolMapper.incrementPopulation(school.getId());
+                    log.info("用户选择学校ID={}人数+1", school.getId());
+                }
+            } else {
+                School newSchool = new School();
+                newSchool.setName(newSchoolName);
+                newSchool.setPopulation(1);
+                newSchool.setStatus(1);
+                schoolMapper.insert(newSchool);
+                log.info("用户新增学校ID={}人数初始化为1", newSchool.getId());
+            }
+        }
+    }
+
+    private void handleSchoolClear(User user) {
+        Long oldSchoolId = user.getSchoolId();
+        if (oldSchoolId != null) {
+            School school = schoolMapper.selectById(oldSchoolId);
+            if (school != null && school.getPopulation() > 0) {
+                schoolMapper.decrementPopulation(oldSchoolId);
+                log.info("用户清除学校，学校ID={}人数-1", oldSchoolId);
+            }
+        }
+    }
+
+    private void handleSchoolPopulationForRegister(Long schoolId, String schoolName) {
+        if (schoolId != null) {
+            School school = schoolMapper.selectById(schoolId);
+            if (school != null) {
+                schoolMapper.incrementPopulation(schoolId);
+                log.info("用户注册选择学校ID={}人数+1", schoolId);
+                return;
+            }
+        }
+        
+        if (schoolName != null && !schoolName.isEmpty()) {
+            School school = schoolMapper.selectByName(schoolName);
+            if (school != null) {
+                schoolMapper.incrementPopulation(school.getId());
+                log.info("用户注册选择学校名称ID={}人数+1", school.getId());
+            } else {
+                School newSchool = new School();
+                newSchool.setName(schoolName);
+                newSchool.setPopulation(1);
+                newSchool.setStatus(1);
+                schoolMapper.insert(newSchool);
+                log.info("用户注册新增学校ID={}人数初始化为1", newSchool.getId());
+            }
+        }
     }
 }

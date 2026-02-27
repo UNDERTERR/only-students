@@ -26,8 +26,6 @@ public class Note {
 
     private String coverImage;
 
-    private Long categoryId;
-
     private Integer visibility;
 
     private BigDecimal price;
@@ -58,8 +56,6 @@ public class Note {
     private Long schoolId;
 
     private String schoolName;
-
-    private String subject;
 
     private LocalDateTime publishTime;
 

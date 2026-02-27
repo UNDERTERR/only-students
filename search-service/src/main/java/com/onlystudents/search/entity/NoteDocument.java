@@ -20,18 +20,16 @@ public class NoteDocument {
     private String title;
     private String content;
     private List<String> tags;
-    private Long categoryId;
-    private String categoryName;
     private Long userId;
     private String authorNickname;  // 作者昵称  
     private String authorAvatar;    // 作者头像
     private Integer educationLevel;
     private Long schoolId;
     private String schoolName;
-    private String subject;
     private Integer visibility;
     private BigDecimal price;
     private Integer status;
+    private Integer deleted;
     private Double hotScore;
     private Integer viewCount;
     private Integer likeCount;
