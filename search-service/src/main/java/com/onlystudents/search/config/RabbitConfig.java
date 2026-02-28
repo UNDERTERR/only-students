@@ -21,6 +21,11 @@ public class RabbitConfig {
     public static final String USER_INFO_UPDATE_QUEUE = "user.info.update.queue";
     public static final String USER_INFO_UPDATE_ROUTING_KEY = "user.info.updated";
     
+    // 笔记交换机
+    public static final String NOTE_EXCHANGE = "note.exchange";
+    public static final String NOTE_DELETE_QUEUE = "note.delete.queue";
+    public static final String NOTE_DELETE_ROUTING_KEY = "note.delete";
+    
     /**
      * 用户信息变更交换机
      */
@@ -45,6 +50,32 @@ public class RabbitConfig {
         return BindingBuilder.bind(userInfoUpdateQueue())
                 .to(userInfoExchange())
                 .with(USER_INFO_UPDATE_ROUTING_KEY);
+    }
+
+    /**
+     * 笔记交换机
+     */
+    @Bean
+    public TopicExchange noteExchange() {
+        return new TopicExchange(NOTE_EXCHANGE, true, false);
+    }
+
+    /**
+     * 笔记删除队列
+     */
+    @Bean
+    public Queue noteDeleteQueue() {
+        return QueueBuilder.durable(NOTE_DELETE_QUEUE).build();
+    }
+
+    /**
+     * 绑定笔记删除队列到交换机
+     */
+    @Bean
+    public Binding noteDeleteBinding() {
+        return BindingBuilder.bind(noteDeleteQueue())
+                .to(noteExchange())
+                .with(NOTE_DELETE_ROUTING_KEY);
     }
 
 

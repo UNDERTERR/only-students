@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS school
     province        VARCHAR(50) COMMENT '省份',
     city            VARCHAR(50) COMMENT '城市',
     population      INT      DEFAULT 0 COMMENT '用户数量',
+    notes           INT      DEFAULT 0 COMMENT '笔记数量',
     status          TINYINT  DEFAULT 1 COMMENT '状态：0禁用 1正常',
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_name (name)

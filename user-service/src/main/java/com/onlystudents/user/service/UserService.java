@@ -54,4 +54,14 @@ public interface UserService {
      * 修改密码（需要旧密码）
      */
     void changePassword(Long userId, String oldPassword, String newPassword);
+
+    /**
+     * 增加学校笔记数
+     */
+    void incrementSchoolNotes(Long schoolId);
+
+    /**
+     * 减少学校笔记数
+     */
+    void decrementSchoolNotes(Long schoolId);
 }

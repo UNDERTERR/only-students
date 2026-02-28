@@ -28,4 +28,16 @@ public class UserFeignClientFallback implements UserFeignClient {
         
         return Result.success(fallbackUser);
     }
+
+    @Override
+    public Result<Void> incrementSchoolNotes(Long schoolId) {
+        log.warn("调用 user-service 增加学校笔记数失败，降级处理，schoolId={}", schoolId);
+        return Result.success(null);
+    }
+
+    @Override
+    public Result<Void> decrementSchoolNotes(Long schoolId) {
+        log.warn("调用 user-service 减少学校笔记数失败，降级处理，schoolId={}", schoolId);
+        return Result.success(null);
+    }
 }

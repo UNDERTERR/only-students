@@ -18,7 +18,7 @@ public interface NoteMapper extends BaseMapper<Note> {
     @Select("SELECT * FROM note WHERE deleted = 0 AND status = 2 AND visibility != 4 ORDER BY publish_time DESC LIMIT #{limit}")
     List<Note> selectLatestNotes(@Param("limit") Integer limit);
 
-    @Select("SELECT * FROM note WHERE user_id = #{userId} AND status = 2 ORDER BY publish_time DESC LIMIT #{limit}")
+    @Select("SELECT * FROM note WHERE user_id = #{userId} AND deleted = 0 AND status = 2 ORDER BY publish_time DESC LIMIT #{limit}")
     List<Note> selectUserLatestNotes(@Param("userId") Long userId, @Param("limit") Integer limit);
 
     @Select("SELECT * FROM note WHERE user_id = #{userId} AND deleted = 0 ORDER BY created_at DESC")

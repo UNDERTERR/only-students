@@ -20,6 +20,8 @@ public class School {
 
     private Integer population;
 
+    private Integer notes;
+
     private Integer status;
 
     @TableField(fill = FieldFill.INSERT)

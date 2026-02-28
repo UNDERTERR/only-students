@@ -66,7 +66,37 @@ public class NoteServiceImpl implements NoteService {
         note.setShareCount(0);
         note.setHotScore(0.0);
 
+        // 获取用户信息，设置 educationLevel, schoolId, schoolName
+        try {
+            // 先尝试通过 Feign 获取
+            Result<Map<String, Object>> userResult = userFeignClient.getUserById(userId);
+            log.info("Feign获取用户信息结果: userId={}, result={}", userId, userResult);
+            
+            Map<String, Object> userData = null;
+            if (userResult != null && userResult.getData() != null) {
+                userData = userResult.getData();
+            }
+            
+            if (userData != null) {
+                log.info("用户数据所有key: {}", userData.keySet());
+                log.info("用户数据: userId={}, schoolId={}, schoolName={}, educationLevel={}", 
+                    userId, userData.get("schoolId"), userData.get("schoolName"), userData.get("educationLevel"));
+                if (userData.get("educationLevel") != null) {
+                    note.setEducationLevel(toInt(userData.get("educationLevel")));
+                }
+                if (userData.get("schoolId") != null) {
+                    note.setSchoolId(toLong(userData.get("schoolId")));
+                }
+                if (userData.get("schoolName") != null) {
+                    note.setSchoolName((String) userData.get("schoolName"));
+                }
+            }
+        } catch (Exception e) {
+            log.error("获取用户信息失败: userId={}", userId, e);
+        }
+
         noteMapper.insert(note);
+        log.info("笔记创建成功: noteId={}, schoolId={}, schoolName={}", note.getId(), note.getSchoolId(), note.getSchoolName());
 
         // 保存标签关联
         if (request.getTags() != null && !request.getTags().isEmpty()) {
@@ -104,20 +134,21 @@ public class NoteServiceImpl implements NoteService {
     }
 
     @Override
-    @Caching(evict = {
-            @CacheEvict(value = "notes", key = "#p0"),
-            @CacheEvict(value = "hotNotes", allEntries = true),
-            @CacheEvict(value = "latestNotes", allEntries = true)
-    })
+    @CacheEvict(value = {"hotNotes", "latestNotes"}, allEntries = true)
     public void deleteNote(Long noteId, Long userId) {
+        log.info("开始删除笔记: noteId={}, userId={}", noteId, userId);
         Note note = noteMapper.selectById(noteId);
         if (note == null) {
+            log.warn("笔记不存在: noteId={}", noteId);
             return;
         }
 
         if (!note.getUserId().equals(userId)) {
+            log.warn("无权限删除笔记: noteId={}, userId={}, noteUserId={}", noteId, userId, note.getUserId());
             throw new BusinessException(ResultCode.FORBIDDEN);
         }
+
+        log.info("删除笔记: noteId={}, title={}", noteId, note.getTitle());
 
         // 删除附件文件
         deleteAttachments(note.getAttachments(), userId);
@@ -125,8 +156,18 @@ public class NoteServiceImpl implements NoteService {
         // 删除标签关联
         tagService.deleteNoteTags(noteId);
 
+        // 减少学校笔记数
+        if (note.getSchoolId() != null) {
+            try {
+                userFeignClient.decrementSchoolNotes(note.getSchoolId());
+            } catch (Exception e) {
+                log.warn("减少学校笔记数失败: schoolId={}", note.getSchoolId(), e);
+            }
+        }
+
         // 使用 MyBatis Plus 逻辑删除，会自动设置 deleted=1
         noteMapper.deleteById(noteId);
+        log.info("笔记已从数据库删除: noteId={}", noteId);
 
         // 发送MQ消息通知删除ES文档
         try {
@@ -135,6 +176,8 @@ public class NoteServiceImpl implements NoteService {
         } catch (Exception e) {
             log.error("发送笔记删除消息失败: noteId={}", noteId, e);
         }
+        
+        log.info("笔记删除完成: noteId={}", noteId);
     }
 
     /**
@@ -208,6 +251,7 @@ public class NoteServiceImpl implements NoteService {
         if (currentUserId != null) {
             LambdaQueryWrapper<Note> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(Note::getUserId, currentUserId);
+            wrapper.eq(Note::getDeleted, 0);
             wrapper.eq(Note::getStatus, 2); // 已发布
             wrapper.orderByDesc(Note::getHotScore);
             wrapper.last("LIMIT " + limit);
@@ -227,7 +271,7 @@ public class NoteServiceImpl implements NoteService {
         if (limit == null || limit > 100) {
             limit = 20;
         }
-        log.info("获取首页数据，当前用户: {}", currentUserId);
+        log.info("获取首页最新数据，当前用户: {}, limit: {}", currentUserId, limit);
 
         // 查询公开的笔记
         List<Note> publicNotes = noteMapper.selectLatestNotes(limit);
@@ -278,6 +322,20 @@ public class NoteServiceImpl implements NoteService {
         note.setStatus(2); // 已发布
         note.setPublishTime(LocalDateTime.now());
         noteMapper.updateById(note);
+
+        // 如果有学校，增加学校笔记数
+        if (note.getSchoolId() != null) {
+            log.info("准备增加学校笔记数, schoolId={}, noteId={}", note.getSchoolId(), noteId);
+            try {
+                    Result<Void> result = userFeignClient.incrementSchoolNotes(note.getSchoolId());
+                    log.info("Feign增加学校笔记数结果: schoolId={}, result={}", note.getSchoolId(), result);
+
+            } catch (Exception e) {
+                log.error("增加学校笔记数失败: schoolId={}", note.getSchoolId(), e);
+            }
+        } else {
+            log.warn("笔记没有学校信息, noteId={}, schoolId={}", noteId, note.getSchoolId());
+        }
 
         try {
             // 发送笔记同步消息
@@ -338,5 +396,21 @@ public class NoteServiceImpl implements NoteService {
         dto.setTags(tags);
 
         return dto;
+    }
+
+    private Long toLong(Object value) {
+        if (value == null) return null;
+        if (value instanceof Long) return (Long) value;
+        if (value instanceof Integer) return ((Integer) value).longValue();
+        if (value instanceof Number) return ((Number) value).longValue();
+        return Long.parseLong(value.toString());
+    }
+
+    private Integer toInt(Object value) {
+        if (value == null) return null;
+        if (value instanceof Integer) return (Integer) value;
+        if (value instanceof Long) return ((Long) value).intValue();
+        if (value instanceof Number) return ((Number) value).intValue();
+        return Integer.parseInt(value.toString());
     }
 }

@@ -16,6 +16,12 @@ public interface SchoolMapper extends BaseMapper<School> {
     @Update("UPDATE school SET population = population - 1 WHERE id = #{schoolId} AND population > 0")
     int decrementPopulation(@Param("schoolId") Long schoolId);
 
+    @Update("UPDATE school SET notes = notes + 1 WHERE id = #{schoolId}")
+    int incrementNotes(@Param("schoolId") Long schoolId);
+
+    @Update("UPDATE school SET notes = notes - 1 WHERE id = #{schoolId} AND notes > 0")
+    int decrementNotes(@Param("schoolId") Long schoolId);
+
     @Select("SELECT * FROM school WHERE name = #{name} LIMIT 1")
     School selectByName(@Param("name") String name);
 }

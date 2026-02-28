@@ -143,4 +143,18 @@ public class UserController {
         userService.clearUserCache(userId);
         return Result.success();
     }
+
+    @PostMapping("/school/notes/increment/{schoolId}")
+    @Operation(summary = "增加学校笔记数", description = "增加指定学校的笔记数量")
+    public Result<Void> incrementSchoolNotes(@PathVariable(name = "schoolId") Long schoolId) {
+        userService.incrementSchoolNotes(schoolId);
+        return Result.success();
+    }
+
+    @PostMapping("/school/notes/decrement/{schoolId}")
+    @Operation(summary = "减少学校笔记数", description = "减少指定学校的笔记数量")
+    public Result<Void> decrementSchoolNotes(@PathVariable(name = "schoolId") Long schoolId) {
+        userService.decrementSchoolNotes(schoolId);
+        return Result.success();
+    }
 }

@@ -69,7 +69,7 @@ public class SearchServiceImpl implements SearchService {
                     boolQuery.must(m -> m
                             .bool(b -> b
                                     .should(s -> s.multiMatch(mm -> mm
-                                            .fields("title^3", "content^2", "tags", "authorNickname")
+                                            .fields("tags^5", "title^3", "content^2", "authorNickname")
                                             .query(keyword)
                                             .type(TextQueryType.BestFields)))
                                     .should(s -> s.wildcard(w -> w.field("title").value("*" + keyword + "*")))
@@ -79,7 +79,7 @@ public class SearchServiceImpl implements SearchService {
                 } else {
                     boolQuery.must(m -> m
                             .multiMatch(mm -> mm
-                                    .fields("title^3", "content^2", "tags", "authorNickname")
+                                    .fields("tags^5", "title^3", "content^2", "authorNickname")
                                     .query(keyword)
                                     .type(TextQueryType.BestFields)
                             )
