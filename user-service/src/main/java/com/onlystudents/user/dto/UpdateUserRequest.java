@@ -33,4 +33,7 @@ public class UpdateUserRequest {
     
     @Schema(description = "学校名称", required = false)
     private String schoolName;
+    
+    @Schema(description = "绑定手机/邮箱时的验证码", required = false)
+    private String verifyCode;
 }

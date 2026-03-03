@@ -13,8 +13,6 @@ public class NoteDTO {
     
     private Long userId;
     
-    private String authorUsername;
-    
     private String authorNickname;
     
     private String authorAvatar;
@@ -24,8 +22,6 @@ public class NoteDTO {
     private String content;
     
     private String coverImage;
-    
-    private Long categoryId;
     
     private Integer visibility;
     
@@ -54,8 +50,6 @@ public class NoteDTO {
     private Long schoolId;
     
     private String schoolName;
-    
-    private String subject;
     
     private List<String> tags;
     

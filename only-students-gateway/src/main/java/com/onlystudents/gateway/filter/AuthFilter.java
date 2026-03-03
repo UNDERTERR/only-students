@@ -5,6 +5,7 @@ import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.onlystudents.common.constants.CommonConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -43,11 +44,11 @@ public class AuthFilter implements GlobalFilter, Ordered {
         
         // 检查是否是白名单路径
         if (isWhitelistPath(path)) {
-            // 即使是白名单，如果前端传了 X-User-Id，也要保留
-            String userIdFromHeader = request.getHeaders().getFirst("X-User-Id");
+            // 即使是白名单，如果前端传了 CommonConstants.USER_ID_HEADER，也要保留
+            String userIdFromHeader = request.getHeaders().getFirst(CommonConstants.USER_ID_HEADER);
             if (userIdFromHeader != null && !userIdFromHeader.isEmpty()) {
                 ServerHttpRequest mutatedRequest = request.mutate()
-                        .header("X-User-Id", userIdFromHeader)
+                        .header(CommonConstants.USER_ID_HEADER, userIdFromHeader)
                         .build();
                 return chain.filter(exchange.mutate().request(mutatedRequest).build());
             }
@@ -55,8 +56,8 @@ public class AuthFilter implements GlobalFilter, Ordered {
         }
         
         // 获取Token
-        String token = request.getHeaders().getFirst("Authorization");
-        if (token == null || !token.startsWith("Bearer ")) {
+        String token = request.getHeaders().getFirst(CommonConstants.TOKEN_HEADER);
+        if (token == null || !token.startsWith(CommonConstants.TOKEN_PREFIX)) {
             return unauthorized(exchange.getResponse(), "缺少认证信息");
         }
         
@@ -70,17 +71,15 @@ public class AuthFilter implements GlobalFilter, Ordered {
             
             // 提取用户信息
             String userId = jwt.getClaim("userId").asString();
-            String username = jwt.getSubject();
             
             // 如果JWT中没有userId，尝试从前端header获取
             if (userId == null || userId.isEmpty()) {
-                userId = request.getHeaders().getFirst("X-User-Id");
+                userId = request.getHeaders().getFirst(CommonConstants.USER_ID_HEADER);
             }
             
             // 将用户信息添加到请求头
             ServerHttpRequest mutatedRequest = request.mutate()
-                    .header("X-User-Id", userId != null ? userId : "")
-                    .header("X-Username", username != null ? username : "")
+                    .header(CommonConstants.USER_ID_HEADER, userId != null ? userId : "")
                     .build();
             
             return chain.filter(exchange.mutate().request(mutatedRequest).build());

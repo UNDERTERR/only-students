@@ -10,8 +10,6 @@ public class CreateNoteRequest {
     
     private String title;
 
-    private String authorUsername;
-
     private String authorNickname;
 
     private String authorAvatar;
@@ -19,8 +17,6 @@ public class CreateNoteRequest {
     private String content;
     
     private String coverImage;
-    
-    private Long categoryId;
     
     private Integer visibility; // 0-公开, 1-仅订阅可见, 2-仅付费可见, 3-订阅后付费可见, 4-仅自己可见
     
@@ -33,8 +29,6 @@ public class CreateNoteRequest {
     private Long schoolId;
     
     private String schoolName;
-    
-    private String subject;
     
     private List<String> tags;
 }

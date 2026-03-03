@@ -2,12 +2,14 @@ package com.onlystudents.file.controller;
 
 import com.onlystudents.common.constants.CommonConstants;
 import com.onlystudents.common.result.Result;
+import com.onlystudents.file.dto.CropImageRequest;
 import com.onlystudents.file.dto.FileUploadResult;
 import com.onlystudents.file.enums.FileCategory;
 import com.onlystudents.file.service.FileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -40,7 +42,7 @@ public class FileController {
     @Operation(summary = "上传笔记附件", description = "根据笔记可见性上传到不同目录")
     public Result<FileUploadResult> uploadFileForNote(@RequestParam("file") MultipartFile file,
                                                       @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
-                                                      @RequestParam Integer visibility) {
+                                                      @RequestParam(value = "visibility", required = false) Integer visibility) {
         return Result.success(fileService.uploadFileByVisibility(file, userId, visibility));
     }
     
@@ -77,14 +79,14 @@ public class FileController {
     
     @GetMapping("/preview/{fileId}")
     @Operation(summary = "预览文件", description = "获取文件预览URL，有效期默认1小时")
-    public Result<String> getPreviewUrl(@PathVariable Long fileId,
-                                         @RequestParam(defaultValue = "3600") Long expireSeconds) {
+    public Result<String> getPreviewUrl(@PathVariable("fileId") Long fileId,
+                                     @RequestParam(defaultValue = "3600") Long expireSeconds) {
         return Result.success(fileService.getPreviewUrl(fileId, expireSeconds));
     }
     
     @GetMapping("/download/{fileId}")
     @Operation(summary = "下载文件", description = "下载原始文件")
-    public void downloadFile(@PathVariable Long fileId, HttpServletResponse response) {
+    public void downloadFile(@PathVariable("fileId") Long fileId, HttpServletResponse response) {
         try (InputStream is = fileService.getFileStream(fileId)) {
             response.setContentType("application/octet-stream");
             response.setHeader("Content-Disposition", "attachment; filename=" + URLEncoder.encode("file", StandardCharsets.UTF_8));
@@ -102,8 +104,8 @@ public class FileController {
     
     @DeleteMapping("/{fileId}")
     @Operation(summary = "删除文件", description = "硬删除文件及关联的PDF文件")
-    public Result<Void> deleteFile(@PathVariable Long fileId,
-                                   @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+    public Result<Void> deleteFile(@PathVariable("fileId") Long fileId,
+                                   @RequestHeader(value = CommonConstants.USER_ID_HEADER, required = false) Long userId) {
         log.info("收到删除文件请求: fileId={}, userId={}", fileId, userId);
         fileService.deleteFile(fileId);
         return Result.success();
@@ -111,7 +113,7 @@ public class FileController {
 
     @GetMapping("/convert-status/{fileId}")
     @Operation(summary = "获取文件转换状态", description = "获取文件的PDF转换状态")
-    public Result<java.util.Map<String, Object>> getConvertStatus(@PathVariable Long fileId) {
+    public Result<java.util.Map<String, Object>> getConvertStatus(@PathVariable("fileId") Long fileId) {
         Integer status = fileService.getConvertStatus(fileId);
         Long pdfFileId = fileService.getPdfFileId(fileId);
         
@@ -119,6 +121,20 @@ public class FileController {
         result.put("status", status);
         result.put("pdfFileId", pdfFileId);
         
+        return Result.success(result);
+    }
+    
+    @PostMapping("/crop-image")
+    @Operation(summary = "裁剪图片", description = "根据指定坐标裁剪图片，返回裁剪后的图片URL")
+    public Result<FileUploadResult> cropImage(@Valid @RequestBody CropImageRequest request) {
+        FileUploadResult result = fileService.cropImage(
+                request.getImageUrl(),
+                request.getX(),
+                request.getY(),
+                request.getWidth(),
+                request.getHeight(),
+                request.getScale() != null ? request.getScale() : 1.0f
+        );
         return Result.success(result);
     }
 }

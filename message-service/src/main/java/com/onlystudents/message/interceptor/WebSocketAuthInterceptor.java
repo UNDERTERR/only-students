@@ -1,5 +1,6 @@
 package com.onlystudents.message.interceptor;
 
+import com.onlystudents.common.constants.CommonConstants;
 import com.onlystudents.common.utils.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -74,8 +75,8 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
             }
             
             // 2. 从Header中获取
-            String authHeader = servletRequest.getServletRequest().getHeader("Authorization");
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String authHeader = servletRequest.getServletRequest().getHeader(CommonConstants.TOKEN_HEADER);
+            if (authHeader != null && authHeader.startsWith(CommonConstants.TOKEN_PREFIX)) {
                 return authHeader.substring(7);
             }
         }

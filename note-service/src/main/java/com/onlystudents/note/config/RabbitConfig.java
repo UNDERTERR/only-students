@@ -2,12 +2,9 @@ package com.onlystudents.note.config;
 
 
 import com.onlystudents.common.utils.JsonSerializerUtils;
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.DirectExchange;
-import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
@@ -37,6 +34,14 @@ public class RabbitConfig {
     }
 
     /**
+     * 笔记发布成功队列
+     */
+    @Bean
+    public Queue notePublishQueue() {
+        return new Queue("note.publish.queue", true);
+    }
+
+    /**
      * 笔记交换机
      */
     @Bean
@@ -63,9 +68,27 @@ public class RabbitConfig {
                 .to(noteExchange())
                 .with("note.delete");
     }
-    
+
+    /**
+     * 绑定发布队列到交换机
+     */
+    @Bean
+    public Binding notePublishBinding() {
+        return BindingBuilder.bind(notePublishQueue())
+                .to(noteExchange())
+                .with("note.publish");
+    }
+
     // ==================== 接收评分服务的事件队列 ====================
-    
+
+    /**
+     * 评分服务交换机（用于接收rating-service的事件）
+     */
+    @Bean
+    public TopicExchange ratingExchange() {
+        return new TopicExchange("rating.exchange", true, false);
+    }
+
     /**
      * 收藏创建队列
      */
@@ -73,7 +96,7 @@ public class RabbitConfig {
     public Queue favoriteCreatedQueue() {
         return new Queue("favorite.created.queue", true);
     }
-    
+
     /**
      * 收藏删除队列
      */
@@ -81,7 +104,27 @@ public class RabbitConfig {
     public Queue favoriteDeletedQueue() {
         return new Queue("favorite.deleted.queue", true);
     }
-    
+
+    /**
+     * 绑定收藏创建队列到评分交换机
+     */
+    @Bean
+    public Binding favoriteCreatedBinding() {
+        return BindingBuilder.bind(favoriteCreatedQueue())
+                .to(ratingExchange())
+                .with("favorite.created");
+    }
+
+    /**
+     * 绑定收藏删除队列到评分交换机
+     */
+    @Bean
+    public Binding favoriteDeletedBinding() {
+        return BindingBuilder.bind(favoriteDeletedQueue())
+                .to(ratingExchange())
+                .with("favorite.deleted");
+    }
+
     /**
      * 评分更新队列
      */
@@ -89,7 +132,17 @@ public class RabbitConfig {
     public Queue ratingUpdatedQueue() {
         return new Queue("rating.updated.queue", true);
     }
-    
+
+    /**
+     * 绑定评分更新队列到评分交换机
+     */
+    @Bean
+    public Binding ratingUpdatedBinding() {
+        return BindingBuilder.bind(ratingUpdatedQueue())
+                .to(ratingExchange())
+                .with("rating.updated");
+    }
+
     /**
      * 分享创建队列
      */
@@ -97,7 +150,17 @@ public class RabbitConfig {
     public Queue shareCreatedQueue() {
         return new Queue("share.created.queue", true);
     }
-    
+
+    /**
+     * 绑定分享创建队列到评分交换机
+     */
+    @Bean
+    public Binding shareCreatedBinding() {
+        return BindingBuilder.bind(shareCreatedQueue())
+                .to(ratingExchange())
+                .with("share.created");
+    }
+
     /**
      * JSON消息转换器
      * 用于将对象序列化为JSON格式发送，支持Java 8日期时间类型
@@ -108,25 +171,17 @@ public class RabbitConfig {
     }
 
 
-    @Bean
-    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
-        RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
-        // 关键1：给生产者绑定JSON转换器
-        rabbitTemplate.setMessageConverter(jsonMessageConverter());
-        return rabbitTemplate;
-    }
-
     /**
-     * 配置 RabbitListenerContainerFactory 使用 JSON 消息转换器
-     * 用于 @RabbitListener 注解的方法接收消息时自动反序列化
+     * 配置 RabbitListenerContainerFactory 使用纯文本消息转换器
+     * 用于 @RabbitListener 注解的方法接收消息时不自动反序列化
      */
     @Bean
-    public org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
+    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
             ConnectionFactory connectionFactory) {
-        org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory factory =
-                new org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory();
+        SimpleRabbitListenerContainerFactory factory =
+                new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
-        factory.setMessageConverter(jsonMessageConverter());
+        factory.setMessageConverter(jsonMessageConverter() );
         return factory;
     }
 }

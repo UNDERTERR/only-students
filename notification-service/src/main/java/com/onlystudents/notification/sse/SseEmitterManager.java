@@ -60,8 +60,8 @@ public class SseEmitterManager {
             emitter.send(SseEmitter.event()
                     .name("connected")
                     .data(Map.of("userId", userId, "message", "SSE连接成功")));
-        } catch (IOException e) {
-            log.error("发送SSE连接成功事件失败", e);
+        } catch (Exception e) {
+            log.warn("发送SSE连接成功事件失败，可能客户端已断开: {}", e.getMessage());
         }
         
         return emitter;
@@ -99,6 +99,24 @@ public class SseEmitterManager {
             }
         } else {
             log.debug("用户 {} 不在线，通知无法推送: {}", userId, notification.getTitle());
+        }
+    }
+    
+    /**
+     * 发送未读计数更新给指定用户
+     */
+    public void sendUnreadCount(Long userId, Long count) {
+        SseEmitter emitter = emitters.get(userId);
+        if (emitter != null) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("unread-count")
+                        .data(Map.of("count", count)));
+                log.debug("未读计数已通过SSE推送给用户 {}: {}", userId, count);
+            } catch (IOException e) {
+                log.error("发送SSE未读计数失败，用户: {}", userId, e);
+                removeEmitter(userId);
+            }
         }
     }
     

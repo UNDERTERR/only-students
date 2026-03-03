@@ -1,5 +1,6 @@
 package com.onlystudents.note.client;
 
+import com.onlystudents.common.constants.CommonConstants;
 import com.onlystudents.common.result.Result;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,5 +18,5 @@ public interface FileFeignClient {
      */
     @DeleteMapping("/{fileId}")
     Result<Void> deleteFile(@PathVariable("fileId") Long fileId, 
-                           @RequestHeader("X-User-Id") Long userId);
+                           @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId);
 }

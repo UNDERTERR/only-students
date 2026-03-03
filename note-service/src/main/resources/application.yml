@@ -4,71 +4,21 @@ server:
 spring:
   application:
     name: note-service
+  profiles:
+    active: dev   # 以后切环境只改这里
   config:
     import:
-      - optional:nacos:application-${spring.profiles.active:}.yaml
+      - optional:nacos:note-service-${spring.profiles.active}.yaml
   cloud:
     nacos:
       discovery:
         server-addr: localhost:8848
-        namespace: public
+        namespace: ""
         group: DEFAULT_GROUP
       config:
         server-addr: localhost:8848
         file-extension: yaml
-        namespace: public
+        namespace: ""
         group: DEFAULT_GROUP
         import-check:
           enabled: false
-  data:
-    redis:
-      database: 0
-      host: localhost
-      port: 6379
-      password: xiaojie666
-      timeout: 3000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
-  datasource:
-    type: com.alibaba.druid.pool.DruidDataSource
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/only_students_note?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
-    username: root
-    password: xiaojie666
-    druid:
-      initial-size: 5
-      min-idle: 5
-      max-active: 20
-      max-wait: 60000
-  elasticsearch:
-    uris: http://localhost:9200
-  rabbitmq:
-    host: localhost
-    port: 5672
-    username: admin      # 你的自定义用户名
-    password: admin123     # 你的自定义密码
-    virtual-host: /
-# MyBatis Plus
-mybatis-plus:
-  configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-    map-underscore-to-camel-case: true
-  mapper-locations: classpath*:mapper/**/*.xml
-  global-config:
-    db-config:
-      id-type: auto
-      logic-delete-field: ${mybatis-plus.logic-delete-field}
-      logic-delete-value: ${mybatis-plus.logic-delete-value}
-      logic-not-delete-value: ${mybatis-plus.logic-not-delete-value}
-
-# 热度计算配置
-hot:
-  score:
-    view-weight: 1
-    like-weight: 3
-    favorite-weight: 5
-    comment-weight: 4
-    share-weight: 6

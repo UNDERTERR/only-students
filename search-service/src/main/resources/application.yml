@@ -4,55 +4,21 @@ server:
 spring:
   application:
     name: search-service
+  profiles:
+    active: dev   # 以后切环境只改这里
   config:
     import:
-      - optional:nacos:application-${spring.profiles.active:}.yaml
+      - optional:nacos:search-service-${spring.profiles.active}.yaml
   cloud:
     nacos:
       discovery:
         server-addr: localhost:8848
-        namespace: public
+        namespace: ""
         group: DEFAULT_GROUP
       config:
         server-addr: localhost:8848
         file-extension: yaml
-        namespace: public
+        namespace: ""
         group: DEFAULT_GROUP
         import-check:
           enabled: false
-
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      password: xiaojie666
-      database: 2
-      timeout: 3000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
-
-  elasticsearch:
-    uris: http://localhost:9200
-
-# RabbitMQ
-  rabbitmq:
-    host: localhost
-    port: 5672
-    username: admin
-    password: admin123
-    virtual-host: /
-    listener:
-      simple:
-        acknowledge-mode: manual
-        retry:
-          enabled: true
-          initial-delay: 1000
-          max-attempts: 3
-
-# JWT
-jwt:
-  secret: OnlyStudentsSecretKey2024
-  expiration: 86400000

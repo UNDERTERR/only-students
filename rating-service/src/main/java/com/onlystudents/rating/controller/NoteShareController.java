@@ -1,5 +1,6 @@
 package com.onlystudents.rating.controller;
 
+import com.onlystudents.common.constants.CommonConstants;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.rating.dto.NoteShareDTO;
 import com.onlystudents.rating.service.NoteShareService;
@@ -26,7 +27,7 @@ public class NoteShareController {
     @Operation(summary = "创建分享", description = "创建笔记分享链接")
     public Result<NoteShareDTO> createShare(
             @Parameter(description = "笔记ID") @PathVariable Long noteId,
-            @Parameter(description = "用户ID", hidden = true) @RequestHeader("X-User-Id") Long userId,
+            @Parameter(description = "用户ID", hidden = true) @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
             @Parameter(description = "分享类型(1-微信 2-QQ 3-链接)") @RequestParam(name = "shareType") Integer shareType) {
         return shareService.createShare(noteId, userId, shareType);
     }
@@ -55,7 +56,7 @@ public class NoteShareController {
     @GetMapping("/my")
     @Operation(summary = "我的分享", description = "获取当前用户的分享列表")
     public Result<List<NoteShareDTO>> getMyShares(
-            @Parameter(description = "用户ID", hidden = true) @RequestHeader("X-User-Id") Long userId) {
+            @Parameter(description = "用户ID", hidden = true) @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId) {
         return shareService.getUserShares(userId);
     }
 }

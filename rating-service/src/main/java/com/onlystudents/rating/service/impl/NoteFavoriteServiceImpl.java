@@ -1,15 +1,17 @@
 package com.onlystudents.rating.service.impl;
 
+import com.onlystudents.common.event.note.NoteFavoriteEvent;
+import com.onlystudents.common.event.notification.FavoriteNotificationEvent;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.rating.client.NoteFeignClient;
+import com.onlystudents.rating.client.UserFeignClient;
 import com.onlystudents.rating.dto.CreateFolderRequest;
 import com.onlystudents.rating.dto.FavoriteFolderDTO;
 import com.onlystudents.rating.dto.NoteFavoriteDTO;
 import com.onlystudents.rating.entity.FavoriteFolder;
 import com.onlystudents.rating.entity.NoteFavorite;
-import com.onlystudents.rating.event.NoteFavoriteEvent;
 import com.onlystudents.rating.mapper.FavoriteFolderMapper;
 import com.onlystudents.rating.mapper.NoteFavoriteMapper;
 import com.onlystudents.rating.service.NoteFavoriteService;
@@ -33,6 +35,7 @@ public class NoteFavoriteServiceImpl implements NoteFavoriteService {
     private final FavoriteFolderMapper folderMapper;
     private final RabbitTemplate rabbitTemplate;
     private final NoteFeignClient noteFeignClient;
+    private final UserFeignClient userFeignClient;
     
     @Override
     @Transactional
@@ -48,20 +51,50 @@ public class NoteFavoriteServiceImpl implements NoteFavoriteService {
             return Result.success();
         }
         
+        // 获取笔记信息
+        Long noteAuthorId = null;
+        String noteTitle = null;
+        String noteCoverImage = null;
+        try {
+            Result<Map<String, Object>> noteResult = noteFeignClient.getNoteById(noteId);
+            if (noteResult != null && noteResult.getData() != null) {
+                Map<String, Object> noteInfo = noteResult.getData();
+                Object authorIdObj = noteInfo.get("userId");
+                if (authorIdObj instanceof Number) {
+                    noteAuthorId = ((Number) authorIdObj).longValue();
+                }
+                noteTitle = (String) noteInfo.get("title");
+                noteCoverImage = (String) noteInfo.get("coverImage");
+            }
+        } catch (Exception e) {
+            log.error("获取笔记信息失败", e);
+        }
+        
         // 创建收藏记录
         NoteFavorite favorite = new NoteFavorite();
         favorite.setNoteId(noteId);
         favorite.setUserId(userId);
         favorite.setFolderId(folderId);
         favoriteMapper.insert(favorite);
-        
-        // 获取当前收藏总数
-        Long totalCount = favoriteMapper.countByNoteId(noteId);
-        
-        // 发送事件
-        NoteFavoriteEvent event = new NoteFavoriteEvent(noteId, userId, 1, totalCount);
+
+        // 发送事件到 note-service（更新收藏数）
+        NoteFavoriteEvent event = new NoteFavoriteEvent(noteId, userId, 1, noteAuthorId, noteTitle);
         rabbitTemplate.convertAndSend("rating.exchange", "favorite.created", event);
-        log.info("发送收藏事件: noteId={}, userId={}, total={}", noteId, userId, totalCount);
+        log.info("发送收藏事件: noteId={}, userId={}, authorId={}", noteId, userId, noteAuthorId);
+        
+        // 发送通知事件到 notification-service
+        if (noteAuthorId != null && !noteAuthorId.equals(userId)) {
+            FavoriteNotificationEvent notifyEvent = new FavoriteNotificationEvent(
+                favorite.getId(),
+                userId,
+                noteAuthorId,
+                noteId,
+                noteTitle,
+                noteCoverImage
+            );
+            rabbitTemplate.convertAndSend("notification.exchange", "favorite.notify", notifyEvent);
+            log.info("发送收藏通知事件成功: favoriteId={}, fromUserId={}, toUserId={}", favorite.getId(), userId, noteAuthorId);
+        }
         
         return Result.success();
     }
@@ -78,13 +111,10 @@ public class NoteFavoriteServiceImpl implements NoteFavoriteService {
         // 删除收藏记录
         favoriteMapper.deleteById(favorite.getId());
         
-        // 获取当前收藏总数
-        Long totalCount = favoriteMapper.countByNoteId(noteId);
-        
         // 发送事件
-        NoteFavoriteEvent event = new NoteFavoriteEvent(noteId, userId, 0, totalCount);
+        NoteFavoriteEvent event = new NoteFavoriteEvent(noteId, userId, 0 , null ,null);
         rabbitTemplate.convertAndSend("rating.exchange", "favorite.deleted", event);
-        log.info("发送取消收藏事件: noteId={}, userId={}, total={}", noteId, userId, totalCount);
+        log.info("发送取消收藏事件: noteId={}, userId={}", noteId, userId);
         
         return Result.success();
     }
@@ -299,12 +329,41 @@ private NoteFavoriteDTO convertToDTO(NoteFavorite favorite) {
             }
         }
         
+        // 获取用户信息（谁收藏了我的笔记）
+        List<Long> userIds = list.stream().map(NoteFavorite::getUserId).collect(Collectors.toList());
+        Map<Long, Map<String, Object>> userInfoMap = new java.util.HashMap<>();
+        if (!userIds.isEmpty()) {
+            try {
+                String idsStr = userIds.stream().map(String::valueOf).collect(Collectors.joining(","));
+                Result<List<Map<String, Object>>> userResult = userFeignClient.getUsersByIds(idsStr);
+                if (userResult != null && userResult.getData() != null) {
+                    for (Map<String, Object> user : userResult.getData()) {
+                        Object idObj = user.get("id");
+                        if (idObj instanceof Number) {
+                            userInfoMap.put(((Number) idObj).longValue(), user);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("获取用户信息失败", e);
+            }
+        }
+        
         final Map<Long, Map<String, Object>> finalNoteInfoMap = noteInfoMap;
+        final Map<Long, Map<String, Object>> finalUserInfoMap = userInfoMap;
         
         List<NoteFavoriteDTO> dtoList = list.stream().map(favorite -> {
             NoteFavoriteDTO dto = new NoteFavoriteDTO();
             BeanUtils.copyProperties(favorite, dto);
             
+            // 填充用户信息（收藏者）
+            Map<String, Object> userInfo = finalUserInfoMap.get(favorite.getUserId());
+            if (userInfo != null) {
+                dto.setNickname(getStringValue(userInfo, "nickname"));
+                dto.setAvatar(getStringValue(userInfo, "avatar"));
+            }
+            
+            // 填充笔记信息
             Map<String, Object> noteInfo = finalNoteInfoMap.get(favorite.getNoteId());
             if (noteInfo != null) {
                 dto.setTitle(getStringValue(noteInfo, "title"));
@@ -346,6 +405,51 @@ private NoteFavoriteDTO convertToDTO(NoteFavorite favorite) {
         // 删除收藏夹
         folderMapper.deleteById(folderId);
         
+        return Result.success();
+    }
+    
+    @Override
+    public Result<List<NoteFavoriteDTO>> getMyNoteFavorites(Long userId, Integer page, Integer size) {
+        try {
+            Result<List<Long>> noteIdsResult = noteFeignClient.getNoteIdsByUserId(userId);
+            if (noteIdsResult == null || !noteIdsResult.isSuccess() || noteIdsResult.getData() == null || noteIdsResult.getData().isEmpty()) {
+                return Result.success(java.util.Collections.emptyList());
+            }
+            int offset = (page - 1) * size;
+            List<NoteFavorite> list = favoriteMapper.selectMyNoteFavorites(userId, noteIdsResult.getData(), offset, size);
+            
+            if (list == null || list.isEmpty()) {
+                return Result.success(java.util.Collections.emptyList());
+            }
+            
+            return convertToFavoriteDTOList(list);
+        } catch (Exception e) {
+            log.error("获取我的笔记被收藏记录失败", e);
+            return Result.success(java.util.Collections.emptyList());
+        }
+    }
+    
+    @Override
+    public Result<Long> getMyNoteFavoriteUnreadCount(Long userId) {
+        try {
+            Result<List<Long>> noteIdsResult = noteFeignClient.getNoteIdsByUserId(userId);
+            if (noteIdsResult == null || !noteIdsResult.isSuccess() || noteIdsResult.getData() == null || noteIdsResult.getData().isEmpty()) {
+                return Result.success(0L);
+            }
+            Long count = favoriteMapper.countMyNoteFavoriteUnread(userId, noteIdsResult.getData());
+            return Result.success(count);
+        } catch (Exception e) {
+            log.error("获取未读收藏数失败", e);
+            return Result.success(0L);
+        }
+    }
+    
+    @Override
+    public Result<Void> markFavoriteAsRead(Long favoriteId, Long userId) {
+        int updated = favoriteMapper.markAsRead(favoriteId, userId);
+        if (updated == 0) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "收藏记录不存在或无权限操作");
+        }
         return Result.success();
     }
 }

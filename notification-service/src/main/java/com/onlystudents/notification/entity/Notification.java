@@ -12,6 +12,7 @@ public class Notification {
     @TableId(type = IdType.AUTO)
     private Long id;
     
+    @TableField("user_id")
     private Long userId;
     
     private Integer type;
@@ -20,22 +21,24 @@ public class Notification {
     
     private String content;
     
-    private String redirectUrl;
+    @TableField("target_id")
+    private Long targetId;
     
-    private Long sourceId;
+    @TableField("target_type")
+    private Integer targetType;
     
-    private Integer sourceType;
+    @TableField("extra_data")
+    private String extraData;
     
-    private Integer status;
+    @TableField("is_read")
+    private Integer isRead;
     
+    @TableField("read_time")
     private LocalDateTime readTime;
+    
+    @TableField("send_channel")
+    private Integer sendChannel;
     
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
-    
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedAt;
-    
-    @TableLogic
-    private Integer deleted;
 }

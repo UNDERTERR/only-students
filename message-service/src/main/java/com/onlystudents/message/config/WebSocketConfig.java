@@ -1,5 +1,6 @@
 package com.onlystudents.message.config;
 
+import com.onlystudents.common.constants.CommonConstants;
 import com.onlystudents.message.handler.MessageWebSocketHandler;
 import com.onlystudents.message.interceptor.WebSocketAuthInterceptor;
 import lombok.RequiredArgsConstructor;
@@ -35,10 +36,10 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public ServletServerContainerFactoryBean createWebSocketContainer() {
         ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
         // 设置消息大小限制（10MB）
-        container.setMaxTextMessageBufferSize(10 * 1024 * 1024);
-        container.setMaxBinaryMessageBufferSize(10 * 1024 * 1024);
+        container.setMaxTextMessageBufferSize(CommonConstants.MaxTextMessageBufferSize);
+        container.setMaxBinaryMessageBufferSize(CommonConstants.MaxBinaryMessageBufferSize);
         // 设置会话超时时间（30分钟）
-        container.setMaxSessionIdleTimeout(30 * 60 * 1000L);
+        container.setMaxSessionIdleTimeout(CommonConstants.MaxSessionIdleTimeout);
         return container;
     }
 }

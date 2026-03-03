@@ -6,7 +6,6 @@ import com.onlystudents.common.result.Result;
 import com.onlystudents.note.client.UserFeignClient;
 import com.onlystudents.note.elasticsearch.NoteDocument;
 import com.onlystudents.note.entity.Note;
-import com.onlystudents.note.mapper.NoteCategoryMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -22,7 +21,6 @@ public class NoteSyncListener {
 
     private final ElasticsearchClient elasticsearchClient;
     private final UserFeignClient userFeignClient;
-    private final NoteCategoryMapper noteCategoryMapper;
     
     @RabbitListener(queues = "note.delete.queue")
     public void handleNoteDelete(Long noteId) {
@@ -46,48 +44,27 @@ public class NoteSyncListener {
             NoteDocument document = new NoteDocument();
             BeanUtils.copyProperties(note, document);
             document.setNoteId(note.getId());
-            
-            // 通过Feign查询用户信息
-            String username = "用户_" + note.getUserId();
+
             String nickname = "用户_" + note.getUserId();
-            String avatar = "";
-            
+            String avatar = null;
             try {
-                Result<Map<String, Object>> userResult = userFeignClient.getUserById(note.getUserId());
-                if (userResult.getData() != null) {
-                    Map<String, Object> userData = userResult.getData();
-                    if (userData.get("username") != null) {
-                        username = userData.get("username").toString();
+                Result<?> result = userFeignClient.getUserById(note.getUserId());
+                if (result != null && result.getData() != null) {
+                    Map<?, ?> userMap = (Map<?, ?>) result.getData();
+                    Object nicknameObj = userMap.get("nickname");
+                    if (nicknameObj != null) {
+                        nickname = nicknameObj.toString();
                     }
-                    if (userData.get("nickname") != null) {
-                        nickname = userData.get("nickname").toString();
-                    }
-                    if (userData.get("avatar") != null) {
-                        avatar = userData.get("avatar").toString();
+                    Object avatarObj = userMap.get("avatar");
+                    if (avatarObj != null) {
+                        avatar = avatarObj.toString();
                     }
                 }
             } catch (Exception e) {
-                log.warn("获取用户信息失败，使用默认信息: userId={}", note.getUserId(), e);
+                log.warn("获取用户信息失败: userId={}", note.getUserId());
             }
-            
-            // 使用与search-service一致的字段名
-            document.setAuthorUsername(username);
             document.setAuthorNickname(nickname);
             document.setAuthorAvatar(avatar);
-            
-            // 查询分类名称
-            String categoryName = "未分类";
-            if (note.getCategoryId() != null) {
-                try {
-                    String name = noteCategoryMapper.selectNameById(note.getCategoryId());
-                    if (name != null && !name.isEmpty()) {
-                        categoryName = name;
-                    }
-                } catch (Exception e) {
-                    log.warn("获取分类名称失败，使用默认名称: categoryId={}", note.getCategoryId(), e);
-                }
-            }
-            document.setCategoryName(categoryName);
             
             // 写入Elasticsearch
             IndexRequest<NoteDocument> indexRequest = IndexRequest.of(i -> i

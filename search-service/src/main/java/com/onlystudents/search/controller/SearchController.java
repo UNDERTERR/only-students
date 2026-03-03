@@ -22,16 +22,15 @@ public class SearchController {
     private final SearchService searchService;
     
     @GetMapping("/notes")
-    @Operation(summary = "搜索笔记", description = "根据关键词、学科、教育阶段等条件搜索笔记")
+    @Operation(summary = "搜索笔记", description = "根据关键词、教育阶段等条件搜索笔记")
     public Result<SearchResult<NoteSearchResult>> searchNotes(
             @RequestParam(name = "keyword") String keyword,
-            @RequestParam(name = "subjectId", required = false) Integer subjectId,
             @RequestParam(name = "educationLevel", required = false) Integer educationLevel,
             @RequestParam(name = "priceType", required = false) Integer priceType,
             @RequestParam(name = "sortType", defaultValue = "0") Integer sortType,
             @RequestParam(name = "page", defaultValue = "1") Integer page,
             @RequestParam(name = "size", defaultValue = "20") Integer size) {
-        return Result.success(searchService.searchNotes(keyword, subjectId, educationLevel, priceType, sortType, page, size));
+        return Result.success(searchService.searchNotes(keyword, educationLevel, priceType, sortType, page, size));
     }
     
     @GetMapping("/users")
@@ -52,6 +51,15 @@ public class SearchController {
             @RequestParam(name = "page", defaultValue = "1") Integer page,
             @RequestParam(name = "size", defaultValue = "20") Integer size) {
         return Result.success(searchService.searchNotesByTag(tag, page, size));
+    }
+
+    @GetMapping("/notes/by-school")
+    @Operation(summary = "按学校搜索笔记", description = "根据学校ID搜索相关笔记")
+    public Result<SearchResult<NoteSearchResult>> searchNotesBySchool(
+            @RequestParam(name = "schoolId") Long schoolId,
+            @RequestParam(name = "page", defaultValue = "1") Integer page,
+            @RequestParam(name = "size", defaultValue = "20") Integer size) {
+        return Result.success(searchService.searchNotesBySchool(schoolId, page, size));
     }
     
     @GetMapping("/hot-keywords")

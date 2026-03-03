@@ -33,6 +33,8 @@ public class Comment {
     
     private Integer isTop;
     
+    private Boolean isRead;
+    
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
     

@@ -2,10 +2,7 @@ package com.onlystudents.rating.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.onlystudents.rating.entity.NoteFavorite;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.*;
 
 import java.util.List;
 
@@ -53,4 +50,33 @@ public interface NoteFavoriteMapper extends BaseMapper<NoteFavorite> {
      */
     @Update("UPDATE note_favorite SET folder_id = NULL WHERE folder_id = #{folderId} AND user_id = #{userId}")
     void clearFolderById(@Param("folderId") Long folderId, @Param("userId") Long userId);
+    
+    /**
+     * 获取我的笔记被收藏的记录（分页）
+     */
+    @Select("<script>" +
+            "SELECT nf.* FROM note_favorite nf " +
+            "WHERE nf.note_id IN " +
+            "<foreach collection='noteIds' item='id' open='(' separator=',' close=')'>#{id}</foreach> " +
+            "ORDER BY nf.created_at DESC " +
+            "LIMIT #{offset}, #{limit}" +
+            "</script>")
+    List<NoteFavorite> selectMyNoteFavorites(@Param("userId") Long userId, @Param("noteIds") List<Long> noteIds, @Param("offset") Integer offset, @Param("limit") Integer limit);
+    
+    /**
+     * 获取我的笔记被收藏的未读数量
+     */
+    @Select("<script>" +
+            "SELECT COUNT(*) FROM note_favorite nf " +
+            "WHERE nf.note_id IN " +
+            "<foreach collection='noteIds' item='id' open='(' separator=',' close=')'>#{id}</foreach> " +
+            "AND (nf.is_read = 0 OR nf.is_read IS NULL)" +
+            "</script>")
+    Long countMyNoteFavoriteUnread(@Param("userId") Long userId, @Param("noteIds") List<Long> noteIds);
+    
+    /**
+     * 标记收藏为已读
+     */
+    @Update("UPDATE note_favorite SET is_read = 1 WHERE id = #{favoriteId}")
+    int markAsRead(@Param("favoriteId") Long favoriteId, @Param("userId") Long userId);
 }

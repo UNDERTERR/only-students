@@ -24,4 +24,8 @@ public interface SubscriptionService {
     CreatorConfigDTO getCreatorConfig(Long creatorId);
     
     CreatorConfigDTO updateCreatorConfig(Long creatorId, UpdateCreatorConfigRequest request);
+    
+    Integer getNewFollowerCount(Long creatorId);
+    
+    void markFollowerAsRead(Long subscriptionId);
 }

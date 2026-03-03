@@ -9,8 +9,6 @@ public class UserResponse {
     
     private Long id;
     
-    private String username;
-    
     private String email;
     
     private String phone;
@@ -28,6 +26,8 @@ public class UserResponse {
     private String schoolName;
     
     private Integer isCreator;
+    
+    private Integer followerCount;
     
     private LocalDateTime lastLoginTime;
     

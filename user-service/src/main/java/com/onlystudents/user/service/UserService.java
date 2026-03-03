@@ -29,4 +29,39 @@ public interface UserService {
      * 批量获取用户
      */
     List<UserResponse> getUsersByIds(List<Long> userIds);
+    
+    /**
+     * 增加粉丝数
+     */
+    void incrementFollowerCount(Long userId);
+    
+    /**
+     * 减少粉丝数
+     */
+    void decrementFollowerCount(Long userId);
+    
+    /**
+     * 清除用户缓存
+     */
+    void clearUserCache(Long userId);
+    
+    /**
+     * 验证码重置密码
+     */
+    void resetPasswordByCode(String account, String verifyCode, String newPassword);
+    
+    /**
+     * 修改密码（需要旧密码）
+     */
+    void changePassword(Long userId, String oldPassword, String newPassword);
+
+    /**
+     * 增加学校笔记数
+     */
+    void incrementSchoolNotes(Long schoolId);
+
+    /**
+     * 减少学校笔记数
+     */
+    void decrementSchoolNotes(Long schoolId);
 }

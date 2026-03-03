@@ -66,4 +66,19 @@ public interface NoteFavoriteService {
      * 删除收藏夹（笔记不会被取消收藏）
      */
     Result<Void> deleteFolder(Long folderId, Long userId);
+    
+    /**
+     * 获取我的笔记被收藏的记录
+     */
+    Result<List<NoteFavoriteDTO>> getMyNoteFavorites(Long userId, Integer page, Integer size);
+    
+    /**
+     * 获取我的笔记被收藏的未读数量
+     */
+    Result<Long> getMyNoteFavoriteUnreadCount(Long userId);
+    
+    /**
+     * 标记收藏为已读
+     */
+    Result<Void> markFavoriteAsRead(Long favoriteId, Long userId);
 }

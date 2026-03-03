@@ -3,6 +3,7 @@ package com.onlystudents.subscription.service.impl;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
+import com.onlystudents.common.event.notification.FollowerNotificationEvent;
 import com.onlystudents.subscription.client.UserFeignClient;
 import com.onlystudents.subscription.dto.CreatorConfigDTO;
 import com.onlystudents.subscription.dto.SubscribeRequest;
@@ -15,6 +16,7 @@ import com.onlystudents.subscription.mapper.SubscriptionMapper;
 import com.onlystudents.subscription.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final SubscriptionMapper subscriptionMapper;
     private final CreatorSubscriptionConfigMapper configMapper;
     private final UserFeignClient userFeignClient;
+    private final RabbitTemplate rabbitTemplate;
     
     @Override
     @Transactional
@@ -52,7 +55,33 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         subscription.setCreatorId(request.getCreatorId());
 
         subscriptionMapper.insert(subscription);
-
+        
+        // 更新创作者的粉丝数
+        try {
+            log.info("开始更新创作者粉丝数, creatorId={}", request.getCreatorId());
+            userFeignClient.incrementFollowerCount(request.getCreatorId());
+            log.info("开始清除创作者缓存, creatorId={}", request.getCreatorId());
+            userFeignClient.clearUserCache(request.getCreatorId());
+            log.info("更新粉丝数完成");
+        } catch (Exception e) {
+            log.error("更新粉丝数失败", e);
+        }
+        
+        // 发布粉丝通知事件
+        try {
+            FollowerNotificationEvent event = new FollowerNotificationEvent(
+                subscription.getId(),
+                subscriberId,
+                request.getCreatorId()
+            );
+            
+            log.info("准备发布粉丝通知事件: {}", event);
+            rabbitTemplate.convertAndSend("notification.exchange", "follower.notify", event);
+            log.info("发布粉丝通知事件成功: subscriptionId={}, toUserId={}", subscription.getId(), request.getCreatorId());
+        } catch (Exception e) {
+            log.error("发布粉丝通知事件失败", e);
+        }
+        
         return convertToDTO(subscription);
     }
     
@@ -62,6 +91,14 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         int deleted = subscriptionMapper.deleteBySubscriberAndCreator(subscriberId, creatorId);
         if (deleted == 0) {
             throw new BusinessException(ResultCode.PARAM_ERROR, "未订阅该创作者");
+        }
+        
+        // 更新创作者的粉丝数
+        try {
+            userFeignClient.decrementFollowerCount(creatorId);
+            userFeignClient.clearUserCache(creatorId);
+        } catch (Exception e) {
+            log.error("更新粉丝数失败", e);
         }
     }
     
@@ -116,7 +153,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                     Map<String, Object> userInfo = finalUserInfoMap.get(sub.getCreatorId());
                     if (userInfo != null) {
                         dto.setCreatorNickname(getStringValue(userInfo, "nickname"));
-                        dto.setCreatorUsername(getStringValue(userInfo, "username"));
                         dto.setCreatorAvatar(getStringValue(userInfo, "avatar"));
                         dto.setCreatorBio(getStringValue(userInfo, "bio"));
                     }
@@ -167,7 +203,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                     Map<String, Object> userInfo = finalUserInfoMap.get(sub.getSubscriberId());
                     if (userInfo != null) {
                         dto.setSubscriberNickname(getStringValue(userInfo, "nickname"));
-                        dto.setSubscriberUsername(getStringValue(userInfo, "username"));
                         dto.setSubscriberAvatar(getStringValue(userInfo, "avatar"));
                         dto.setSubscriberBio(getStringValue(userInfo, "bio"));
                     }
@@ -212,6 +247,20 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         }
         
         return convertToConfigDTO(config);
+    }
+    
+    @Override
+    public Integer getNewFollowerCount(Long creatorId) {
+        return subscriptionMapper.countUnreadByCreator(creatorId);
+    }
+    
+    @Override
+    public void markFollowerAsRead(Long subscriptionId) {
+        Subscription subscription = subscriptionMapper.selectById(subscriptionId);
+        if (subscription != null) {
+            subscription.setIsRead(1);
+            subscriptionMapper.updateById(subscription);
+        }
     }
     
     private SubscriptionDTO convertToDTO(Subscription subscription) {

@@ -18,11 +18,6 @@ public class UserInfoUpdateEvent {
     private Long userId;
     
     /**
-     * 用户名
-     */
-    private String username;
-    
-    /**
      * 昵称
      */
     private String nickname;

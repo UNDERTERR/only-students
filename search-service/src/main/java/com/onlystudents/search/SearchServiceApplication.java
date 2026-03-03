@@ -6,7 +6,7 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.ComponentScan;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {"com.onlystudents.search", "com.onlystudents.common"})
 @EnableDiscoveryClient
 @EnableFeignClients
 @ComponentScan(basePackages = "com.onlystudents.search")

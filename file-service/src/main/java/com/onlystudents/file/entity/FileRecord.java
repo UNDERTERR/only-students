@@ -31,7 +31,8 @@ public class FileRecord {
     private Integer storageType;
     
     private Integer status;
-    
+
+    private String category;
     /**
      * 访问权限：0-私有，1-公开
      */

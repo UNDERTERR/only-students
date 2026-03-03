@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {"com.onlystudents.file", "com.onlystudents.common"})
 @EnableDiscoveryClient
 @EnableScheduling
 @MapperScan("com.onlystudents.file.mapper")

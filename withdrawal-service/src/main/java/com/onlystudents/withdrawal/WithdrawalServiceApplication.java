@@ -5,7 +5,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {"com.onlystudents.withdrawal", "com.onlystudents.common"})
 @EnableDiscoveryClient
 @MapperScan("com.onlystudents.withdrawal.mapper")
 public class WithdrawalServiceApplication {

@@ -5,8 +5,7 @@ import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
-import org.springframework.amqp.rabbit.connection.ConnectionFactory;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
@@ -18,19 +17,11 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class RabbitConfig {
-    
+
     @Bean
     public MessageConverter jsonMessageConverter() {
         return new Jackson2JsonMessageConverter(JsonSerializerUtils.getGlobalObjectMapper());
     }
-    
-    @Bean
-    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
-        RabbitTemplate template = new RabbitTemplate(connectionFactory);
-        template.setMessageConverter(jsonMessageConverter());
-        return template;
-    }
-    
     /**
      * 评分服务交换机
      */
@@ -52,6 +43,11 @@ public class RabbitConfig {
     }
     
     @Bean
+    public Queue ratingFavoriteQueue() {
+        return new Queue("rating.favorite.queue", true);
+    }
+    
+    @Bean
     public Binding favoriteCreatedBinding() {
         return BindingBuilder.bind(favoriteCreatedQueue())
                 .to(ratingExchange())
@@ -63,6 +59,13 @@ public class RabbitConfig {
         return BindingBuilder.bind(favoriteDeletedQueue())
                 .to(ratingExchange())
                 .with("favorite.deleted");
+    }
+    
+    @Bean
+    public Binding ratingFavoriteBinding() {
+        return BindingBuilder.bind(ratingFavoriteQueue())
+                .to(ratingExchange())
+                .with("favorite.created");
     }
     
     // ==================== 评分事件队列 ====================

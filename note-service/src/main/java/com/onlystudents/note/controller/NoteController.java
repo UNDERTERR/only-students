@@ -62,6 +62,12 @@ public class NoteController {
         }
         return Result.success(noteService.getNoteById(noteId));
     }
+    
+    @GetMapping("/ids/user/{userId}")
+    @Operation(summary = "获取用户笔记ID列表", description = "获取指定用户的所有笔记ID")
+    public Result<List<Long>> getNoteIdsByUserId(@PathVariable("userId") Long userId) {
+        return Result.success(noteService.getNoteIdsByUserId(userId));
+    }
 
     @PostMapping("/{noteId}/publish")
     @Operation(summary = "发布笔记", description = "将草稿状态笔记发布")

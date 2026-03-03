@@ -1,0 +1,112 @@
+{
+  "index": "note_index",
+  "settings": {
+    "number_of_shards": 3,
+    "number_of_replicas": 1,
+    "analysis": {
+      "analyzer": {
+        "ik_smart": {
+          "type": "custom",
+          "tokenizer": "ik_smart"
+        },
+        "ik_max_word": {
+          "type": "custom",
+          "tokenizer": "ik_max_word"
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "note_id": {
+        "type": "long"
+      },
+      "title": {
+        "type": "text",
+        "analyzer": "ik_max_word",
+        "search_analyzer": "ik_smart",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "content": {
+        "type": "text",
+        "analyzer": "ik_max_word",
+        "search_analyzer": "ik_smart"
+      },
+      "tags": {
+        "type": "keyword"
+      },
+      "category_id": {
+        "type": "long"
+      },
+      "category_name": {
+        "type": "keyword"
+      },
+      "user_id": {
+        "type": "long"
+      },
+      "nickname": {
+        "type": "text",
+        "analyzer": "ik_max_word"
+      },
+      "education_level": {
+        "type": "integer"
+      },
+      "school_id": {
+        "type": "long"
+      },
+      "school_name": {
+        "type": "keyword"
+      },
+      "subject": {
+        "type": "keyword"
+      },
+      "visibility": {
+        "type": "integer"
+      },
+      "price": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "status": {
+        "type": "integer"
+      },
+      "hot_score": {
+        "type": "double"
+      },
+      "view_count": {
+        "type": "integer"
+      },
+      "like_count": {
+        "type": "integer"
+      },
+      "favorite_count": {
+        "type": "integer"
+      },
+      "comment_count": {
+        "type": "integer"
+      },
+      "share_count": {
+        "type": "integer"
+      },
+      "rating_avg": {
+        "type": "float"
+      },
+      "cover_image": {
+        "type": "keyword"
+      },
+      "publish_time": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis"
+      },
+      "created_at": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis"
+      }
+    }
+  }
+}

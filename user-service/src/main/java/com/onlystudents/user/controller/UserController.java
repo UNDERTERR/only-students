@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
@@ -85,6 +86,21 @@ public class UserController {
         return Result.success();
     }
     
+    @PostMapping("/reset-password")
+    @Operation(summary = "验证码重置密码", description = "通过验证码重置密码，不需要登录")
+    public Result<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        userService.resetPasswordByCode(request.getAccount(), request.getVerifyCode(), request.getNewPassword());
+        return Result.success();
+    }
+    
+    @PostMapping("/change-password")
+    @Operation(summary = "修改密码", description = "修改当前登录用户的密码，需要旧密码")
+    public Result<Void> changePassword(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
+                                       @Valid @RequestBody ChangePasswordRequest request) {
+        userService.changePassword(userId, request.getOldPassword(), request.getNewPassword());
+        return Result.success();
+    }
+    
     private String getClientIp(HttpServletRequest request) {
         String ip = request.getHeader("X-Forwarded-For");
         if (ip == null || ip.isEmpty()) {
@@ -105,5 +121,40 @@ public class UserController {
                 .map(Long::parseLong)
                 .toList();
         return Result.success(userService.getUsersByIds(userIds));
+    }
+    
+    @PostMapping("/follower-count/increment/{userId}")
+    @Operation(summary = "增加粉丝数", description = "增加指定用户的粉丝数")
+    public Result<Void> incrementFollowerCount(@PathVariable(name = "userId") Long userId) {
+        userService.incrementFollowerCount(userId);
+        return Result.success();
+    }
+    
+    @PostMapping("/follower-count/decrement/{userId}")
+    @Operation(summary = "减少粉丝数", description = "减少指定用户的粉丝数")
+    public Result<Void> decrementFollowerCount(@PathVariable(name = "userId") Long userId) {
+        userService.decrementFollowerCount(userId);
+        return Result.success();
+    }
+    
+    @DeleteMapping("/cache/{userId}")
+    @Operation(summary = "清除用户缓存", description = "清除指定用户的缓存")
+    public Result<Void> clearUserCache(@PathVariable(name = "userId") Long userId) {
+        userService.clearUserCache(userId);
+        return Result.success();
+    }
+
+    @PostMapping("/school/notes/increment/{schoolId}")
+    @Operation(summary = "增加学校笔记数", description = "增加指定学校的笔记数量")
+    public Result<Void> incrementSchoolNotes(@PathVariable(name = "schoolId") Long schoolId) {
+        userService.incrementSchoolNotes(schoolId);
+        return Result.success();
+    }
+
+    @PostMapping("/school/notes/decrement/{schoolId}")
+    @Operation(summary = "减少学校笔记数", description = "减少指定学校的笔记数量")
+    public Result<Void> decrementSchoolNotes(@PathVariable(name = "schoolId") Long schoolId) {
+        userService.decrementSchoolNotes(schoolId);
+        return Result.success();
     }
 }

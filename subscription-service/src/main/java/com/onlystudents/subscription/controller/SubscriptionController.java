@@ -74,4 +74,17 @@ public class SubscriptionController {
                                                          @RequestHeader(CommonConstants.USER_ID_HEADER) Long creatorId) {
         return Result.success(subscriptionService.updateCreatorConfig(creatorId, request));
     }
+    
+    @GetMapping("/new-follower-count")
+    @Operation(summary = "新增粉丝未读数", description = "获取新增粉丝未读数量")
+    public Result<Integer> getNewFollowerCount(@RequestHeader(CommonConstants.USER_ID_HEADER) Long creatorId) {
+        return Result.success(subscriptionService.getNewFollowerCount(creatorId));
+    }
+    
+    @PostMapping("/follower/{subscriptionId}/read")
+    @Operation(summary = "标记粉丝已读", description = "将新增粉丝标记为已读")
+    public Result<Void> markFollowerAsRead(@PathVariable Long subscriptionId) {
+        subscriptionService.markFollowerAsRead(subscriptionId);
+        return Result.success();
+    }
 }

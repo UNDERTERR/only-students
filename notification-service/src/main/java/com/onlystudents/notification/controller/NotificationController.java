@@ -32,12 +32,12 @@ public class NotificationController {
     }
     
     @GetMapping("/list")
-    @Operation(summary = "获取通知列表", description = "获取当前用户的通知列表，可按状态筛选")
+    @Operation(summary = "获取通知列表", description = "获取当前用户的通知列表，可按已读状态筛选")
     public Result<List<Notification>> getNotificationList(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId,
-                                                         @RequestParam(name = "status", required = false) Integer status,
+                                                         @RequestParam(name = "isRead", required = false) Integer isRead,
                                                          @RequestParam(name = "page", defaultValue = "1") Integer page,
                                                          @RequestParam(name = "size", defaultValue = "20") Integer size) {
-        return Result.success(notificationService.getNotificationList(userId, status, page, size));
+        return Result.success(notificationService.getNotificationList(userId, isRead, page, size));
     }
     
     @GetMapping("/unread-count")

@@ -2,8 +2,6 @@ package com.onlystudents.note.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
-import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -18,9 +16,6 @@ public class Note {
 
     private Long userId;
 
-    // 作者信息（冗余存储，用于ES搜索）
-    private String authorUsername;
-
     private String authorNickname;
 
     private String authorAvatar;
@@ -30,8 +25,6 @@ public class Note {
     private String content;
 
     private String coverImage;
-
-    private Long categoryId;
 
     private Integer visibility;
 
@@ -63,8 +56,6 @@ public class Note {
     private Long schoolId;
 
     private String schoolName;
-
-    private String subject;
 
     private LocalDateTime publishTime;
 

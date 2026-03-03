@@ -27,22 +27,27 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public Notification sendNotification(Long userId, Integer type, String title, String content, 
-                                       String redirectUrl, Long sourceId, Integer sourceType) {
+                                        String redirectUrl, Long sourceId, Integer sourceType) {
         Notification notification = new Notification();
         notification.setUserId(userId);
         notification.setType(type);
         notification.setTitle(title);
         notification.setContent(content);
-        notification.setRedirectUrl(redirectUrl);
-        notification.setSourceId(sourceId);
-        notification.setSourceType(sourceType);
-        notification.setStatus(0);
+        // redirectUrl、sourceId、sourceType 字段暂不使用，保留在extraData中
+        notification.setExtraData("{}");
+        notification.setTargetId(sourceId);
+        notification.setTargetType(sourceType);
+        notification.setIsRead(0);
+        notification.setSendChannel(1);
         
         notificationMapper.insert(notification);
         
         // 如果用户在线，通过SSE实时推送
         if (sseEmitterManager.isUserOnline(userId)) {
             sseEmitterManager.sendNotification(userId, notification);
+            // 发送未读数更新
+            Long unreadCount = notificationMapper.countUnreadByUserId(userId);
+            sseEmitterManager.sendUnreadCount(userId, unreadCount);
             log.info("通知已通过SSE推送给用户{}: {}", userId, title);
         } else {
             log.info("通知已存储，用户{}不在线，待登录后查看: {}", userId, title);
@@ -52,11 +57,11 @@ public class NotificationServiceImpl implements NotificationService {
     }
     
     @Override
-    public List<Notification> getNotificationList(Long userId, Integer status, Integer page, Integer size) {
+    public List<Notification> getNotificationList(Long userId, Integer isRead, Integer page, Integer size) {
         LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Notification::getUserId, userId);
-        if (status != null) {
-            wrapper.eq(Notification::getStatus, status);
+        if (isRead != null) {
+            wrapper.eq(Notification::getIsRead, isRead);
         }
         wrapper.orderByDesc(Notification::getCreatedAt);
         
@@ -80,10 +85,13 @@ public class NotificationServiceImpl implements NotificationService {
             throw new BusinessException(ResultCode.FORBIDDEN, "无权操作该通知");
         }
         
-        notification.setStatus(1);
+        notification.setIsRead(1);
         notification.setReadTime(LocalDateTime.now());
-        notification.setUpdatedAt(LocalDateTime.now());
         notificationMapper.updateById(notification);
+        
+        // 发送未读数更新
+        Long unreadCount = notificationMapper.countUnreadByUserId(userId);
+        sseEmitterManager.sendUnreadCount(userId, unreadCount);
         
         log.info("用户{}标记通知{}为已读", userId, notificationId);
     }
@@ -92,6 +100,10 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public void markAllAsRead(Long userId) {
         notificationMapper.markAllAsRead(userId);
+        
+        // 发送未读数更新
+        sseEmitterManager.sendUnreadCount(userId, 0L);
+        
         log.info("用户{}标记所有通知为已读", userId);
     }
     

@@ -16,6 +16,8 @@ public class Subscription {
     
     private Long creatorId;
     
+    private Integer isRead;
+    
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
     

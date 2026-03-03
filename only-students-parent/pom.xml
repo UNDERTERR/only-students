@@ -25,7 +25,7 @@
         <spring-cloud.version>2023.0.0</spring-cloud.version>
 
         <!-- Database -->
-        <mybatis-plus.version>3.5.7</mybatis-plus.version>
+        <mybatis-plus.version>3.5.8</mybatis-plus.version>
         <druid.version>1.2.20</druid.version>
         <mysql-connector.version>8.0.33</mysql-connector.version>
 
@@ -45,18 +45,17 @@
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <jwt.version>4.4.0</jwt.version>
         <fastjson.version>2.0.42</fastjson.version>
+        <minio.version>8.5.7</minio.version>
         <!-- API Doc -->
         <knife4j.version>4.5.0</knife4j.version>
-
-        <!-- File -->
-        <minio.version>8.5.7</minio.version>
-        <jodconverter.version>4.4.6</jodconverter.version>
-        
-        <!-- MyBatis Plus 逻辑删除配置 -->
-        <mybatis-plus.logic-delete-field>deleted</mybatis-plus.logic-delete-field>
-        <mybatis-plus.logic-delete-value>1</mybatis-plus.logic-delete-value>
-        <mybatis-plus.logic-not-delete-value>0</mybatis-plus.logic-not-delete-value>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
 
     <dependencyManagement>
         <dependencies>
@@ -242,6 +241,9 @@
                             <version>${mapstruct.version}</version>
                         </path>
                     </annotationProcessorPaths>
+                    <compilerArgs>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
         </plugins>

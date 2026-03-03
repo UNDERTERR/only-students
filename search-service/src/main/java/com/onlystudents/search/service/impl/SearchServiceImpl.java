@@ -1,6 +1,7 @@
 package com.onlystudents.search.service.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery.Builder;
 import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
@@ -32,16 +33,16 @@ public class SearchServiceImpl implements SearchService {
     private final ElasticsearchClient elasticsearchClient;
     private final RedisTemplate<String, Object> redisTemplate;
     private final UserClient userClient;
-    private final ElasticsearchIndexService elasticsearchIndexService;
+
 
     private static final String HOT_KEYWORDS_KEY = "search:hot:keywords";
     private static final String USER_SUGGEST_KEY_PREFIX = "search:suggest:user:";
 
     @Override
-    public SearchResult<NoteSearchResult> searchNotes(String keyword, Integer subjectId, Integer educationLevel,
+    public SearchResult<NoteSearchResult> searchNotes(String keyword, Integer educationLevel,
                                                       Integer priceType, Integer sortType, Integer page, Integer size) {
-        log.info("搜索笔记：keyword={}, subjectId={}, educationLevel={}, priceType={}, sortType={}, page={}, size={}",
-                keyword, subjectId, educationLevel, priceType, sortType, page, size);
+        log.info("搜索笔记：keyword={}, educationLevel={}, priceType={}, sortType={}, page={}, size={}",
+                keyword, educationLevel, priceType, sortType, page, size);
 
         try {
             // 构建查询条件
@@ -50,10 +51,10 @@ public class SearchServiceImpl implements SearchService {
                     .from((page - 1) * size)
                     .size(size)
                     .source(s -> s.filter(f -> f.includes(
-                            "noteId", "title", "content", "tags", "categoryId", "categoryName",
-                            "userId", "authorUsername", "authorNickname", "authorAvatar",
-                            "educationLevel", "schoolId", "schoolName", "subject",
-                            "visibility", "price", "status", "hotScore",
+                            "noteId", "title", "content", "tags",
+                            "userId", "authorNickname", "authorAvatar",
+                            "educationLevel", "schoolId", "schoolName",
+                            "visibility", "price", "status", "deleted", "hotScore",
                             "viewCount", "likeCount", "favoriteCount", "commentCount", "shareCount",
                             "rating", "ratingCount", "coverImage", "publishTime", "createdAt"
                     )));
@@ -68,7 +69,7 @@ public class SearchServiceImpl implements SearchService {
                     boolQuery.must(m -> m
                             .bool(b -> b
                                     .should(s -> s.multiMatch(mm -> mm
-                                            .fields("title^3", "content^2", "tags", "authorUsername", "authorNickname")
+                                            .fields("tags^5", "title^3", "content^2", "authorNickname")
                                             .query(keyword)
                                             .type(TextQueryType.BestFields)))
                                     .should(s -> s.wildcard(w -> w.field("title").value("*" + keyword + "*")))
@@ -78,28 +79,24 @@ public class SearchServiceImpl implements SearchService {
                 } else {
                     boolQuery.must(m -> m
                             .multiMatch(mm -> mm
-                                    .fields("title^3", "content^2", "tags", "authorUsername", "authorNickname")
+                                    .fields("tags^5", "title^3", "content^2", "authorNickname")
                                     .query(keyword)
                                     .type(TextQueryType.BestFields)
                             )
                     );
                 }
 
+                // 暂时移除高亮功能，避免返回 <em> 标签
                 // 高亮配置
-                Map<String, HighlightField> highlightFields = new HashMap<>();
-                highlightFields.put("title", HighlightField.of(hf -> hf));
-                highlightFields.put("content", HighlightField.of(hf -> hf.preTags("<em>").postTags("</em>").fragmentSize(150)));
+                // Map<String, HighlightField> highlightFields = new HashMap<>();
+                // highlightFields.put("title", HighlightField.of(hf -> hf));
+                // highlightFields.put("content", HighlightField.of(hf -> hf.preTags("<em>").postTags("</em>").fragmentSize(150)));
 
-                requestBuilder.highlight(h -> h
-                        .fields(highlightFields)
-                        .preTags("<em>")
-                        .postTags("</em>")
-                );
-            }
-
-            // 学科筛选
-            if (subjectId != null && subjectId > 0) {
-                boolQuery.filter(f -> f.term(t -> t.field("subject").value(subjectId)));
+                // requestBuilder.highlight(h -> h
+                //         .fields(highlightFields)
+                //         .preTags("<em>")
+                //         .postTags("</em>")
+                // );
             }
 
             // 教育阶段筛选
@@ -118,14 +115,15 @@ public class SearchServiceImpl implements SearchService {
                 }
             }
 
-            // 只搜索未删除的笔记
-            boolQuery.filter(f -> f.term(t -> t.field("deleted").value(0)));
-
-            // 只搜索已发布的笔记
+            // 过滤条件
+            // status: 2=已发布
             boolQuery.filter(f -> f.term(t -> t.field("status").value(2)));
-
-            // 可见性筛选（只搜索公开的）
-            boolQuery.filter(f -> f.term(t -> t.field("visibility").value(0)));
+            // deleted: 0=未删除
+//            boolQuery.filter(f -> f.term(t -> t.field("deleted").value(0)));
+//            // visibility: 0=公开,1=订阅可见,2=付费可见,3=订阅+付费可见（全部包含）
+            boolQuery.filter(f -> f.terms(t -> t.field("visibility").terms(tv -> tv.value(
+                    Arrays.asList(FieldValue.of(0), FieldValue.of(1), FieldValue.of(2), FieldValue.of(3))
+            ))));
 
             requestBuilder.query(q -> q.bool(boolQuery.build()));
 
@@ -170,18 +168,15 @@ public class SearchServiceImpl implements SearchService {
                         BeanUtils.copyProperties(doc, result);
                         result.setId(doc.getNoteId());
                         result.setAuthorId(doc.getUserId());
-                        result.setAuthorName(doc.getAuthorNickname() != null ? doc.getAuthorNickname() : doc.getAuthorUsername());
+                        result.setAuthorNickname(doc.getAuthorNickname());
                         result.setAuthorAvatar(doc.getAuthorAvatar());
+                        result.setRating(doc.getRating() != null ? doc.getRating().intValue() : 0);
+                        result.setRatingCount(doc.getRatingCount());
+                        result.setAverageRating(doc.getRating() != null ? doc.getRating().intValue() : 0);
                         result.setPrice(doc.getPrice() != null ? doc.getPrice().intValue() : 0);
 
-                        // 处理高亮
-                        if (hit.highlight() != null && hit.highlight().containsKey("title")) {
-                            result.setTitle(hit.highlight().get("title").get(0));
-                        }
-                        if (hit.highlight() != null && hit.highlight().containsKey("content")) {
-                            result.setSummary(hit.highlight().get("content").get(0));
-                        } else if (doc.getContent() != null) {
-                            // 截取前150个字符作为摘要
+                        // 摘要取内容前150字
+                        if (doc.getContent() != null) {
                             result.setSummary(doc.getContent().length() > 150
                                     ? doc.getContent().substring(0, 150) + "..."
                                     : doc.getContent());
@@ -292,7 +287,7 @@ public class SearchServiceImpl implements SearchService {
                         BeanUtils.copyProperties(doc, result);
                         result.setId(doc.getNoteId());
                         result.setAuthorId(doc.getUserId());
-                        result.setAuthorName(doc.getAuthorNickname() != null ? doc.getAuthorNickname() : doc.getAuthorUsername());
+                        result.setAuthorNickname(doc.getAuthorNickname());
                         result.setAuthorAvatar(doc.getAuthorAvatar());
                         return result;
                     })
@@ -309,6 +304,57 @@ public class SearchServiceImpl implements SearchService {
 
         } catch (IOException e) {
             log.error("按标签搜索笔记失败：tag={}", tag, e);
+            SearchResult<NoteSearchResult> emptyResult = new SearchResult<>();
+            emptyResult.setList(new ArrayList<>());
+            emptyResult.setTotal(0L);
+            emptyResult.setPage(page);
+            emptyResult.setSize(size);
+            emptyResult.setTotalPages(0);
+            return emptyResult;
+        }
+    }
+
+    @Override
+    public SearchResult<NoteSearchResult> searchNotesBySchool(Long schoolId, Integer page, Integer size) {
+        log.info("按学校搜索笔记：schoolId={}, page={}, size={}", schoolId, page, size);
+
+        try {
+            SearchRequest request = SearchRequest.of(s -> s
+                    .index("notes")
+                    .from((page - 1) * size)
+                    .size(size)
+                    .query(q -> q
+                            .term(t -> t.field("schoolId").value(schoolId))
+                    )
+                    .sort(sort -> sort.field(f -> f.field("hotScore").order(SortOrder.Desc)))
+            );
+
+            SearchResponse<NoteDocument> response = elasticsearchClient.search(request, NoteDocument.class);
+
+            List<NoteSearchResult> results = response.hits().hits().stream()
+                    .map(hit -> {
+                        NoteDocument doc = hit.source();
+                        NoteSearchResult result = new NoteSearchResult();
+                        BeanUtils.copyProperties(doc, result);
+                        result.setId(doc.getNoteId());
+                        result.setAuthorId(doc.getUserId());
+                        result.setAuthorNickname(doc.getAuthorNickname());
+                        result.setAuthorAvatar(doc.getAuthorAvatar());
+                        return result;
+                    })
+                    .collect(Collectors.toList());
+
+            SearchResult<NoteSearchResult> searchResult = new SearchResult<>();
+            searchResult.setList(results);
+            searchResult.setTotal(response.hits().total() != null ? response.hits().total().value() : 0);
+            searchResult.setPage(page);
+            searchResult.setSize(size);
+            searchResult.setTotalPages((int) Math.ceil((double) searchResult.getTotal() / size));
+
+            return searchResult;
+
+        } catch (IOException e) {
+            log.error("按学校搜索笔记失败：schoolId={}", schoolId, e);
             SearchResult<NoteSearchResult> emptyResult = new SearchResult<>();
             emptyResult.setList(new ArrayList<>());
             emptyResult.setTotal(0L);

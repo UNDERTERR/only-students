@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 public class UserDocument {
     
     private Long userId;
-    private String username;
     private String nickname;
     private String bio;
     private String avatar;

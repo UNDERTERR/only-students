@@ -5,7 +5,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {"com.onlystudents.report", "com.onlystudents.common"})
 @EnableDiscoveryClient
 @MapperScan("com.onlystudents.report.mapper")
 public class ReportServiceApplication {

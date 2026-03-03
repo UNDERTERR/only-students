@@ -1,6 +1,8 @@
 package com.onlystudents.comment.service.impl;
 
+import com.onlystudents.comment.client.NoteFeignClient;
 import com.onlystudents.comment.client.UserFeignClient;
+import com.onlystudents.comment.dto.UserResponse;
 import com.onlystudents.comment.dto.CommentDTO;
 import com.onlystudents.comment.dto.CreateCommentRequest;
 import com.onlystudents.comment.entity.Comment;
@@ -11,15 +13,16 @@ import com.onlystudents.comment.service.CommentService;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
+import com.onlystudents.common.event.notification.CommentNotificationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -30,6 +33,8 @@ public class CommentServiceImpl implements CommentService {
     private final CommentMapper commentMapper;
     private final CommentLikeMapper likeMapper;
     private final UserFeignClient userFeignClient;
+    private final NoteFeignClient noteFeignClient;
+    private final RabbitTemplate rabbitTemplate;
     
     @Override
     @Transactional
@@ -57,6 +62,38 @@ public class CommentServiceImpl implements CommentService {
         // 如果是回复，增加父评论的回复数
         if (comment.getParentId() != 0) {
             commentMapper.incrementReplyCount(comment.getParentId());
+        }
+        
+        // 发布评论通知事件
+        log.info("========== 开始处理评论通知事件 ==========");
+        try {
+            Result<Map<String, Object>> noteResult = noteFeignClient.getNoteById(comment.getNoteId());
+            log.info("获取笔记信息结果: {}", noteResult);
+            if (noteResult != null && noteResult.isSuccess() && noteResult.getData() != null) {
+                Map<String, Object> noteData = noteResult.getData();
+                Object authorIdObj = noteData.get("userId");
+                Long noteAuthorId = authorIdObj != null ? ((Number) authorIdObj).longValue() : null;
+                log.info("笔记信息: noteAuthorId={}, userId={}, 条件={}", noteAuthorId, userId, noteAuthorId != null && !noteAuthorId.equals(userId));
+                
+                if (noteAuthorId != null && !noteAuthorId.equals(userId)) {
+                    String noteTitle = (String) noteData.get("title");
+                    
+                    CommentNotificationEvent event = new CommentNotificationEvent(
+                        comment.getId(),
+                        userId,
+                        noteAuthorId,
+                        comment.getNoteId(),
+                        comment.getContent(),
+                        noteTitle
+                    );
+                    
+                    log.info("准备发布评论通知事件: {}", event);
+                    rabbitTemplate.convertAndSend("notification.exchange", "comment.notify", event);
+                    log.info("发布评论通知事件成功: commentId={}, toUserId={}", comment.getId(), noteAuthorId);
+                }
+            }
+        } catch (Exception e) {
+            log.error("发布评论通知事件失败", e);
         }
         
         return convertToDTO(comment, userId);
@@ -132,6 +169,129 @@ public class CommentServiceImpl implements CommentService {
         return commentMapper.countByNoteId(noteId);
     }
     
+    @Override
+    public CommentDTO getCommentDetail(Long commentId, Long currentUserId) {
+        Comment comment = commentMapper.selectById(commentId);
+        if (comment == null || comment.getDeleted() == 1) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "评论不存在");
+        }
+        
+        CommentDTO dto = convertToDTO(comment, currentUserId);
+        
+        if (comment.getParentId() == 0 || comment.getParentId() == null) {
+            List<Comment> allReplies = commentMapper.selectRepliesByRootId(commentId);
+            if (allReplies != null && !allReplies.isEmpty()) {
+                dto.setReplies(allReplies.stream()
+                        .map(reply -> convertToDTO(reply, currentUserId))
+                        .collect(Collectors.toList()));
+            }
+        } else {
+            List<Comment> directReplies = commentMapper.selectDirectRepliesByParentId(commentId);
+            if (directReplies != null && !directReplies.isEmpty()) {
+                dto.setReplies(directReplies.stream()
+                        .map(reply -> convertToDTO(reply, currentUserId))
+                        .collect(Collectors.toList()));
+            }
+        }
+        
+        return dto;
+    }
+    
+    @Override
+    public List<CommentDTO> getReceivedComments(Long userId, Integer page, Integer size) {
+        int offset = (page - 1) * size;
+        
+        // 先获取用户的笔记ID列表
+        java.util.Set<Long> userNoteIds = new java.util.HashSet<>();
+        try {
+            Result<java.util.List<Long>> noteIdsResult = noteFeignClient.getNoteIdsByUserId(userId);
+            if (noteIdsResult != null && noteIdsResult.getData() != null) {
+                userNoteIds.addAll(noteIdsResult.getData());
+            }
+        } catch (Exception e) {
+            log.error("获取用户笔记ID列表失败", e);
+        }
+        
+        if (userNoteIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        
+        // 获取用户笔记的评论（排除自己发的）
+        List<Comment> comments = commentMapper.selectReceivedComments(userId, new java.util.ArrayList<>(userNoteIds), offset, size);
+        
+        if (comments == null || comments.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        
+        // 获取笔记信息
+        final java.util.Map<Long, java.util.Map<String, Object>> noteInfoMap = new java.util.HashMap<>();
+        List<Long> noteIds = comments.stream().map(Comment::getNoteId).distinct().collect(Collectors.toList());
+        if (!noteIds.isEmpty()) {
+            try {
+                for (Long noteId : noteIds) {
+                    Result<Map<String, Object>> result = noteFeignClient.getNoteById(noteId);
+                    if (result != null && result.isSuccess() && result.getData() != null) {
+                        noteInfoMap.put(noteId, result.getData());
+                    }
+                }
+            } catch (Exception e) {
+                log.error("获取笔记信息失败", e);
+            }
+        }
+        
+        final java.util.Map<Long, java.util.Map<String, Object>> finalNoteInfoMap = noteInfoMap;
+        
+        return comments.stream()
+                .map(comment -> {
+                    CommentDTO dto = convertToDTO(comment, userId);
+                    // 填充笔记信息
+                    java.util.Map<String, Object> noteInfo = finalNoteInfoMap.get(comment.getNoteId());
+                    if (noteInfo != null) {
+                        CommentDTO.NoteInfo noteDTO = new CommentDTO.NoteInfo();
+                        noteDTO.setId(((Number) noteInfo.get("id")).longValue());
+                        noteDTO.setTitle((String) noteInfo.get("title"));
+                        noteDTO.setCoverUrl((String) noteInfo.get("coverImage"));
+                        dto.setNote(noteDTO);
+                    }
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public List<CommentDTO> getSentComments(Long userId, Integer page, Integer size) {
+        int offset = (page - 1) * size;
+        List<Comment> comments = commentMapper.selectSentComments(userId, offset, size);
+        
+        if (comments == null || comments.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        
+        return comments.stream()
+                .map(comment -> convertToDTO(comment, userId))
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public Integer getReceivedCommentUnreadCount(Long userId) {
+        // 先获取用户的笔记ID列表
+        try {
+            Result<List<Long>> noteIdsResult = noteFeignClient.getNoteIdsByUserId(userId);
+            if (noteIdsResult != null && noteIdsResult.getData() != null && !noteIdsResult.getData().isEmpty()) {
+                // 获取这些笔记的所有未读评论数（排除自己发的）
+                return commentMapper.countReceivedCommentsUnread(userId, noteIdsResult.getData());
+            }
+        } catch (Exception e) {
+            log.error("获取用户笔记ID列表失败", e);
+        }
+        return 0;
+    }
+
+    @Override
+    public void markCommentAsRead(Long commentId) {
+        commentMapper.markAsRead(commentId);
+    }
+    
     private CommentDTO convertToDTO(Comment comment, Long currentUserId) {
         CommentDTO dto = new CommentDTO();
         BeanUtils.copyProperties(comment, dto);
@@ -146,23 +306,18 @@ public class CommentServiceImpl implements CommentService {
 
         // 通过 Feign 调用 User-Service 查询用户信息
         try {
-            Result<Map<String, Object>> result = userFeignClient.getUserById(comment.getUserId());
+            Result<UserResponse> result = userFeignClient.getUserById(comment.getUserId());
             if (result != null && result.isSuccess() && result.getData() != null) {
-                Map<String, Object> userData = result.getData();
-                // 优先使用 nickname，如果没有则使用 username
-                String nickname = (String) userData.get("nickname");
-                String username = (String) userData.get("username");
-                dto.setUsername(Objects.toString(nickname != null ? nickname : username, "用户_" + comment.getUserId()));
-                // 设置头像
-                String avatar = (String) userData.get("avatar");
-                dto.setAvatar(avatar != null ? avatar : "");
+                UserResponse user = result.getData();
+                dto.setNickname(user.getNickname() != null ? user.getNickname() : "用户_" + comment.getUserId());
+                dto.setAvatar(user.getAvatar() != null ? user.getAvatar() : "");
             } else {
-                dto.setUsername("用户_" + comment.getUserId());
+                dto.setNickname("用户_" + comment.getUserId());
                 dto.setAvatar("");
             }
         } catch (Exception e) {
             log.error("查询用户信息失败，commentId={}, userId={}", comment.getId(), comment.getUserId(), e);
-            dto.setUsername("用户_" + comment.getUserId());
+            dto.setNickname("用户_" + comment.getUserId());
             dto.setAvatar("");
         }
 

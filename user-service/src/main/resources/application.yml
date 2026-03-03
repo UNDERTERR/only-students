@@ -11,76 +11,21 @@ server:
 spring:
   application:
     name: user-service
+  profiles:
+    active: dev   # 以后切环境只改这里
   config:
     import:
-      - optional:nacos:application-${spring.profiles.active:}.yaml
+      - optional:nacos:user-service-${spring.profiles.active}.yaml
   cloud:
     nacos:
       discovery:
         server-addr: localhost:8848
-        namespace: public
+        namespace: ""
         group: DEFAULT_GROUP
       config:
         server-addr: localhost:8848
         file-extension: yaml
-        namespace: public
+        namespace: ""
         group: DEFAULT_GROUP
         import-check:
           enabled: false
-  datasource:
-    type: com.alibaba.druid.pool.DruidDataSource
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/only_students_user?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: root
-    password: xiaojie666
-    druid:
-      initial-size: 20
-      min-idle: 20
-      max-active: 200
-      max-wait: 30000
-      time-between-eviction-runs-millis: 60000
-      min-evictable-idle-time-millis: 300000
-      validation-query: SELECT 1
-      test-while-idle: true
-      test-on-borrow: false
-      test-on-return: false
-      pool-prepared-statements: true
-      max-pool-prepared-statement-per-connection-size: 20
-      keep-alive: true
-      remove-abandoned: true
-      remove-abandoned-timeout-millis: 60000
-      log-abandoned: true
-  data:
-    redis:
-      database: 0
-      host: localhost
-      port: 6379
-      password: xiaojie666
-      timeout: 3000ms
-      lettuce:
-        pool:
-          max-active: 200
-          max-idle: 100
-          min-idle: 20
-  rabbitmq:
-    host: localhost
-    port: 5672
-    username: admin      # 你的自定义用户名
-    password: admin123     # 你的自定义密码
-    virtual-host: /
-# MyBatis Plus
-mybatis-plus:
-  configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-    map-underscore-to-camel-case: true
-  global-config:
-    db-config:
-      id-type: auto
-      logic-delete-field: ${mybatis-plus.logic-delete-field}
-      logic-delete-value: ${mybatis-plus.logic-delete-value}
-      logic-not-delete-value: ${mybatis-plus.logic-not-delete-value}
-
-# JWT
-jwt:
-  secret: OnlyStudentsSecretKey2024
-  expiration: 86400000

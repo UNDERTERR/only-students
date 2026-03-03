@@ -14,7 +14,7 @@ public class CommentDTO {
     
     private Long userId;
     
-    private String username;
+    private String nickname;
     
     private String avatar;
     
@@ -30,7 +30,19 @@ public class CommentDTO {
     
     private Boolean isLiked;
     
+    private Boolean isRead;
+    
     private List<CommentDTO> replies;
     
     private LocalDateTime createdAt;
+    
+    // 笔记信息（用于收到的评论列表）
+    private NoteInfo note;
+    
+    @Data
+    public static class NoteInfo {
+        private Long id;
+        private String title;
+        private String coverUrl;
+    }
 }

@@ -1,18 +1,18 @@
 package com.onlystudents.note.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onlystudents.common.exception.BusinessException;
-import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
-import com.onlystudents.common.utils.JsonSerializerUtils;
+import com.onlystudents.common.result.Result;
 import com.onlystudents.note.client.FileFeignClient;
 import com.onlystudents.note.client.SubscriptionFeignClient;
+import com.onlystudents.note.client.UserFeignClient;
 import com.onlystudents.note.dto.CreateNoteRequest;
 import com.onlystudents.note.dto.NoteDTO;
 import com.onlystudents.note.dto.UpdateNoteRequest;
 import com.onlystudents.note.entity.Note;
+import com.onlystudents.common.event.note.NotePublishEvent;
 import com.onlystudents.note.mapper.NoteMapper;
 import com.onlystudents.note.service.NoteService;
 import com.onlystudents.note.service.TagService;
@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -38,6 +39,7 @@ public class NoteServiceImpl implements NoteService {
     private final NoteMapper noteMapper;
     private final SubscriptionFeignClient subscriptionFeignClient;
     private final FileFeignClient fileFeignClient;
+    private final UserFeignClient userFeignClient;
     private final RabbitTemplate rabbitTemplate;
     private final StringRedisTemplate redisTemplate;
     private final TagService tagService;
@@ -50,8 +52,8 @@ public class NoteServiceImpl implements NoteService {
 
     @Override
     @Caching(evict = {
-        @CacheEvict(value = "hotNotes", allEntries = true),
-        @CacheEvict(value = "latestNotes", allEntries = true)
+            @CacheEvict(value = "hotNotes", allEntries = true),
+            @CacheEvict(value = "latestNotes", allEntries = true)
     })
     public NoteDTO createNote(CreateNoteRequest request, Long userId) {
         Note note = new Note();
@@ -64,7 +66,37 @@ public class NoteServiceImpl implements NoteService {
         note.setShareCount(0);
         note.setHotScore(0.0);
 
+        // 获取用户信息，设置 educationLevel, schoolId, schoolName
+        try {
+            // 先尝试通过 Feign 获取
+            Result<Map<String, Object>> userResult = userFeignClient.getUserById(userId);
+            log.info("Feign获取用户信息结果: userId={}, result={}", userId, userResult);
+            
+            Map<String, Object> userData = null;
+            if (userResult != null && userResult.getData() != null) {
+                userData = userResult.getData();
+            }
+            
+            if (userData != null) {
+                log.info("用户数据所有key: {}", userData.keySet());
+                log.info("用户数据: userId={}, schoolId={}, schoolName={}, educationLevel={}", 
+                    userId, userData.get("schoolId"), userData.get("schoolName"), userData.get("educationLevel"));
+                if (userData.get("educationLevel") != null) {
+                    note.setEducationLevel(toInt(userData.get("educationLevel")));
+                }
+                if (userData.get("schoolId") != null) {
+                    note.setSchoolId(toLong(userData.get("schoolId")));
+                }
+                if (userData.get("schoolName") != null) {
+                    note.setSchoolName((String) userData.get("schoolName"));
+                }
+            }
+        } catch (Exception e) {
+            log.error("获取用户信息失败: userId={}", userId, e);
+        }
+
         noteMapper.insert(note);
+        log.info("笔记创建成功: noteId={}, schoolId={}, schoolName={}", note.getId(), note.getSchoolId(), note.getSchoolName());
 
         // 保存标签关联
         if (request.getTags() != null && !request.getTags().isEmpty()) {
@@ -76,9 +108,9 @@ public class NoteServiceImpl implements NoteService {
 
     @Override
     @Caching(evict = {
-        @CacheEvict(value = "notes", key = "#p0"),
-        @CacheEvict(value = "hotNotes", allEntries = true),
-        @CacheEvict(value = "latestNotes", allEntries = true)
+            @CacheEvict(value = "notes", key = "#p0"),
+            @CacheEvict(value = "hotNotes", allEntries = true),
+            @CacheEvict(value = "latestNotes", allEntries = true)
     })
     public NoteDTO updateNote(Long noteId, UpdateNoteRequest request, Long userId) {
         Note note = noteMapper.selectById(noteId);
@@ -102,20 +134,21 @@ public class NoteServiceImpl implements NoteService {
     }
 
     @Override
-    @Caching(evict = {
-        @CacheEvict(value = "notes", key = "#p0"),
-        @CacheEvict(value = "hotNotes", allEntries = true),
-        @CacheEvict(value = "latestNotes", allEntries = true)
-    })
+    @CacheEvict(value = {"hotNotes", "latestNotes"}, allEntries = true)
     public void deleteNote(Long noteId, Long userId) {
+        log.info("开始删除笔记: noteId={}, userId={}", noteId, userId);
         Note note = noteMapper.selectById(noteId);
         if (note == null) {
+            log.warn("笔记不存在: noteId={}", noteId);
             return;
         }
 
         if (!note.getUserId().equals(userId)) {
+            log.warn("无权限删除笔记: noteId={}, userId={}, noteUserId={}", noteId, userId, note.getUserId());
             throw new BusinessException(ResultCode.FORBIDDEN);
         }
+
+        log.info("删除笔记: noteId={}, title={}", noteId, note.getTitle());
 
         // 删除附件文件
         deleteAttachments(note.getAttachments(), userId);
@@ -123,8 +156,18 @@ public class NoteServiceImpl implements NoteService {
         // 删除标签关联
         tagService.deleteNoteTags(noteId);
 
+        // 减少学校笔记数
+        if (note.getSchoolId() != null) {
+            try {
+                userFeignClient.decrementSchoolNotes(note.getSchoolId());
+            } catch (Exception e) {
+                log.warn("减少学校笔记数失败: schoolId={}", note.getSchoolId(), e);
+            }
+        }
+
         // 使用 MyBatis Plus 逻辑删除，会自动设置 deleted=1
         noteMapper.deleteById(noteId);
+        log.info("笔记已从数据库删除: noteId={}", noteId);
 
         // 发送MQ消息通知删除ES文档
         try {
@@ -133,6 +176,8 @@ public class NoteServiceImpl implements NoteService {
         } catch (Exception e) {
             log.error("发送笔记删除消息失败: noteId={}", noteId, e);
         }
+        
+        log.info("笔记删除完成: noteId={}", noteId);
     }
 
     /**
@@ -145,8 +190,9 @@ public class NoteServiceImpl implements NoteService {
 
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            List<java.util.Map<String, Object>> attachments = objectMapper.readValue(attachmentsJson, 
-                new com.fasterxml.jackson.core.type.TypeReference<List<java.util.Map<String, Object>>>() {});
+            List<java.util.Map<String, Object>> attachments = objectMapper.readValue(attachmentsJson,
+                    new com.fasterxml.jackson.core.type.TypeReference<List<java.util.Map<String, Object>>>() {
+                    });
 
             for (java.util.Map<String, Object> att : attachments) {
                 Long fileId = Long.valueOf(att.get("fileId").toString());
@@ -197,24 +243,25 @@ public class NoteServiceImpl implements NoteService {
         if (limit == null || limit > 100) {
             limit = 20;
         }
-        
+
         // 查询公开的笔记
         List<Note> publicNotes = noteMapper.selectHotNotes(limit);
-        
+
         // 如果用户已登录，还需要查询该用户的所有已发布笔记（无论可见性）
         if (currentUserId != null) {
             LambdaQueryWrapper<Note> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(Note::getUserId, currentUserId);
+            wrapper.eq(Note::getDeleted, 0);
             wrapper.eq(Note::getStatus, 2); // 已发布
             wrapper.orderByDesc(Note::getHotScore);
             wrapper.last("LIMIT " + limit);
             List<Note> userNotes = noteMapper.selectList(wrapper);
-            
+
             // 合并并去重（用户的笔记优先）
             publicNotes.removeIf(note -> userNotes.stream().anyMatch(u -> u.getId().equals(note.getId())));
             publicNotes.addAll(0, userNotes);
         }
-        
+
         return publicNotes.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
@@ -224,25 +271,20 @@ public class NoteServiceImpl implements NoteService {
         if (limit == null || limit > 100) {
             limit = 20;
         }
-        log.info("获取首页数据，当前用户: {}", currentUserId);
-        
+        log.info("获取首页最新数据，当前用户: {}, limit: {}", currentUserId, limit);
+
         // 查询公开的笔记
         List<Note> publicNotes = noteMapper.selectLatestNotes(limit);
-        
+
         // 如果用户已登录，还需要查询该用户的所有已发布笔记（无论可见性）
         if (currentUserId != null) {
-            LambdaQueryWrapper<Note> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(Note::getUserId, currentUserId);
-            wrapper.eq(Note::getStatus, 2); // 已发布
-            wrapper.orderByDesc(Note::getPublishTime);
-            wrapper.last("LIMIT " + limit);
-            List<Note> userNotes = noteMapper.selectList(wrapper);
-            
+            List<Note> userNotes = noteMapper.selectUserLatestNotes(currentUserId, limit);
+
             // 合并并去重（用户的笔记优先）
             publicNotes.removeIf(note -> userNotes.stream().anyMatch(u -> u.getId().equals(note.getId())));
             publicNotes.addAll(0, userNotes);
         }
-        
+
         return publicNotes.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
@@ -250,7 +292,6 @@ public class NoteServiceImpl implements NoteService {
     public List<NoteDTO> getUserNotes(Long userId) {
         LambdaQueryWrapper<Note> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Note::getUserId, userId);
-        // @TableLogic 会自动过滤 deleted=1 的记录
         wrapper.orderByDesc(Note::getCreatedAt);
 
         List<Note> notes = noteMapper.selectList(wrapper);
@@ -264,9 +305,9 @@ public class NoteServiceImpl implements NoteService {
 
     @Override
     @Caching(evict = {
-        @CacheEvict(value = "notes", key = "#p0"),
-        @CacheEvict(value = "hotNotes", allEntries = true),
-        @CacheEvict(value = "latestNotes", allEntries = true)
+            @CacheEvict(value = "notes", key = "#p0"),
+            @CacheEvict(value = "hotNotes", allEntries = true),
+            @CacheEvict(value = "latestNotes", allEntries = true)
     })
     public void publishNote(Long noteId, Long userId) {
         Note note = noteMapper.selectById(noteId);
@@ -282,15 +323,41 @@ public class NoteServiceImpl implements NoteService {
         note.setPublishTime(LocalDateTime.now());
         noteMapper.updateById(note);
 
-        try {
+        // 如果有学校，增加学校笔记数
+        if (note.getSchoolId() != null) {
+            log.info("准备增加学校笔记数, schoolId={}, noteId={}", note.getSchoolId(), noteId);
+            try {
+                    Result<Void> result = userFeignClient.incrementSchoolNotes(note.getSchoolId());
+                    log.info("Feign增加学校笔记数结果: schoolId={}, result={}", note.getSchoolId(), result);
 
-            rabbitTemplate.convertAndSend("note.exchange", "note.sync", note);
-            log.info("笔记 [{}] 已发布，同步消息已发送到MQ", noteId+":"+note);
-        } catch (Exception e) {
-            log.error("发送笔记同步消息失败: noteId={}", noteId, e);
-            // 可以选择抛异常回滚，或者继续执行（最终一致性）
-            // throw new BusinessException(ResultCode.SYSTEM_ERROR, "同步消息发送失败");
+            } catch (Exception e) {
+                log.error("增加学校笔记数失败: schoolId={}", note.getSchoolId(), e);
+            }
+        } else {
+            log.warn("笔记没有学校信息, noteId={}, schoolId={}", noteId, note.getSchoolId());
         }
+
+        try {
+            // 发送笔记同步消息
+            rabbitTemplate.convertAndSend("note.exchange", "note.sync", note);
+            log.info("笔记 [{}] 已发布，同步消息已发送到MQ", noteId + ":" + note);
+
+            // 发送笔记发布成功通知给作者
+            NotePublishEvent event = new NotePublishEvent(noteId, userId, note.getTitle(), note.getCoverImage());
+            rabbitTemplate.convertAndSend("note.exchange", "note.publish", event);
+            log.info("笔记发布通知事件已发送: noteId={}", noteId);
+        } catch (Exception e) {
+            log.error("发送消息失败: noteId={}", noteId, e);
+        }
+    }
+
+    @Override
+    public List<Long> getNoteIdsByUserId(Long userId) {
+        LambdaQueryWrapper<Note> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Note::getUserId, userId);
+        wrapper.select(Note::getId);
+        List<Note> notes = noteMapper.selectList(wrapper);
+        return notes.stream().map(Note::getId).collect(Collectors.toList());
     }
 
     /**
@@ -309,11 +376,41 @@ public class NoteServiceImpl implements NoteService {
     private NoteDTO convertToDTO(Note note) {
         NoteDTO dto = new NoteDTO();
         BeanUtils.copyProperties(note, dto);
-        
+
+        // 如果 authorAvatar 为空，尝试通过 userId 获取用户信息
+        if (dto.getAuthorAvatar() == null || dto.getAuthorAvatar().isEmpty()) {
+            try {
+                Result<Map<String, Object>> userResult = userFeignClient.getUserById(note.getUserId());
+                if (userResult != null && userResult.getData() != null) {
+                    Map<String, Object> userData = userResult.getData();
+                    dto.setAuthorNickname((String) userData.get("nickname"));
+                    dto.setAuthorAvatar((String) userData.get("avatar"));
+                }
+            } catch (Exception e) {
+                log.error("获取用户信息失败: userId={}", note.getUserId(), e);
+            }
+        }
+
         // 加载标签
         List<String> tags = tagService.getNoteTags(note.getId());
         dto.setTags(tags);
-        
+
         return dto;
+    }
+
+    private Long toLong(Object value) {
+        if (value == null) return null;
+        if (value instanceof Long) return (Long) value;
+        if (value instanceof Integer) return ((Integer) value).longValue();
+        if (value instanceof Number) return ((Number) value).longValue();
+        return Long.parseLong(value.toString());
+    }
+
+    private Integer toInt(Object value) {
+        if (value == null) return null;
+        if (value instanceof Integer) return (Integer) value;
+        if (value instanceof Long) return ((Long) value).intValue();
+        if (value instanceof Number) return ((Number) value).intValue();
+        return Integer.parseInt(value.toString());
     }
 }

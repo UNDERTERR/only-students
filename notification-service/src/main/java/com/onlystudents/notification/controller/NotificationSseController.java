@@ -26,8 +26,8 @@ public class NotificationSseController {
      * 用户登录后调用此接口建立 SSE 连接
      */
     @GetMapping(value = "/subscribe", produces = "text/event-stream;charset=UTF-8")
-    @Operation(summary = "订阅通知", description = "建立SSE连接，接收实时通知推送。需要在请求头中携带用户ID")
-    public SseEmitter subscribe(@RequestHeader(CommonConstants.USER_ID_HEADER) Long userId) {
+    @Operation(summary = "订阅通知", description = "建立SSE连接，接收实时通知推送。需要在URL参数中携带用户ID")
+    public SseEmitter subscribe(@RequestParam("userId") Long userId) {
         log.info("用户 {} 订阅SSE通知", userId);
         return sseEmitterManager.createEmitter(userId);
     }

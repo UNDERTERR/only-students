@@ -23,10 +23,21 @@ public class UserFeignClientFallback implements UserFeignClient {
         // 构建降级用户信息
         Map<String, Object> fallbackUser = new HashMap<>();
         fallbackUser.put("id", userId);
-        fallbackUser.put("username", "用户_" + userId);
         fallbackUser.put("nickname", "用户_" + userId);
         fallbackUser.put("avatar", "");
         
         return Result.success(fallbackUser);
+    }
+
+    @Override
+    public Result<Void> incrementSchoolNotes(Long schoolId) {
+        log.warn("调用 user-service 增加学校笔记数失败，降级处理，schoolId={}", schoolId);
+        return Result.success(null);
+    }
+
+    @Override
+    public Result<Void> decrementSchoolNotes(Long schoolId) {
+        log.warn("调用 user-service 减少学校笔记数失败，降级处理，schoolId={}", schoolId);
+        return Result.success(null);
     }
 }

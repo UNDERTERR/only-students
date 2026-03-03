@@ -16,9 +16,15 @@ public class NoteSearchResult {
     
     private Long authorId;
     
-    private String authorName;
+    private String authorNickname;
     
     private String authorAvatar;
+    
+    private Integer rating;
+    
+    private Integer ratingCount;
+    
+    private Integer averageRating;
     
     private Integer price;
     

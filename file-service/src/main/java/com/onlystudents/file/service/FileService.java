@@ -59,4 +59,16 @@ public interface FileService {
      * @return PDF文件ID（如果转换成功）
      */
     Long getPdfFileId(Long sourceFileId);
+    
+    /**
+     * 裁剪图片
+     * @param imageUrl 原图片URL
+     * @param x 裁剪区域X坐标
+     * @param y 裁剪区域Y坐标
+     * @param width 裁剪区域宽度
+     * @param height 裁剪区域高度
+     * @param scale 缩放比例
+     * @return 裁剪后的图片URL
+     */
+    FileUploadResult cropImage(String imageUrl, int x, int y, int width, int height, float scale);
 }

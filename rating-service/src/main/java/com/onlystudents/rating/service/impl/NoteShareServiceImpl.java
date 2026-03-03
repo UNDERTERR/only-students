@@ -1,12 +1,12 @@
 package com.onlystudents.rating.service.impl;
 
 import cn.hutool.core.util.IdUtil;
+import com.onlystudents.common.event.note.NoteShareEvent;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.rating.dto.NoteShareDTO;
 import com.onlystudents.rating.entity.NoteShare;
-import com.onlystudents.rating.event.NoteShareEvent;
 import com.onlystudents.rating.mapper.NoteShareMapper;
 import com.onlystudents.rating.service.NoteShareService;
 import lombok.RequiredArgsConstructor;
@@ -41,15 +41,12 @@ public class NoteShareServiceImpl implements NoteShareService {
         share.setShareCode(shareCode);
         share.setClickCount(0);
         shareMapper.insert(share);
-        
-        // 获取当前分享总数
-        Long totalCount = shareMapper.countByNoteId(noteId);
-        
+
         // 发送事件
-        NoteShareEvent event = new NoteShareEvent(noteId, userId, shareType, shareCode, totalCount);
+        NoteShareEvent event = new NoteShareEvent(noteId, userId, shareType, shareCode);
         rabbitTemplate.convertAndSend("rating.exchange", "share.created", event);
-        log.info("发送分享事件: noteId={}, userId={}, shareCode={}, total={}", 
-                noteId, userId, shareCode, totalCount);
+        log.info("发送分享事件: noteId={}, userId={}, shareCode={}",
+                noteId, userId, shareCode);
         
         NoteShareDTO dto = new NoteShareDTO();
         BeanUtils.copyProperties(share, dto);

@@ -23,12 +23,19 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 
 @Slf4j
 @Service
@@ -396,6 +403,97 @@ public class FileServiceImpl implements FileService {
                 "  - public/*: 公开可读\n" +
                 "  - private/*: 公开可读\n" +
                 "  - paid/*: 私有");
+    }
+
+    @Override
+    public FileUploadResult cropImage(String imageUrl, int x, int y, int width, int height, float scale) {
+        log.info("[图片裁剪] 开始裁剪: imageUrl={}, x={}, y={}, width={}, height={}, scale={}", 
+                imageUrl, x, y, width, height, scale);
+        
+        try {
+            // 从URL下载图片
+            URL url = new URL(imageUrl);
+            java.awt.image.BufferedImage originalImage = ImageIO.read(url);
+            
+            if (originalImage == null) {
+                throw new BusinessException(ResultCode.PARAM_ERROR, "无法读取图片");
+            }
+            
+            // 应用缩放
+            int actualX = (int) (x / scale);
+            int actualY = (int) (y / scale);
+            int actualWidth = (int) (width / scale);
+            int actualHeight = (int) (height / scale);
+            
+            // 确保裁剪区域不超出图片范围
+            int imgWidth = originalImage.getWidth();
+            int imgHeight = originalImage.getHeight();
+            
+            actualX = Math.max(0, Math.min(actualX, imgWidth));
+            actualY = Math.max(0, Math.min(actualY, imgHeight));
+            actualWidth = Math.min(actualWidth, imgWidth - actualX);
+            actualHeight = Math.min(actualHeight, imgHeight - actualY);
+            
+            // 裁剪图片
+            java.awt.image.BufferedImage croppedImage = originalImage.getSubimage(
+                    actualX, actualY, actualWidth, actualHeight);
+            
+            // 转换为字节数组
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            String formatName = "png";
+            if (imageUrl.toLowerCase().contains(".jpg") || imageUrl.toLowerCase().contains(".jpeg")) {
+                formatName = "jpg";
+            }
+            ImageIO.write(croppedImage, formatName, baos);
+            byte[] imageBytes = baos.toByteArray();
+            
+            // 生成新文件名
+            String fileName = IdUtil.simpleUUID() + "." + formatName;
+            String objectName = "avatars/" + LocalDateTime.now().getYear() + "/" + 
+                    LocalDateTime.now().getMonthValue() + "/" + fileName;
+            
+            // 上传到MinIO
+            ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes);
+            minioClient.putObject(PutObjectArgs.builder()
+                    .bucket(minioConfig.getBucketName())
+                    .object(objectName)
+                    .stream(bais, imageBytes.length, -1)
+                    .contentType("image/" + formatName)
+                    .build());
+            
+            // 保存文件记录
+            FileRecord fileRecord = new FileRecord();
+            fileRecord.setOriginalName("avatar." + formatName);
+            fileRecord.setFileName(fileName);
+            fileRecord.setFilePath(objectName);
+            fileRecord.setFileSize((long) imageBytes.length);
+            fileRecord.setFileType(formatName);
+            fileRecord.setMimeType("image/" + formatName);
+            fileRecord.setMd5Hash(DigestUtil.md5Hex(imageBytes));
+            fileRecord.setStorageType(1);
+            fileRecord.setUploaderId(0L); // 裁剪图片没有用户ID
+            fileRecord.setAccessLevel(0); // 公开访问
+            fileRecord.setCreatedAt(LocalDateTime.now());
+            fileRecordMapper.insert(fileRecord);
+            
+            // 返回结果
+            FileUploadResult result = new FileUploadResult();
+            result.setFileId(fileRecord.getId());
+            result.setOriginalName(fileRecord.getOriginalName());
+            result.setFileName(fileRecord.getFileName());
+            result.setFileSize(fileRecord.getFileSize());
+            result.setFileType(fileRecord.getFileType());
+            result.setMimeType(fileRecord.getMimeType());
+            result.setFileUrl(minioConfig.getEndpoint() + "/" + minioConfig.getBucketName() + "/" + objectName);
+            
+            log.info("[图片裁剪] 完成: fileId={}, newUrl={}", fileRecord.getId(), result.getFileUrl());
+            
+            return result;
+            
+        } catch (Exception e) {
+            log.error("[图片裁剪] 失败: ", e);
+            throw new BusinessException(ResultCode.PARAM_ERROR, "图片裁剪失败: " + e.getMessage());
+        }
     }
 
 }
