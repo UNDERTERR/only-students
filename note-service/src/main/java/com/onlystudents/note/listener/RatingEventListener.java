@@ -27,8 +27,6 @@ public class RatingEventListener {
     private final NoteMapper noteMapper;
     private final CacheManager cacheManager;
     private final RabbitTemplate rabbitTemplate;
-    private final ObjectMapper objectMapper = JsonSerializerUtils.getGlobalObjectMapper();
-
     private void evictCache(Long noteId) {
         log.info("开始清除缓存, noteId={}, cacheManager={}", noteId, cacheManager);
         if (noteId != null && cacheManager != null) {

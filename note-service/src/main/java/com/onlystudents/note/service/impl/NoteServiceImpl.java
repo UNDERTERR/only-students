@@ -38,13 +38,11 @@ import java.util.stream.Collectors;
 public class NoteServiceImpl implements NoteService {
 
     private final NoteMapper noteMapper;
-    private final SubscriptionFeignClient subscriptionFeignClient;
     private final FileFeignClient fileFeignClient;
     private final UserFeignClient userFeignClient;
     private final RabbitTemplate rabbitTemplate;
     private final StringRedisTemplate redisTemplate;
     private final TagService tagService;
-    private final CacheManager cacheManager;
 
     private static final String CACHE_KEY_NOTE = "note:detail:";
     private static final String CACHE_KEY_HOT = "hotNotes";
@@ -55,21 +53,17 @@ public class NoteServiceImpl implements NoteService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public NoteServiceImpl(NoteMapper noteMapper,
-                           SubscriptionFeignClient subscriptionFeignClient,
                            FileFeignClient fileFeignClient,
                            UserFeignClient userFeignClient,
                            RabbitTemplate rabbitTemplate,
                            StringRedisTemplate redisTemplate,
-                           TagService tagService,
-                           CacheManager cacheManager) {
+                           TagService tagService) {
         this.noteMapper = noteMapper;
-        this.subscriptionFeignClient = subscriptionFeignClient;
         this.fileFeignClient = fileFeignClient;
         this.userFeignClient = userFeignClient;
         this.rabbitTemplate = rabbitTemplate;
         this.redisTemplate = redisTemplate;
         this.tagService = tagService;
-        this.cacheManager = cacheManager;
         initLocalCache();
         objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);

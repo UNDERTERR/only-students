@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class RabbitMQConfig {
+public class RabbitConfig {
     
     // ========== 收藏通知队列 ==========
     @Bean
@@ -64,25 +64,10 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(queue).to(exchange).with("message.notify");
     }
     
-    // ========== 旧配置（兼容） ==========
-    @Bean
-    public Queue favoriteQueue() {
-        return QueueBuilder.durable("favorite.created.queue").build();
-    }
-
-    @Bean
-    public TopicExchange ratingExchange() {
-        return new TopicExchange("rating.exchange", true, false);
-    }
-
-    @Bean
-    public Binding favoriteBinding(@Qualifier("favoriteQueue") Queue favoriteQueue, @Qualifier("ratingExchange") TopicExchange ratingExchange) {
-        return BindingBuilder.bind(favoriteQueue).to(ratingExchange).with("favorite.created");
-    }
-
+    // ========== note发布队列 ==========
     @Bean
     public Queue notePublishQueue() {
-        return QueueBuilder.durable( "note.publish.queue").build();
+        return QueueBuilder.durable("note.publish.queue").build();
     }
 
     @Bean
