@@ -22,6 +22,8 @@ public interface NoteService {
     
     List<NoteDTO> getLatestNotes(Integer limit, Long currentUserId);
     
+    List<NoteDTO> getNotesBySchoolId(Long schoolId, Integer limit);
+    
     List<NoteDTO> getUserNotes(Long userId);
     
     void incrementViewCount(Long noteId);

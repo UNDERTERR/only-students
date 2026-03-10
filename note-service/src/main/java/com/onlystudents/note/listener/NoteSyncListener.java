@@ -6,6 +6,7 @@ import com.onlystudents.common.result.Result;
 import com.onlystudents.note.client.UserFeignClient;
 import com.onlystudents.note.elasticsearch.NoteDocument;
 import com.onlystudents.note.entity.Note;
+import com.onlystudents.note.mapper.NoteMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -21,6 +22,7 @@ public class NoteSyncListener {
 
     private final ElasticsearchClient elasticsearchClient;
     private final UserFeignClient userFeignClient;
+    private final NoteMapper noteMapper;
     
     @RabbitListener(queues = "note.delete.queue")
     public void handleNoteDelete(Long noteId) {
@@ -38,13 +40,47 @@ public class NoteSyncListener {
     }
 
     @RabbitListener(queues = "note.sync.queue")
-    public void handleNoteSync(Note note) {
-        log.info("收到笔记同步消息: noteId={}", note.getId());
+    public void handleNoteSync(Object message) {
+        log.info("收到笔记同步消息: message={}, type={}", message, message != null ? message.getClass().getName() : "null");
+        
+        Long noteId = null;
+        
+        // 支持两种消息格式：Note 对象 或 noteId
+        if (message instanceof Note) {
+            noteId = ((Note) message).getId();
+            syncNoteToEs((Note) message);
+        } else if (message instanceof Long) {
+            noteId = (Long) message;
+            // 通过 noteId 查询数据库获取最新数据
+            syncNoteByIdToEs(noteId);
+        } else if (message instanceof Number) {
+            noteId = ((Number) message).longValue();
+            syncNoteByIdToEs(noteId);
+        } else if (message instanceof String) {
+            try {
+                noteId = Long.parseLong((String) message);
+                syncNoteByIdToEs(noteId);
+            } catch (NumberFormatException e) {
+                log.error("解析noteId失败: message={}", message, e);
+            }
+        } else {
+            log.warn("未知的消息类型: type={}", message != null ? message.getClass().getName() : "null");
+        }
+    }
+    
+    /**
+     * 通过 Note 对象同步到 ES
+     */
+    private void syncNoteToEs(Note note) {
+        log.info("通过Note对象同步到ES: noteId={}", note.getId());
         try {
             NoteDocument document = new NoteDocument();
             BeanUtils.copyProperties(note, document);
             document.setNoteId(note.getId());
+            document.setRating(note.getAverageRating() != null ? note.getAverageRating().doubleValue() : null);
+            document.setRatingCount(note.getRatingCount());
 
+            // 获取用户信息
             String nickname = "用户_" + note.getUserId();
             String avatar = null;
             try {
@@ -77,7 +113,23 @@ public class NoteSyncListener {
             log.info("笔记同步到ES成功: noteId={}", note.getId());
         } catch (Exception e) {
             log.error("同步笔记到ES失败: noteId={}", note.getId(), e);
-            // TODO: 可以发送到死信队列或记录到数据库重试
+        }
+    }
+    
+    /**
+     * 通过 noteId 查询数据库后同步到 ES
+     */
+    private void syncNoteByIdToEs(Long noteId) {
+        log.info("通过noteId查询数据库同步到ES: noteId={}", noteId);
+        try {
+            Note note = noteMapper.selectById(noteId);
+            if (note == null) {
+                log.warn("笔记不存在: noteId={}", noteId);
+                return;
+            }
+            syncNoteToEs(note);
+        } catch (Exception e) {
+            log.error("查询并同步笔记到ES失败: noteId={}", noteId, e);
         }
     }
 }

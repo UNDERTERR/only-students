@@ -66,4 +66,7 @@ public interface NoteMapper extends BaseMapper<Note> {
             " AND deleted = 0" +
             "</script>")
     List<Note> selectListByIds(@Param("ids") List<Long> ids);
+
+    @Select("SELECT * FROM note WHERE school_id = #{schoolId} AND deleted = 0 AND status = 2 AND visibility != 4 ORDER BY publish_time DESC LIMIT #{limit}")
+    List<Note> selectNotesBySchoolId(@Param("schoolId") Long schoolId, @Param("limit") Integer limit);
 }

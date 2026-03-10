@@ -18,18 +18,27 @@ public class Report {
     
     private Integer targetType;
     
-    private Integer reason;
+    @TableField("target_user_id")
+    private Long targetUserId;
     
+    @TableField("reason_type")
+    private String reasonType;
+    
+    @TableField("reason_detail")
     private String description;
     
+    @TableField("evidence_urls")
     private String evidence;
     
     private Integer status;
     
+    @TableField("processor_id")
     private Long handlerId;
     
+    @TableField("process_result")
     private String handleResult;
     
+    @TableField("process_time")
     private LocalDateTime handleTime;
     
     @TableField(fill = FieldFill.INSERT)

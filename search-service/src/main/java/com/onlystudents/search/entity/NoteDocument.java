@@ -32,7 +32,6 @@ public class NoteDocument {
     private Integer deleted;
     private Double hotScore;
     private Integer viewCount;
-    private Integer likeCount;
     private Integer favoriteCount;
     private Integer commentCount;
     private Integer shareCount;

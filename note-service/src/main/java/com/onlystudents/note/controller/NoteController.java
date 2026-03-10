@@ -123,6 +123,13 @@ public class NoteController {
         return Result.success(noteService.getLatestNotes(limit, userId));
     }
 
+    @GetMapping("/school/{schoolId}")
+    @Operation(summary = "学校笔记", description = "获取指定学校的已发布笔记")
+    public Result<List<NoteDTO>> getNotesBySchool(@PathVariable(name = "schoolId") Long schoolId,
+                                                   @RequestParam(name = "limit", defaultValue = "20") Integer limit) {
+        return Result.success(noteService.getNotesBySchoolId(schoolId, limit));
+    }
+
     @GetMapping("/user/{userId}")
     @Operation(summary = "用户笔记列表", description = "获取指定用户的所有笔记")
     public Result<List<NoteDTO>> getUserNotes(@PathVariable(name = "userId") Long userId) {

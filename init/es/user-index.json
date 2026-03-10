@@ -64,9 +64,6 @@
       "total_views": {
         "type": "integer"
       },
-      "total_likes": {
-        "type": "integer"
-      },
       "status": {
         "type": "integer"
       },

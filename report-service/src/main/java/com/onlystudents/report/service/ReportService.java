@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface ReportService {
     
-    Report submitReport(Long reporterId, Long targetId, Integer targetType, Integer reason, String description, String evidence);
+    Report submitReport(Long reporterId, Long targetId, Integer targetType, String reason, String description, String evidence);
     
     List<Report> getReportList(Integer status, Integer page, Integer size);
     

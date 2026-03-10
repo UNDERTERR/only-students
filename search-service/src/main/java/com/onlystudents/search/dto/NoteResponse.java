@@ -34,8 +34,6 @@ public class NoteResponse {
 
     private Integer viewCount;
 
-    private Integer likeCount;
-
     private Integer favoriteCount;
 
     private Integer commentCount;

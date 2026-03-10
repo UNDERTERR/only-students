@@ -29,6 +29,24 @@ public class TagService {
     }
 
     /**
+     * 批量获取多个笔记的标签
+     * @param noteIds 笔记ID列表
+     * @return Map<noteId, 标签列表>
+     */
+    public java.util.Map<Long, List<String>> getNoteTagsBatch(List<Long> noteIds) {
+        if (noteIds == null || noteIds.isEmpty()) {
+            return new java.util.HashMap<>();
+        }
+        List<NoteTagRelationMapper.NoteTagVO> tagVOs = noteTagRelationMapper.selectTagNamesByNoteIds(noteIds);
+        
+        java.util.Map<Long, List<String>> result = new java.util.HashMap<>();
+        for (NoteTagRelationMapper.NoteTagVO vo : tagVOs) {
+            result.computeIfAbsent(vo.getNoteId(), k -> new ArrayList<>()).add(vo.getName());
+        }
+        return result;
+    }
+
+    /**
      * 设置笔记的标签（会先删除旧标签）
      */
     @Transactional

@@ -2,12 +2,15 @@ package com.onlystudents.note.dto;
 
 import lombok.Data;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-public class NoteDTO {
+public class NoteDTO implements Serializable {
+    
+    private static final long serialVersionUID = 1L;
     
     private Long id;
     

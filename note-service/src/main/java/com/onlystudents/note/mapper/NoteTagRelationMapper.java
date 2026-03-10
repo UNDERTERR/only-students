@@ -3,6 +3,7 @@ package com.onlystudents.note.mapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.onlystudents.note.entity.NoteTagRelation;
+import lombok.Getter;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -23,6 +24,29 @@ public interface NoteTagRelationMapper extends BaseMapper<NoteTagRelation> {
      */
     @Select("SELECT t.name FROM note_tag t INNER JOIN note_tag_relation r ON t.id = r.tag_id WHERE r.note_id = #{noteId} AND t.status = 1")
     List<String> selectTagNamesByNoteId(@Param("noteId") Long noteId);
+
+    /**
+     * 批量查询多个笔记的标签（真正的批量SQL）
+     */
+    @Select("<script>" +
+            "SELECT r.note_id, t.name FROM note_tag t " +
+            "INNER JOIN note_tag_relation r ON t.id = r.tag_id " +
+            "WHERE r.note_id IN " +
+            "<foreach collection='noteIds' item='id' open='(' separator=',' close=')'>" +
+            "#{id}" +
+            "</foreach>" +
+            " AND t.status = 1" +
+            "</script>")
+    List<NoteTagVO> selectTagNamesByNoteIds(@Param("noteIds") List<Long> noteIds);
+
+    /**
+     * NoteTagVO 用于批量查询结果
+     */
+    @Getter
+    class NoteTagVO {
+        private Long noteId;
+        private String name;
+    }
     
     /**
      * 根据笔记ID删除所有关联（使用 MyBatis Plus）

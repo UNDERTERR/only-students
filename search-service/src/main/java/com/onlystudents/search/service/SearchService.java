@@ -16,6 +16,8 @@ public interface SearchService {
     
     SearchResult<NoteSearchResult> searchNotesBySchool(Long schoolId, Integer page, Integer size);
     
+    SearchResult<NoteSearchResult> searchNotesByUserId(Long userId, Integer page, Integer size);
+    
     SearchResult<String> getHotKeywords(Integer limit);
     
     SearchResult<String> getSuggestions(String prefix, Integer limit);

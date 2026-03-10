@@ -91,7 +91,6 @@ public class ElasticsearchIndexService {
                 .properties("deleted", p -> p.integer(i -> i))
                 .properties("hotScore", p -> p.double_(d -> d))
                 .properties("viewCount", p -> p.integer(i -> i))
-                .properties("likeCount", p -> p.integer(i -> i))
                 .properties("favoriteCount", p -> p.integer(i -> i))
                 .properties("commentCount", p -> p.integer(i -> i))
                 .properties("shareCount", p -> p.integer(i -> i))

@@ -42,11 +42,11 @@ public class RabbitConfig {
     }
 
     /**
-     * 笔记交换机
+     * 笔记交换机（使用Topic类型，支持通配符）
      */
     @Bean
-    public DirectExchange noteExchange() {
-        return new DirectExchange("note.exchange", true, false);
+    public TopicExchange noteExchange() {
+        return new TopicExchange("note.exchange", true, false);
     }
 
     /**

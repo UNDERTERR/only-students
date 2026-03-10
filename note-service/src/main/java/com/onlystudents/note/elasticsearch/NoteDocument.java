@@ -25,11 +25,11 @@ public class NoteDocument {
     private Integer deleted;
     private Double hotScore;
     private Integer viewCount;
-    private Integer likeCount;
     private Integer favoriteCount;
     private Integer commentCount;
     private Integer shareCount;
-    private Float ratingAvg;
+    private Double rating;
+    private Integer ratingCount;
     private String coverImage;
     private LocalDateTime publishTime;
     private LocalDateTime createdAt;

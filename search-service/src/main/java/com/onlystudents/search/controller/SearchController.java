@@ -22,9 +22,9 @@ public class SearchController {
     private final SearchService searchService;
     
     @GetMapping("/notes")
-    @Operation(summary = "搜索笔记", description = "根据关键词、教育阶段等条件搜索笔记")
+    @Operation(summary = "搜索笔记", description = "根据关键词、教育阶段等条件搜索笔记，不传keyword则返回所有笔记")
     public Result<SearchResult<NoteSearchResult>> searchNotes(
-            @RequestParam(name = "keyword") String keyword,
+            @RequestParam(name = "keyword", required = false) String keyword,
             @RequestParam(name = "educationLevel", required = false) Integer educationLevel,
             @RequestParam(name = "priceType", required = false) Integer priceType,
             @RequestParam(name = "sortType", defaultValue = "0") Integer sortType,
@@ -60,6 +60,15 @@ public class SearchController {
             @RequestParam(name = "page", defaultValue = "1") Integer page,
             @RequestParam(name = "size", defaultValue = "20") Integer size) {
         return Result.success(searchService.searchNotesBySchool(schoolId, page, size));
+    }
+
+    @GetMapping("/notes/by-user")
+    @Operation(summary = "按用户搜索笔记", description = "根据用户ID搜索相关笔记")
+    public Result<SearchResult<NoteSearchResult>> searchNotesByUserId(
+            @RequestParam(name = "userId") Long userId,
+            @RequestParam(name = "page", defaultValue = "1") Integer page,
+            @RequestParam(name = "size", defaultValue = "20") Integer size) {
+        return Result.success(searchService.searchNotesByUserId(userId, page, size));
     }
     
     @GetMapping("/hot-keywords")

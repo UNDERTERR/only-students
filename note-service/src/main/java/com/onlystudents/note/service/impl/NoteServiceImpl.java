@@ -2,6 +2,8 @@ package com.onlystudents.note.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.github.benmanes.caffeine.cache.Cache;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.common.result.Result;
@@ -16,10 +18,10 @@ import com.onlystudents.common.event.note.NotePublishEvent;
 import com.onlystudents.note.mapper.NoteMapper;
 import com.onlystudents.note.service.NoteService;
 import com.onlystudents.note.service.TagService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -33,7 +35,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class NoteServiceImpl implements NoteService {
 
     private final NoteMapper noteMapper;
@@ -43,11 +44,44 @@ public class NoteServiceImpl implements NoteService {
     private final RabbitTemplate rabbitTemplate;
     private final StringRedisTemplate redisTemplate;
     private final TagService tagService;
+    private final CacheManager cacheManager;
 
     private static final String CACHE_KEY_NOTE = "note:detail:";
     private static final String CACHE_KEY_HOT = "hotNotes";
     private static final String CACHE_KEY_LATEST = "latestNotes";
     private static final long CACHE_TTL_MINUTES = 5;
+
+    private Cache<Long, NoteDTO> noteLocalCache;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public NoteServiceImpl(NoteMapper noteMapper,
+                           SubscriptionFeignClient subscriptionFeignClient,
+                           FileFeignClient fileFeignClient,
+                           UserFeignClient userFeignClient,
+                           RabbitTemplate rabbitTemplate,
+                           StringRedisTemplate redisTemplate,
+                           TagService tagService,
+                           CacheManager cacheManager) {
+        this.noteMapper = noteMapper;
+        this.subscriptionFeignClient = subscriptionFeignClient;
+        this.fileFeignClient = fileFeignClient;
+        this.userFeignClient = userFeignClient;
+        this.rabbitTemplate = rabbitTemplate;
+        this.redisTemplate = redisTemplate;
+        this.tagService = tagService;
+        this.cacheManager = cacheManager;
+        initLocalCache();
+        objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    }
+
+    private void initLocalCache() {
+        this.noteLocalCache = com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+                .initialCapacity(100)
+                .maximumSize(500)
+                .expireAfterWrite(1, java.util.concurrent.TimeUnit.MINUTES)
+                .build();
+    }
 
 
     @Override
@@ -107,11 +141,6 @@ public class NoteServiceImpl implements NoteService {
     }
 
     @Override
-    @Caching(evict = {
-            @CacheEvict(value = "notes", key = "#p0"),
-            @CacheEvict(value = "hotNotes", allEntries = true),
-            @CacheEvict(value = "latestNotes", allEntries = true)
-    })
     public NoteDTO updateNote(Long noteId, UpdateNoteRequest request, Long userId) {
         Note note = noteMapper.selectById(noteId);
         if (note == null) {
@@ -130,11 +159,12 @@ public class NoteServiceImpl implements NoteService {
             tagService.setNoteTags(noteId, request.getTags());
         }
 
+        clearNoteCache(noteId);
+
         return convertToDTO(note);
     }
 
     @Override
-    @CacheEvict(value = {"hotNotes", "latestNotes"}, allEntries = true)
     public void deleteNote(Long noteId, Long userId) {
         log.info("开始删除笔记: noteId={}, userId={}", noteId, userId);
         Note note = noteMapper.selectById(noteId);
@@ -168,6 +198,9 @@ public class NoteServiceImpl implements NoteService {
         // 使用 MyBatis Plus 逻辑删除，会自动设置 deleted=1
         noteMapper.deleteById(noteId);
         log.info("笔记已从数据库删除: noteId={}", noteId);
+
+        // 清除缓存
+        clearNoteCache(noteId);
 
         // 发送MQ消息通知删除ES文档
         try {
@@ -209,13 +242,66 @@ public class NoteServiceImpl implements NoteService {
     }
 
     @Override
-    @Cacheable(value = "notes", key = "#p0", unless = "#result == null")
     public NoteDTO getNoteById(Long noteId) {
-        Note note = noteMapper.selectById(noteId);
-        if (note == null || note.getStatus() != 2) { // 只返回已发布的
-            throw new BusinessException(ResultCode.NOTE_NOT_FOUND);
+        if (noteId == null) {
+            return null;
         }
-        return convertToDTO(note);
+
+        NoteDTO cached = noteLocalCache.getIfPresent(noteId);
+        if (cached != null) {
+            log.debug("L1缓存命中: noteId={}", noteId);
+            return cached;
+        }
+
+        String redisKey = CACHE_KEY_NOTE + noteId;
+        Object redisValue = redisTemplate.opsForValue().get(redisKey);
+        if (redisValue != null) {
+            log.debug("L2缓存命中: noteId={}", noteId);
+            NoteDTO noteDTO = convertRedisValue(redisValue);
+            if (noteDTO != null) {
+                noteLocalCache.put(noteId, noteDTO);
+            }
+            return noteDTO;
+        }
+
+        Note note = noteMapper.selectById(noteId);
+        if (note == null || note.getStatus() != 2) {
+            return null;
+        }
+        NoteDTO noteDTO = convertToDTO(note);
+
+        try {
+            String jsonValue = objectMapper.writeValueAsString(noteDTO);
+            redisTemplate.opsForValue().set(redisKey, jsonValue, CACHE_TTL_MINUTES, java.util.concurrent.TimeUnit.MINUTES);
+        } catch (Exception e) {
+            log.error("序列化NoteDTO失败", e);
+        }
+        noteLocalCache.put(noteId, noteDTO);
+        log.debug("数据库查询并写入缓存: noteId={}", noteId);
+
+        return noteDTO;
+    }
+
+    private NoteDTO convertRedisValue(Object redisValue) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+            mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+            if (redisValue instanceof String) {
+                return mapper.readValue((String) redisValue, NoteDTO.class);
+            }
+            return mapper.convertValue(redisValue, NoteDTO.class);
+        } catch (Exception e) {
+            log.error("Redis值转换失败", e);
+            return null;
+        }
+    }
+
+    private void clearNoteCache(Long noteId) {
+        noteLocalCache.invalidate(noteId);
+        String redisKey = CACHE_KEY_NOTE + noteId;
+        redisTemplate.delete(redisKey);
+        log.info("清除笔记缓存: noteId={}", noteId);
     }
 
     @Override
@@ -285,7 +371,36 @@ public class NoteServiceImpl implements NoteService {
             publicNotes.addAll(0, userNotes);
         }
 
-        return publicNotes.stream().map(this::convertToDTO).collect(Collectors.toList());
+        // 直接转换，不查询标签（标签按需加载）
+        return publicNotes.stream().map(this::convertToDTOWithoutRemote).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<NoteDTO> getNotesBySchoolId(Long schoolId, Integer limit) {
+        if (limit == null || limit > 100) {
+            limit = 20;
+        }
+        log.info("获取学校笔记: schoolId={}, limit={}", schoolId, limit);
+        
+        List<Note> notes = noteMapper.selectNotesBySchoolId(schoolId, limit);
+        
+        // 直接转换，不查询标签
+        return notes.stream().map(this::convertToDTOWithoutRemote).collect(Collectors.toList());
+    }
+
+    /**
+     * 转换DTO但不调用远程服务（用于批量处理）
+     */
+    private NoteDTO convertToDTOWithoutRemote(Note note) {
+        NoteDTO dto = new NoteDTO();
+        BeanUtils.copyProperties(note, dto);
+        
+        // 如果 authorAvatar 为空，使用默认值
+        if (dto.getAuthorNickname() == null || dto.getAuthorNickname().isEmpty()) {
+            dto.setAuthorNickname("用户_" + note.getUserId());
+        }
+        
+        return dto;
     }
 
     @Override
@@ -304,11 +419,6 @@ public class NoteServiceImpl implements NoteService {
     }
 
     @Override
-    @Caching(evict = {
-            @CacheEvict(value = "notes", key = "#p0"),
-            @CacheEvict(value = "hotNotes", allEntries = true),
-            @CacheEvict(value = "latestNotes", allEntries = true)
-    })
     public void publishNote(Long noteId, Long userId) {
         Note note = noteMapper.selectById(noteId);
         if (note == null) {
@@ -336,6 +446,8 @@ public class NoteServiceImpl implements NoteService {
         } else {
             log.warn("笔记没有学校信息, noteId={}, schoolId={}", noteId, note.getSchoolId());
         }
+
+        clearNoteCache(noteId);
 
         try {
             // 发送笔记同步消息

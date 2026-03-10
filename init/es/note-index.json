@@ -81,9 +81,6 @@
       "view_count": {
         "type": "integer"
       },
-      "like_count": {
-        "type": "integer"
-      },
       "favorite_count": {
         "type": "integer"
       },

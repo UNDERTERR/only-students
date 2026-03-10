@@ -8,6 +8,7 @@ import com.onlystudents.common.event.note.NoteShareEvent;
 import com.onlystudents.note.mapper.NoteMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
@@ -25,6 +26,7 @@ public class RatingEventListener {
 
     private final NoteMapper noteMapper;
     private final CacheManager cacheManager;
+    private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper = JsonSerializerUtils.getGlobalObjectMapper();
 
     private void evictCache(Long noteId) {
@@ -45,6 +47,18 @@ public class RatingEventListener {
     }
 
     /**
+     * 同步到 Elasticsearch
+     */
+    private void syncToEs(Long noteId) {
+        try {
+            rabbitTemplate.convertAndSend("note.exchange", "note.sync", noteId);
+            log.info("发送ES同步消息成功: noteId={}", noteId);
+        } catch (Exception e) {
+            log.error("发送ES同步消息失败: noteId={}", noteId, e);
+        }
+    }
+
+    /**
      * 监听收藏事件
      */
     @RabbitListener(queues = "favorite.created.queue")
@@ -61,6 +75,7 @@ public class RatingEventListener {
             throw new RuntimeException("更新收藏数失败");
         }
         evictCache(event.getNoteId());
+        syncToEs(event.getNoteId());
         log.info("更新笔记收藏数成功: noteId={}",
                 event.getNoteId());
     }
@@ -76,6 +91,7 @@ public class RatingEventListener {
         int rows = noteMapper.dreaseFavoriteCount(event.getNoteId());
         log.info("数据库更新结果: noteId={}, affectedRows={}", event.getNoteId(), rows);
         evictCache(event.getNoteId());
+        syncToEs(event.getNoteId());
         log.info("更新笔记收藏数成功: noteId={}", event.getNoteId());
         if (rows == 0) {
             throw new RuntimeException("更新收藏数失败");
@@ -93,6 +109,7 @@ public class RatingEventListener {
         int rows = noteMapper.updateRatingStats(event.getNoteId(),
                 event.getAverageScore());
         evictCache(event.getNoteId());
+        syncToEs(event.getNoteId());
         log.info("更新笔记评分统计成功: noteId={}, avg={}, count={}",
                 event.getNoteId(), event.getAverageScore(), event.getRatingCount());
         if (rows == 0) {
@@ -111,6 +128,7 @@ public class RatingEventListener {
                 event.getNoteId(), event.getUserId());
         int rows = noteMapper.updateShareCount(event.getNoteId());
         evictCache(event.getNoteId());
+        syncToEs(event.getNoteId());
         log.info("更新笔记分享数成功: noteId={}", event.getNoteId());
         if (rows == 0) {
             throw new RuntimeException("更新笔记分享数失败");

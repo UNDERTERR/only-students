@@ -24,7 +24,7 @@ public class ReportServiceImpl implements ReportService {
     
     @Override
     @Transactional
-    public Report submitReport(Long reporterId, Long targetId, Integer targetType, Integer reason, 
+    public Report submitReport(Long reporterId, Long targetId, Integer targetType, String reason, 
                             String description, String evidence) {
         // 检查是否已举报过
         LambdaQueryWrapper<Report> wrapper = new LambdaQueryWrapper<>();
@@ -41,7 +41,7 @@ public class ReportServiceImpl implements ReportService {
         report.setReporterId(reporterId);
         report.setTargetId(targetId);
         report.setTargetType(targetType);
-        report.setReason(reason);
+        report.setReasonType(reason);
         report.setDescription(description);
         report.setEvidence(evidence);
         report.setStatus(0);

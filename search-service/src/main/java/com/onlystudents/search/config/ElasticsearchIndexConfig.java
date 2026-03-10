@@ -104,8 +104,6 @@ public class ElasticsearchIndexConfig {
                 .properties("hotScore", p -> p.double_(d -> d))
                 // viewCount
                 .properties("viewCount", p -> p.integer(i -> i))
-                // likeCount
-                .properties("likeCount", p -> p.integer(i -> i))
                 // favoriteCount
                 .properties("favoriteCount", p -> p.integer(i -> i))
                 // commentCount

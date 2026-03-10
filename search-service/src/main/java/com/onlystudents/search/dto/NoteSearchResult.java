@@ -9,32 +9,24 @@ import java.util.List;
 public class NoteSearchResult {
     
     private Long id;
-    
+    private Long userId;
     private String title;
-    
-    private String summary;
-    
-    private Long authorId;
-    
-    private String authorNickname;
-    
-    private String authorAvatar;
-    
-    private Integer rating;
-    
-    private Integer ratingCount;
-    
-    private Integer averageRating;
-    
+    private String content;
+    private String coverImage;
+    private Integer visibility;
     private Integer price;
-    
+    private Boolean isFree;
+    private Integer viewCount;
+    private Integer ratingCount;
+    private Integer averageRating;
+    private Integer favoriteCount;
+    private Integer commentCount;
+    private Integer shareCount;
     private Integer status;
     
-    private Integer viewCount;
-    
-    private Integer likeCount;
-    
-    private Integer downloadCount;
+    private Long authorId;
+    private String authorNickname;
+    private String authorAvatar;
     
     private List<String> tags;
     

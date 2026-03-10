@@ -296,9 +296,9 @@ only-students/
 ├── search-service/               # 搜索服务 (8012)
 ├── analytics-service/            # 分析服务 (8013)
 ├── admin-service/                # 后台服务 (8014)
-├── sql/                          # 数据库脚本
-│   ├── init/                     # 初始化脚本
-│   └── *.sql                     # 各服务SQL
+├── init/                          # 数据库脚本
+│   ├── sql/                     # 初始化脚本
+│   └── es/                    # 各服务SQL
 ├── start-services.bat            # 启动脚本
 └── PROJECT_SUMMARY.md            # 本文档
 ```

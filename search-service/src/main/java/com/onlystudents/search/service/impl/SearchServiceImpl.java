@@ -55,7 +55,7 @@ public class SearchServiceImpl implements SearchService {
                             "userId", "authorNickname", "authorAvatar",
                             "educationLevel", "schoolId", "schoolName",
                             "visibility", "price", "status", "deleted", "hotScore",
-                            "viewCount", "likeCount", "favoriteCount", "commentCount", "shareCount",
+                            "viewCount", "favoriteCount", "commentCount", "shareCount",
                             "rating", "ratingCount", "coverImage", "publishTime", "createdAt"
                     )));
 
@@ -165,19 +165,30 @@ public class SearchServiceImpl implements SearchService {
                     .map(hit -> {
                         NoteDocument doc = hit.source();
                         NoteSearchResult result = new NoteSearchResult();
-                        BeanUtils.copyProperties(doc, result);
                         result.setId(doc.getNoteId());
+                        result.setUserId(doc.getUserId());
+                        result.setTitle(doc.getTitle());
+                        result.setContent(doc.getContent());
+                        result.setCoverImage(doc.getCoverImage());
+                        result.setVisibility(doc.getVisibility());
+                        result.setPrice(doc.getPrice() != null ? doc.getPrice().intValue() : 0);
+                        result.setIsFree(doc.getPrice() == null || doc.getPrice().intValue() == 0);
+                        result.setViewCount(doc.getViewCount());
+                        result.setRatingCount(doc.getRatingCount());
+                        result.setAverageRating(doc.getRating() != null ? doc.getRating().intValue() : 0);
+                        result.setFavoriteCount(doc.getFavoriteCount());
+                        result.setCommentCount(doc.getCommentCount());
+                        result.setShareCount(doc.getShareCount());
+                        result.setStatus(doc.getStatus());
                         result.setAuthorId(doc.getUserId());
                         result.setAuthorNickname(doc.getAuthorNickname());
                         result.setAuthorAvatar(doc.getAuthorAvatar());
-                        result.setRating(doc.getRating() != null ? doc.getRating().intValue() : 0);
-                        result.setRatingCount(doc.getRatingCount());
-                        result.setAverageRating(doc.getRating() != null ? doc.getRating().intValue() : 0);
-                        result.setPrice(doc.getPrice() != null ? doc.getPrice().intValue() : 0);
+                        result.setTags(doc.getTags());
+                        result.setCreatedAt(doc.getCreatedAt());
 
                         // 摘要取内容前150字
                         if (doc.getContent() != null) {
-                            result.setSummary(doc.getContent().length() > 150
+                            result.setContent(doc.getContent().length() > 150
                                     ? doc.getContent().substring(0, 150) + "..."
                                     : doc.getContent());
                         }
@@ -284,11 +295,26 @@ public class SearchServiceImpl implements SearchService {
                     .map(hit -> {
                         NoteDocument doc = hit.source();
                         NoteSearchResult result = new NoteSearchResult();
-                        BeanUtils.copyProperties(doc, result);
                         result.setId(doc.getNoteId());
+                        result.setUserId(doc.getUserId());
+                        result.setTitle(doc.getTitle());
+                        result.setContent(doc.getContent());
+                        result.setCoverImage(doc.getCoverImage());
+                        result.setVisibility(doc.getVisibility());
+                        result.setPrice(doc.getPrice() != null ? doc.getPrice().intValue() : 0);
+                        result.setIsFree(doc.getPrice() == null || doc.getPrice().intValue() == 0);
+                        result.setViewCount(doc.getViewCount());
+                        result.setRatingCount(doc.getRatingCount());
+                        result.setAverageRating(doc.getRating() != null ? doc.getRating().intValue() : 0);
+                        result.setFavoriteCount(doc.getFavoriteCount());
+                        result.setCommentCount(doc.getCommentCount());
+                        result.setShareCount(doc.getShareCount());
+                        result.setStatus(doc.getStatus());
                         result.setAuthorId(doc.getUserId());
                         result.setAuthorNickname(doc.getAuthorNickname());
                         result.setAuthorAvatar(doc.getAuthorAvatar());
+                        result.setTags(doc.getTags());
+                        result.setCreatedAt(doc.getCreatedAt());
                         return result;
                     })
                     .collect(Collectors.toList());
@@ -335,11 +361,26 @@ public class SearchServiceImpl implements SearchService {
                     .map(hit -> {
                         NoteDocument doc = hit.source();
                         NoteSearchResult result = new NoteSearchResult();
-                        BeanUtils.copyProperties(doc, result);
                         result.setId(doc.getNoteId());
+                        result.setUserId(doc.getUserId());
+                        result.setTitle(doc.getTitle());
+                        result.setContent(doc.getContent());
+                        result.setCoverImage(doc.getCoverImage());
+                        result.setVisibility(doc.getVisibility());
+                        result.setPrice(doc.getPrice() != null ? doc.getPrice().intValue() : 0);
+                        result.setIsFree(doc.getPrice() == null || doc.getPrice().intValue() == 0);
+                        result.setViewCount(doc.getViewCount());
+                        result.setRatingCount(doc.getRatingCount());
+                        result.setAverageRating(doc.getRating() != null ? doc.getRating().intValue() : 0);
+                        result.setFavoriteCount(doc.getFavoriteCount());
+                        result.setCommentCount(doc.getCommentCount());
+                        result.setShareCount(doc.getShareCount());
+                        result.setStatus(doc.getStatus());
                         result.setAuthorId(doc.getUserId());
                         result.setAuthorNickname(doc.getAuthorNickname());
                         result.setAuthorAvatar(doc.getAuthorAvatar());
+                        result.setTags(doc.getTags());
+                        result.setCreatedAt(doc.getCreatedAt());
                         return result;
                     })
                     .collect(Collectors.toList());
@@ -355,6 +396,72 @@ public class SearchServiceImpl implements SearchService {
 
         } catch (IOException e) {
             log.error("按学校搜索笔记失败：schoolId={}", schoolId, e);
+            SearchResult<NoteSearchResult> emptyResult = new SearchResult<>();
+            emptyResult.setList(new ArrayList<>());
+            emptyResult.setTotal(0L);
+            emptyResult.setPage(page);
+            emptyResult.setSize(size);
+            emptyResult.setTotalPages(0);
+            return emptyResult;
+        }
+    }
+
+    @Override
+    public SearchResult<NoteSearchResult> searchNotesByUserId(Long userId, Integer page, Integer size) {
+        log.info("按用户搜索笔记：userId={}, page={}, size={}", userId, page, size);
+
+        try {
+            SearchRequest request = SearchRequest.of(s -> s
+                    .index("notes")
+                    .from((page - 1) * size)
+                    .size(size)
+                    .query(q -> q
+                            .term(t -> t.field("userId").value(userId))
+                    )
+                    .sort(sort -> sort.field(f -> f.field("publishTime").order(SortOrder.Desc)))
+            );
+
+            SearchResponse<NoteDocument> response = elasticsearchClient.search(request, NoteDocument.class);
+
+            List<NoteSearchResult> results = response.hits().hits().stream()
+                    .map(hit -> {
+                        NoteDocument doc = hit.source();
+                        NoteSearchResult result = new NoteSearchResult();
+                        result.setId(doc.getNoteId());
+                        result.setUserId(doc.getUserId());
+                        result.setTitle(doc.getTitle());
+                        result.setContent(doc.getContent());
+                        result.setCoverImage(doc.getCoverImage());
+                        result.setVisibility(doc.getVisibility());
+                        result.setPrice(doc.getPrice() != null ? doc.getPrice().intValue() : 0);
+                        result.setIsFree(doc.getPrice() == null || doc.getPrice().intValue() == 0);
+                        result.setViewCount(doc.getViewCount());
+                        result.setRatingCount(doc.getRatingCount());
+                        result.setAverageRating(doc.getRating() != null ? doc.getRating().intValue() : 0);
+                        result.setFavoriteCount(doc.getFavoriteCount());
+                        result.setCommentCount(doc.getCommentCount());
+                        result.setShareCount(doc.getShareCount());
+                        result.setStatus(doc.getStatus());
+                        result.setAuthorId(doc.getUserId());
+                        result.setAuthorNickname(doc.getAuthorNickname());
+                        result.setAuthorAvatar(doc.getAuthorAvatar());
+                        result.setTags(doc.getTags());
+                        result.setCreatedAt(doc.getCreatedAt());
+                        return result;
+                    })
+                    .collect(Collectors.toList());
+
+            SearchResult<NoteSearchResult> searchResult = new SearchResult<>();
+            searchResult.setList(results);
+            searchResult.setTotal(response.hits().total() != null ? response.hits().total().value() : 0);
+            searchResult.setPage(page);
+            searchResult.setSize(size);
+            searchResult.setTotalPages((int) Math.ceil((double) searchResult.getTotal() / size));
+
+            return searchResult;
+
+        } catch (IOException e) {
+            log.error("按用户搜索笔记失败：userId={}", userId, e);
             SearchResult<NoteSearchResult> emptyResult = new SearchResult<>();
             emptyResult.setList(new ArrayList<>());
             emptyResult.setTotal(0L);

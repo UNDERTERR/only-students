@@ -86,12 +86,12 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public DirectExchange noteExchange() {
-        return new DirectExchange("note.exchange", true, false);
+    public TopicExchange noteExchange() {
+        return new TopicExchange("note.exchange", true, false);
     }
 
     @Bean
-    public Binding notePublishBinding(@Qualifier("notePublishQueue") Queue notePublishQueue, @Qualifier("noteExchange") DirectExchange noteExchange) {
+    public Binding notePublishBinding(@Qualifier("notePublishQueue") Queue notePublishQueue, @Qualifier("noteExchange") TopicExchange noteExchange) {
         return BindingBuilder.bind(notePublishQueue).to(noteExchange).with("note.publish");
     }
 
