@@ -8,6 +8,7 @@ USE only_students_file;
 CREATE TABLE IF NOT EXISTS file_record (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     original_name VARCHAR(255) NOT NULL COMMENT '原始文件名',
+    category VARCHAR(50) COMMENT '文件分类',
     file_name VARCHAR(255) NOT NULL COMMENT '存储文件名（UUID）',
     file_path VARCHAR(500) NOT NULL COMMENT '存储路径',
     file_size BIGINT NOT NULL COMMENT '文件大小（字节）',

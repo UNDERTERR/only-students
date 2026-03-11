@@ -2,8 +2,7 @@ package com.onlystudents.note.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.github.benmanes.caffeine.cache.Cache;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.common.result.Result;
@@ -21,11 +20,9 @@ import com.onlystudents.note.service.TagService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
-import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -41,40 +38,18 @@ public class NoteServiceImpl implements NoteService {
     private final FileFeignClient fileFeignClient;
     private final UserFeignClient userFeignClient;
     private final RabbitTemplate rabbitTemplate;
-    private final StringRedisTemplate redisTemplate;
     private final TagService tagService;
-
-    private static final String CACHE_KEY_NOTE = "note:detail:";
-    private static final String CACHE_KEY_HOT = "hotNotes";
-    private static final String CACHE_KEY_LATEST = "latestNotes";
-    private static final long CACHE_TTL_MINUTES = 5;
-
-    private Cache<Long, NoteDTO> noteLocalCache;
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public NoteServiceImpl(NoteMapper noteMapper,
                            FileFeignClient fileFeignClient,
                            UserFeignClient userFeignClient,
                            RabbitTemplate rabbitTemplate,
-                           StringRedisTemplate redisTemplate,
                            TagService tagService) {
         this.noteMapper = noteMapper;
         this.fileFeignClient = fileFeignClient;
         this.userFeignClient = userFeignClient;
         this.rabbitTemplate = rabbitTemplate;
-        this.redisTemplate = redisTemplate;
         this.tagService = tagService;
-        initLocalCache();
-        objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
-        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-    }
-
-    private void initLocalCache() {
-        this.noteLocalCache = com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
-                .initialCapacity(100)
-                .maximumSize(500)
-                .expireAfterWrite(1, java.util.concurrent.TimeUnit.MINUTES)
-                .build();
     }
 
 
@@ -135,6 +110,7 @@ public class NoteServiceImpl implements NoteService {
     }
 
     @Override
+    @CacheEvict(value = "noteDetail", key = "#noteId")
     public NoteDTO updateNote(Long noteId, UpdateNoteRequest request, Long userId) {
         Note note = noteMapper.selectById(noteId);
         if (note == null) {
@@ -153,12 +129,11 @@ public class NoteServiceImpl implements NoteService {
             tagService.setNoteTags(noteId, request.getTags());
         }
 
-        clearNoteCache(noteId);
-
         return convertToDTO(note);
     }
 
     @Override
+    @CacheEvict(value = "noteDetail", key = "#noteId")
     public void deleteNote(Long noteId, Long userId) {
         log.info("开始删除笔记: noteId={}, userId={}", noteId, userId);
         Note note = noteMapper.selectById(noteId);
@@ -192,9 +167,6 @@ public class NoteServiceImpl implements NoteService {
         // 使用 MyBatis Plus 逻辑删除，会自动设置 deleted=1
         noteMapper.deleteById(noteId);
         log.info("笔记已从数据库删除: noteId={}", noteId);
-
-        // 清除缓存
-        clearNoteCache(noteId);
 
         // 发送MQ消息通知删除ES文档
         try {
@@ -236,66 +208,17 @@ public class NoteServiceImpl implements NoteService {
     }
 
     @Override
+    @Cacheable(value = "noteDetail", key = "#noteId", unless = "#result == null")
     public NoteDTO getNoteById(Long noteId) {
         if (noteId == null) {
             return null;
-        }
-
-        NoteDTO cached = noteLocalCache.getIfPresent(noteId);
-        if (cached != null) {
-            log.debug("L1缓存命中: noteId={}", noteId);
-            return cached;
-        }
-
-        String redisKey = CACHE_KEY_NOTE + noteId;
-        Object redisValue = redisTemplate.opsForValue().get(redisKey);
-        if (redisValue != null) {
-            log.debug("L2缓存命中: noteId={}", noteId);
-            NoteDTO noteDTO = convertRedisValue(redisValue);
-            if (noteDTO != null) {
-                noteLocalCache.put(noteId, noteDTO);
-            }
-            return noteDTO;
         }
 
         Note note = noteMapper.selectById(noteId);
         if (note == null || note.getStatus() != 2) {
             return null;
         }
-        NoteDTO noteDTO = convertToDTO(note);
-
-        try {
-            String jsonValue = objectMapper.writeValueAsString(noteDTO);
-            redisTemplate.opsForValue().set(redisKey, jsonValue, CACHE_TTL_MINUTES, java.util.concurrent.TimeUnit.MINUTES);
-        } catch (Exception e) {
-            log.error("序列化NoteDTO失败", e);
-        }
-        noteLocalCache.put(noteId, noteDTO);
-        log.debug("数据库查询并写入缓存: noteId={}", noteId);
-
-        return noteDTO;
-    }
-
-    private NoteDTO convertRedisValue(Object redisValue) {
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
-            mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-            if (redisValue instanceof String) {
-                return mapper.readValue((String) redisValue, NoteDTO.class);
-            }
-            return mapper.convertValue(redisValue, NoteDTO.class);
-        } catch (Exception e) {
-            log.error("Redis值转换失败", e);
-            return null;
-        }
-    }
-
-    private void clearNoteCache(Long noteId) {
-        noteLocalCache.invalidate(noteId);
-        String redisKey = CACHE_KEY_NOTE + noteId;
-        redisTemplate.delete(redisKey);
-        log.info("清除笔记缓存: noteId={}", noteId);
+        return convertToDTO(note);
     }
 
     @Override
@@ -365,8 +288,16 @@ public class NoteServiceImpl implements NoteService {
             publicNotes.addAll(0, userNotes);
         }
 
-        // 直接转换，不查询标签（标签按需加载）
-        return publicNotes.stream().map(this::convertToDTOWithoutRemote).collect(Collectors.toList());
+        // 批量查询标签
+        List<Long> noteIds = publicNotes.stream().map(Note::getId).collect(Collectors.toList());
+        Map<Long, List<String>> tagsMap = tagService.getNoteTagsBatch(noteIds);
+
+        // 转换DTO
+        return publicNotes.stream().map(note -> {
+            NoteDTO dto = convertToDTOWithoutRemote(note);
+            dto.setTags(tagsMap.get(note.getId()));
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     @Override
@@ -378,8 +309,15 @@ public class NoteServiceImpl implements NoteService {
         
         List<Note> notes = noteMapper.selectNotesBySchoolId(schoolId, limit);
         
-        // 直接转换，不查询标签
-        return notes.stream().map(this::convertToDTOWithoutRemote).collect(Collectors.toList());
+        // 批量查询标签
+        List<Long> noteIds = notes.stream().map(Note::getId).collect(Collectors.toList());
+        Map<Long, List<String>> tagsMap = tagService.getNoteTagsBatch(noteIds);
+
+        return notes.stream().map(note -> {
+            NoteDTO dto = convertToDTOWithoutRemote(note);
+            dto.setTags(tagsMap.get(note.getId()));
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     /**
@@ -441,8 +379,6 @@ public class NoteServiceImpl implements NoteService {
             log.warn("笔记没有学校信息, noteId={}, schoolId={}", noteId, note.getSchoolId());
         }
 
-        clearNoteCache(noteId);
-
         try {
             // 发送笔记同步消息
             rabbitTemplate.convertAndSend("note.exchange", "note.sync", note);
@@ -464,19 +400,6 @@ public class NoteServiceImpl implements NoteService {
         wrapper.select(Note::getId);
         List<Note> notes = noteMapper.selectList(wrapper);
         return notes.stream().map(Note::getId).collect(Collectors.toList());
-    }
-
-    /**
-     * 清除列表缓存
-     */
-    private void clearListCache() {
-        try {
-            redisTemplate.delete(CACHE_KEY_HOT);
-            redisTemplate.delete(CACHE_KEY_LATEST);
-            log.debug("清除笔记列表缓存");
-        } catch (Exception e) {
-            log.warn("清除缓存失败", e);
-        }
     }
 
     private NoteDTO convertToDTO(Note note) {

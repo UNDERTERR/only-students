@@ -10,7 +10,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -33,13 +35,13 @@ public class TagService {
      * @param noteIds 笔记ID列表
      * @return Map<noteId, 标签列表>
      */
-    public java.util.Map<Long, List<String>> getNoteTagsBatch(List<Long> noteIds) {
+    public Map<Long, List<String>> getNoteTagsBatch(List<Long> noteIds) {
         if (noteIds == null || noteIds.isEmpty()) {
-            return new java.util.HashMap<>();
+            return new HashMap<>();
         }
         List<NoteTagRelationMapper.NoteTagVO> tagVOs = noteTagRelationMapper.selectTagNamesByNoteIds(noteIds);
         
-        java.util.Map<Long, List<String>> result = new java.util.HashMap<>();
+        Map<Long, List<String>> result = new HashMap<>();
         for (NoteTagRelationMapper.NoteTagVO vo : tagVOs) {
             result.computeIfAbsent(vo.getNoteId(), k -> new ArrayList<>()).add(vo.getName());
         }
