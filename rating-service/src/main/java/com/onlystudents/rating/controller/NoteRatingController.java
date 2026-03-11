@@ -60,4 +60,11 @@ public class NoteRatingController {
             @Parameter(description = "用户ID", hidden = true) @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId) {
         return ratingService.getUserRatings(userId);
     }
+    
+    @GetMapping("/creator/{creatorId}/stats")
+    @Operation(summary = "获取创作者评分统计", description = "获取创作者所有笔记的评分统计")
+    public Result<Map<String, Object>> getCreatorRatingStats(
+            @Parameter(description = "创作者ID") @PathVariable Long creatorId) {
+        return ratingService.getCreatorRatingStats(creatorId);
+    }
 }

@@ -34,4 +34,9 @@ public interface NoteRatingService {
      * 获取用户评分列表
      */
     Result<List<NoteRatingDTO>> getUserRatings(Long userId);
+    
+    /**
+     * 获取创作者所有笔记的评分统计
+     */
+    Result<java.util.Map<String, Object>> getCreatorRatingStats(Long creatorId);
 }

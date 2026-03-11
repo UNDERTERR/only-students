@@ -69,4 +69,26 @@ public interface NoteMapper extends BaseMapper<Note> {
 
     @Select("SELECT * FROM note WHERE school_id = #{schoolId} AND deleted = 0 AND status = 2 AND visibility != 4 ORDER BY publish_time DESC LIMIT #{limit}")
     List<Note> selectNotesBySchoolId(@Param("schoolId") Long schoolId, @Param("limit") Integer limit);
+
+    /**
+     * 根据用户ID列表查询已发布笔记（分页）
+     */
+    @Select("<script>" +
+            "SELECT * FROM note WHERE user_id IN " +
+            "<foreach collection='userIds' item='userId' open='(' separator=',' close=')'>" +
+            "#{userId}" +
+            "</foreach>" +
+            " AND deleted = 0 AND status = 2 AND visibility != 4 " +
+            "ORDER BY publish_time DESC LIMIT #{limit} OFFSET #{offset}" +
+            "</script>")
+    List<Note> selectNotesByUserIds(@Param("userIds") List<Long> userIds, @Param("offset") Integer offset, @Param("limit") Integer limit);
+
+    @Select("SELECT " +
+            "COUNT(*) as totalNotes, " +
+            "COALESCE(SUM(view_count), 0) as totalViews, " +
+            "COALESCE(SUM(comment_count), 0) as totalComments, " +
+            "COALESCE(SUM(favorite_count), 0) as totalCollects, " +
+            "COALESCE(SUM(share_count), 0) as totalShares " +
+            "FROM note WHERE user_id = #{creatorId} AND deleted = 0 AND status = 2")
+    java.util.Map<String, Object> selectCreatorNoteStats(@Param("creatorId") Long creatorId);
 }

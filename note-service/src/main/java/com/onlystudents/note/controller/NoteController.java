@@ -3,6 +3,7 @@ package com.onlystudents.note.controller;
 import com.onlystudents.common.constants.CommonConstants;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.Result;
+import com.onlystudents.note.client.SubscriptionFeignClient;
 import com.onlystudents.note.dto.CreateNoteRequest;
 import com.onlystudents.note.dto.NoteDTO;
 import com.onlystudents.note.dto.UpdateNoteRequest;
@@ -29,6 +30,7 @@ public class NoteController {
 
     private final NoteService noteService;
     private final NoteMapper noteMapper;
+    private final SubscriptionFeignClient subscriptionFeignClient;
 
     @PostMapping
     @Operation(summary = "创建笔记", description = "创建新笔记草稿")
@@ -130,6 +132,35 @@ public class NoteController {
         return Result.success(noteService.getNotesBySchoolId(schoolId, limit));
     }
 
+    @GetMapping("/subscribed")
+    @Operation(summary = "订阅笔记", description = "获取我订阅的创作者发布的笔记")
+    public Result<List<NoteDTO>> getSubscribedNotes(
+            @RequestParam(name = "page", defaultValue = "1") Integer page,
+            @RequestParam(name = "size", defaultValue = "20") Integer size,
+            @RequestHeader(value = CommonConstants.USER_ID_HEADER, required = false) Long userId) {
+        
+        if (userId == null) {
+            return Result.success(List.of());
+        }
+        
+        // 获取用户订阅的创作者列表
+        try {
+            var result = subscriptionFeignClient.getMySubscriptions(userId);
+            if (result == null || result.getData() == null || result.getData().isEmpty()) {
+                return Result.success(List.of());
+            }
+            
+            List<Long> creatorIds = result.getData().stream()
+                    .map(sub -> ((Number) sub.get("creatorId")).longValue())
+                    .collect(Collectors.toList());
+            
+            return Result.success(noteService.getSubscribedNotes(creatorIds, page, size));
+        } catch (Exception e) {
+            log.error("获取订阅笔记失败: userId={}", userId, e);
+            return Result.success(List.of());
+        }
+    }
+
     @GetMapping("/user/{userId}")
     @Operation(summary = "用户笔记列表", description = "获取指定用户的所有笔记")
     public Result<List<NoteDTO>> getUserNotes(@PathVariable(name = "userId") Long userId) {
@@ -195,5 +226,12 @@ public class NoteController {
                 })
                 .collect(Collectors.toList());
         return Result.success(noteDTOs);
+    }
+
+    @GetMapping("/creator/{creatorId}/stats")
+    @Operation(summary = "获取创作者笔记统计", description = "获取创作者的笔记统计数据（浏览、收藏、评论等）")
+    public Result<java.util.Map<String, Object>> getCreatorNoteStats(@PathVariable Long creatorId) {
+        java.util.Map<String, Object> stats = noteService.getCreatorNoteStats(creatorId);
+        return Result.success(stats);
     }
 }

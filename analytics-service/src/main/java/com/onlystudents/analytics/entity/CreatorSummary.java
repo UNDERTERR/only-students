@@ -19,11 +19,13 @@ public class CreatorSummary {
 
     private Long totalViews;
 
-    private Long totalLikes;
-
     private Long totalComments;
 
     private Long totalCollects;
+
+    private Long totalRatings;
+
+    private Double avgRating;
 
     private Long totalFollowers;
 

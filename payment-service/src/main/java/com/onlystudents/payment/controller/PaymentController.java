@@ -60,4 +60,10 @@ public class PaymentController {
                                           @RequestHeader(CommonConstants.USER_ID_HEADER) Long userId) {
         return Result.success(paymentService.checkNotePurchased(userId, noteId));
     }
+    
+    @GetMapping("/creator/{creatorId}/revenue")
+    @Operation(summary = "获取创作者收入", description = "获取创作者的总收入（已支付订单）")
+    public Result<Long> getCreatorRevenue(@PathVariable Long creatorId) {
+        return Result.success(paymentService.getCreatorRevenue(creatorId));
+    }
 }

@@ -25,4 +25,6 @@ public interface PaymentService {
     void addIncome(Long userId, Long orderId, BigDecimal amount);
     
     boolean checkNotePurchased(Long userId, Long noteId);
+    
+    Long getCreatorRevenue(Long creatorId);
 }

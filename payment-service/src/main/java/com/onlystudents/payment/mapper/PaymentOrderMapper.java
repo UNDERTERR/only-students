@@ -18,4 +18,7 @@ public interface PaymentOrderMapper extends BaseMapper<PaymentOrder> {
     
     @Select("SELECT COUNT(*) > 0 FROM payment_order WHERE user_id = #{userId} AND target_id = #{noteId} AND target_type = 1 AND status = 1")
     boolean checkNotePurchased(@Param("userId") Long userId, @Param("noteId") Long noteId);
+    
+    @Select("SELECT COALESCE(SUM(creator_amount * 100), 0) FROM payment_order WHERE target_id = #{creatorId} AND status = 1")
+    Long selectCreatorRevenue(@Param("creatorId") Long creatorId);
 }
