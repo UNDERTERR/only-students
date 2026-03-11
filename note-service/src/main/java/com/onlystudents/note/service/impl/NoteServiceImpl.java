@@ -133,7 +133,10 @@ public class NoteServiceImpl implements NoteService {
     }
 
     @Override
-    @CacheEvict(value = "noteDetail", key = "#noteId")
+    @Caching(evict = {
+        @CacheEvict(value = "noteDetail", key = "#noteId"),
+        @CacheEvict(value = "latestNotes", allEntries = true)
+    })
     public void deleteNote(Long noteId, Long userId) {
         log.info("开始删除笔记: noteId={}, userId={}", noteId, userId);
         Note note = noteMapper.selectById(noteId);
