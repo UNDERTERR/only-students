@@ -1,6 +1,3 @@
--- Analytics Service 数据库表结构
--- 数据库: only_students_analytics
--- 执行: mysql -u root -p only_students_analytics < analytics-service.sql
 
 USE only_students_analytics;
 
@@ -29,9 +26,16 @@ CREATE TABLE IF NOT EXISTS daily_stats (
 CREATE TABLE IF NOT EXISTS creator_summary (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     creator_id BIGINT UNIQUE NOT NULL COMMENT '创作者ID',
-    total_views INT DEFAULT 0 COMMENT '总浏览量',
-    total_favorites INT DEFAULT 0 COMMENT '总收藏数',
-    total_comments INT DEFAULT 0 COMMENT '总评论数',
+    total_notes BIGINT DEFAULT 0 COMMENT '总笔记数',
+    total_views BIGINT DEFAULT 0 COMMENT '总浏览量',
+    total_comments BIGINT DEFAULT 0 COMMENT '总评论数',
+    total_favorites BIGINT DEFAULT 0 COMMENT '总收藏数',
+    total_ratings BIGINT DEFAULT 0 COMMENT '总评分次数',
+    avg_rating DECIMAL(3,2) DEFAULT 0.00 COMMENT '平均评分',
+    avg_heat_score DECIMAL(10,2) DEFAULT 0.00 COMMENT '平均热度分',
+    weekly_ranking INT DEFAULT 0 COMMENT '周榜排名',
+    monthly_ranking INT DEFAULT 0 COMMENT '月榜排名',
+    -- 以下为保留字段
     total_shares INT DEFAULT 0 COMMENT '总分享数',
     total_subscribers INT DEFAULT 0 COMMENT '总订阅者数',
     today_income DECIMAL(10,2) DEFAULT 0.00 COMMENT '今日收入',
@@ -40,9 +44,12 @@ CREATE TABLE IF NOT EXISTS creator_summary (
     year_income DECIMAL(10,2) DEFAULT 0.00 COMMENT '近一年收入',
     total_income DECIMAL(10,2) DEFAULT 0.00 COMMENT '累计收入',
     last_calculated_at DATETIME COMMENT '上次计算时间',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_creator_id (creator_id),
-    INDEX idx_total_income (total_income)
+    INDEX idx_total_income (total_income),
+    INDEX idx_weekly_ranking (weekly_ranking),
+    INDEX idx_monthly_ranking (monthly_ranking)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='创作者累计数据表';
 
 -- 笔记统计数据表

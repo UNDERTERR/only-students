@@ -15,7 +15,9 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -90,6 +92,26 @@ public class NoteRatingServiceImpl implements NoteRatingService {
         List<NoteRating> list = ratingMapper.selectListByUser(userId);
         List<NoteRatingDTO> dtoList = list.stream().map(this::convertToDTO).collect(Collectors.toList());
         return Result.success(dtoList);
+    }
+    
+    @Override
+    public Result<java.util.Map<String, Object>> getCreatorRatingStats(Long creatorId) {
+        java.util.Map<String, Object> stats = ratingMapper.selectCreatorRatingStats(creatorId);
+        if (stats == null) {
+            stats = new java.util.HashMap<>();
+        }
+        
+        Object avgObj = stats.get("avgScore");
+        Object countObj = stats.get("totalRatings");
+        
+        double avgRating = avgObj != null ? ((Number) avgObj).doubleValue() : 0.0;
+        long ratingCount = countObj != null ? ((Number) countObj).longValue() : 0L;
+        
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("avgRating", avgRating);
+        result.put("ratingCount", ratingCount);
+        
+        return Result.success(result);
     }
     
     private NoteRatingDTO convertToDTO(NoteRating rating) {

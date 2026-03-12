@@ -5,6 +5,9 @@ import com.onlystudents.note.client.SubscriptionFeignClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * 订阅服务 Feign 客户端降级处理类
  * 当 subscription-service 不可用时，默认返回未订阅
@@ -19,5 +22,10 @@ public class SubscriptionFeignClientFallback implements SubscriptionFeignClient 
         
         // 降级处理：服务不可用时，默认返回未订阅（安全策略）
         return Result.success(false);
+    }
+
+    @Override
+    public Result<List<Map<String, Object>>> getMySubscriptions(Long subscriberId) {
+        return null;
     }
 }

@@ -34,4 +34,14 @@ public interface NoteRatingMapper extends BaseMapper<NoteRating> {
      */
     @Select("SELECT * FROM note_rating WHERE user_id = #{userId} ORDER BY created_at DESC")
     List<NoteRating> selectListByUser(@Param("userId") Long userId);
+    
+    /**
+     * 查询创作者所有笔记的评分统计
+     * 需要通过 note_service 查询创作者的笔记，再统计评分
+     */
+    @Select("SELECT AVG(nr.score) as avgScore, COUNT(DISTINCT nr.note_id) as noteCount, COUNT(*) as totalRatings " +
+            "FROM note_rating nr " +
+            "INNER JOIN note n ON nr.note_id = n.id " +
+            "WHERE n.user_id = #{creatorId}")
+    java.util.Map<String, Object> selectCreatorRatingStats(@Param("creatorId") Long creatorId);
 }

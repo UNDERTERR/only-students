@@ -24,6 +24,8 @@ public interface NoteService {
     
     List<NoteDTO> getNotesBySchoolId(Long schoolId, Integer limit);
     
+    List<NoteDTO> getSubscribedNotes(List<Long> creatorIds, Integer page, Integer limit);
+    
     List<NoteDTO> getUserNotes(Long userId);
     
     void incrementViewCount(Long noteId);
@@ -31,4 +33,6 @@ public interface NoteService {
     void publishNote(Long noteId, Long userId);
     
     List<Long> getNoteIdsByUserId(Long userId);
+    
+    java.util.Map<String, Object> getCreatorNoteStats(Long creatorId);
 }

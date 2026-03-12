@@ -26,6 +26,7 @@ import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -323,6 +324,34 @@ public class NoteServiceImpl implements NoteService {
         }).collect(Collectors.toList());
     }
 
+    @Override
+    public List<NoteDTO> getSubscribedNotes(List<Long> creatorIds, Integer page, Integer limit) {
+        if (creatorIds == null || creatorIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        if (limit == null || limit > 100) {
+            limit = 20;
+        }
+        if (page == null || page < 1) {
+            page = 1;
+        }
+        
+        int offset = (page - 1) * limit;
+        log.info("获取订阅笔记: creatorIds={}, page={}, limit={}", creatorIds, page, limit);
+        
+        List<Note> notes = noteMapper.selectNotesByUserIds(creatorIds, offset, limit);
+        
+        // 批量查询标签
+        List<Long> noteIds = notes.stream().map(Note::getId).collect(Collectors.toList());
+        Map<Long, List<String>> tagsMap = tagService.getNoteTagsBatch(noteIds);
+
+        return notes.stream().map(note -> {
+            NoteDTO dto = convertToDTOWithoutRemote(note);
+            dto.setTags(tagsMap.get(note.getId()));
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
     /**
      * 转换DTO但不调用远程服务（用于批量处理）
      */
@@ -444,5 +473,14 @@ public class NoteServiceImpl implements NoteService {
         if (value instanceof Long) return ((Long) value).intValue();
         if (value instanceof Number) return ((Number) value).intValue();
         return Integer.parseInt(value.toString());
+    }
+
+    @Override
+    public java.util.Map<String, Object> getCreatorNoteStats(Long creatorId) {
+        java.util.Map<String, Object> stats = noteMapper.selectCreatorNoteStats(creatorId);
+        if (stats == null) {
+            stats = new java.util.HashMap<>();
+        }
+        return stats;
     }
 }

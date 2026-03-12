@@ -19,15 +19,27 @@ public class CreatorSummary {
 
     private Long totalViews;
 
-    private Long totalLikes;
-
     private Long totalComments;
 
-    private Long totalCollects;
+    private Long totalFavorites;
 
-    private Long totalFollowers;
+    private Long totalShares;
 
-    private Long totalRevenue;
+    private Long totalRatings;
+
+    private Double avgRating;
+
+    private Long totalSubscribers;
+
+    private BigDecimal todayIncome;
+
+    private BigDecimal weekIncome;
+
+    private BigDecimal monthIncome;
+
+    private BigDecimal yearIncome;
+
+    private BigDecimal totalIncome;
 
     private BigDecimal avgHeatScore;
 

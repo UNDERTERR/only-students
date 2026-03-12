@@ -1,14 +1,15 @@
 package com.onlystudents.user.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.onlystudents.common.event.user.UserInfoUpdatedEvent;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.common.utils.JwtUtils;
+import com.onlystudents.user.config.RabbitConfig;
 import com.onlystudents.user.dto.*;
 import com.onlystudents.user.entity.User;
 import com.onlystudents.user.entity.UserDevice;
 import com.onlystudents.user.entity.School;
-import com.onlystudents.user.event.UserEventPublisher;
 import com.onlystudents.user.mapper.UserDeviceMapper;
 import com.onlystudents.user.mapper.UserMapper;
 import com.onlystudents.user.mapper.SchoolMapper;
@@ -18,6 +19,7 @@ import com.onlystudents.user.service.VerificationCodeService;
 import com.onlystudents.user.service.VerificationCodeService.CodeType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
@@ -42,9 +44,9 @@ public class UserServiceImpl implements UserService {
     private final JwtUtils jwtUtils;
     private final VerificationCodeService verificationCodeService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-    private final UserEventPublisher userEventPublisher;
     private final SensitiveWordFilterService sensitiveWordFilterService;
     private final CacheManager cacheManager;
+    private final RabbitTemplate rabbitTemplate;
     private static final int MAX_DEVICES = 3;
 
     @Override
@@ -317,7 +319,7 @@ public class UserServiceImpl implements UserService {
         userMapper.updateById(user);
 
         // 发布用户信息更新事件
-        userEventPublisher.publishUserInfoUpdated(user);
+        publishUserInfoUpdated(user);
 
         return convertToResponse(user);
     }
@@ -538,6 +540,26 @@ public class UserServiceImpl implements UserService {
         if (schoolId != null) {
             schoolMapper.decrementNotes(schoolId);
             log.info("学校笔记数-1: schoolId={}", schoolId);
+        }
+    }
+
+
+    private void publishUserInfoUpdated(User user) {
+        try {
+            UserInfoUpdatedEvent event = new UserInfoUpdatedEvent(
+                    user.getId(),
+                    user.getNickname(),
+                    user.getAvatar(),
+                    user.getBio()
+            );
+            rabbitTemplate.convertAndSend(
+                    RabbitConfig.USER_INFO_EXCHANGE,
+                    RabbitConfig.USER_INFO_UPDATE_ROUTING_KEY,
+                    event
+            );
+            log.info("发布用户信息更新事件: userId={}, nickname={}", user.getId(), user.getNickname());
+        } catch (Exception e) {
+            log.error("发布用户信息更新事件失败: userId={}", user.getId(), e);
         }
     }
 }

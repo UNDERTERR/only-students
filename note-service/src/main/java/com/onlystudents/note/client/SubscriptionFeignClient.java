@@ -8,6 +8,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * 订阅服务 Feign 客户端
  * 用于 note-service 调用 subscription-service 检查订阅状态
@@ -28,4 +31,13 @@ public interface SubscriptionFeignClient {
     @GetMapping("/subscription/check/{creatorId}")
     Result<Boolean> checkSubscription(@PathVariable("creatorId") Long creatorId,
                                       @RequestHeader(CommonConstants.USER_ID_HEADER) Long subscriberId);
+
+    /**
+     * 获取我的订阅列表
+     *
+     * @param subscriberId 订阅者ID
+     * @return 订阅列表
+     */
+    @GetMapping("/subscription/my-subscriptions")
+    Result<List<Map<String, Object>>> getMySubscriptions(@RequestHeader(CommonConstants.USER_ID_HEADER) Long subscriberId);
 }

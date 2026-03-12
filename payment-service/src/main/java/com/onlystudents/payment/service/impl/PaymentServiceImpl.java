@@ -161,6 +161,14 @@ public class PaymentServiceImpl implements PaymentService {
         return orderMapper.checkNotePurchased(userId, noteId);
     }
     
+    @Override
+    public Long getCreatorRevenue(Long creatorId) {
+        // 查询该创作者的所有已支付订单的收入总和
+        // 收入 = 笔记购买(目标类型1) + 订阅(目标类型2) 的 creator_amount 总和
+        Long revenue = orderMapper.selectCreatorRevenue(creatorId);
+        return revenue != null ? revenue : 0L;
+    }
+    
     private OrderDTO convertToDTO(PaymentOrder order) {
         OrderDTO dto = new OrderDTO();
         BeanUtils.copyProperties(order, dto);
