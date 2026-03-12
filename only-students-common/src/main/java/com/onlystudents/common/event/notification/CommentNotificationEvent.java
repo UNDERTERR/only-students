@@ -1,10 +1,14 @@
 package com.onlystudents.common.event.notification;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class CommentNotificationEvent implements Serializable {
     private static final long serialVersionUID = 1L;
     
@@ -14,15 +18,5 @@ public class CommentNotificationEvent implements Serializable {
     private Long noteId;
     private String commentContent;
     private String noteTitle;
-    
-    public CommentNotificationEvent() {}
-    
-    public CommentNotificationEvent(Long commentId, Long fromUserId, Long toUserId, Long noteId, String commentContent, String noteTitle) {
-        this.commentId = commentId;
-        this.fromUserId = fromUserId;
-        this.toUserId = toUserId;
-        this.noteId = noteId;
-        this.commentContent = commentContent;
-        this.noteTitle = noteTitle;
-    }
+
 }

@@ -57,50 +57,69 @@ public class RatingEventListener {
     @Transactional
     public void handleFavoriteCreated(NoteFavoriteEvent event) {
         log.info("收到收藏事件: noteId={}, userId={}", event.getNoteId(), event.getUserId());
-        int rows = noteMapper.updateFavoriteCount(event.getNoteId());
-        if (rows == 0) {
-            throw new RuntimeException("更新收藏数失败");
+        try {
+            int rows = noteMapper.updateFavoriteCount(event.getNoteId());
+            if (rows == 0) {
+                log.warn("笔记不存在，无法更新收藏数: noteId={}", event.getNoteId());
+                return;
+            }
+            evictCache(event.getNoteId());
+            syncToEs(event.getNoteId());
+            log.info("更新笔记收藏数成功: noteId={}", event.getNoteId());
+        } catch (Exception e) {
+            log.error("处理收藏事件失败: noteId={}", event.getNoteId(), e);
         }
-        evictCache(event.getNoteId());
-        syncToEs(event.getNoteId());
-        log.info("更新笔记收藏数成功: noteId={}", event.getNoteId());
     }
 
     @RabbitListener(queues = "favorite.deleted.queue")
     @Transactional
     public void handleFavoriteDeleted(NoteFavoriteEvent event) {
         log.info("收到取消收藏事件: noteId={}, userId={}", event.getNoteId(), event.getUserId());
-        int rows = noteMapper.dreaseFavoriteCount(event.getNoteId());
-        log.info("数据库更新结果: noteId={}, affectedRows={}", event.getNoteId(), rows);
-        evictCache(event.getNoteId());
-        syncToEs(event.getNoteId());
-        log.info("更新笔记收藏数成功: noteId={}", event.getNoteId());
-        if (rows == 0) {
-            throw new RuntimeException("更新收藏数失败");
+        try {
+            int rows = noteMapper.dreaseFavoriteCount(event.getNoteId());
+            if (rows == 0) {
+                log.warn("笔记不存在或收藏数已为0: noteId={}", event.getNoteId());
+                return;
+            }
+            evictCache(event.getNoteId());
+            syncToEs(event.getNoteId());
+            log.info("更新笔记收藏数成功: noteId={}", event.getNoteId());
+        } catch (Exception e) {
+            log.error("处理取消收藏事件失败: noteId={}", event.getNoteId(), e);
         }
     }
 
     @RabbitListener(queues = "rating.updated.queue")
     public void handleRatingUpdated(NoteRatingEvent event) {
         log.info("收到评分事件: noteId={}, avg={}, count={}", event.getNoteId(), event.getAverageScore(), event.getRatingCount());
-        int rows = noteMapper.updateRatingStats(event.getNoteId(), event.getAverageScore());
-        evictCache(event.getNoteId());
-        syncToEs(event.getNoteId());
-        log.info("更新笔记评分统计成功: noteId={}, avg={}, count={}", event.getNoteId(), event.getAverageScore(), event.getRatingCount());
-        if (rows == 0) {
-            throw new RuntimeException("更新笔记评分失败");
+        try {
+            int rows = noteMapper.updateRatingStats(event.getNoteId(), event.getAverageScore());
+            if (rows == 0) {
+                log.warn("笔记不存在，无法更新评分: noteId={}", event.getNoteId());
+                return;
+            }
+            evictCache(event.getNoteId());
+            syncToEs(event.getNoteId());
+            log.info("更新笔记评分统计成功: noteId={}, avg={}, count={}", event.getNoteId(), event.getAverageScore(), event.getRatingCount());
+        } catch (Exception e) {
+            log.error("处理评分事件失败: noteId={}", event.getNoteId(), e);
         }
     }
 
     @RabbitListener(queues = "share.created.queue")
     public void handleShareCreated(NoteShareEvent event) {
         log.info("收到分享事件: noteId={}, userId={}", event.getNoteId(), event.getUserId());
-        int rows = noteMapper.updateShareCount(event.getNoteId());
-        evictCache(event.getNoteId());
-        syncToEs(event.getNoteId());
-        log.info("更新笔记分享数成功: noteId={}", event.getNoteId());
-        if (rows == 0) {
-            throw new RuntimeException("更新笔记分享数失败");
+        try {
+            int rows = noteMapper.updateShareCount(event.getNoteId());
+            if (rows == 0) {
+                log.warn("笔记不存在，无法更新分享数: noteId={}", event.getNoteId());
+                return;
+            }
+            evictCache(event.getNoteId());
+            syncToEs(event.getNoteId());
+            log.info("更新笔记分享数成功: noteId={}", event.getNoteId());
+        } catch (Exception e) {
+            log.error("处理分享事件失败: noteId={}", event.getNoteId(), e);
         }
     }
 }

@@ -17,21 +17,21 @@ public class NoteStats {
 
     private Long creatorId;
 
-    private Long viewCount;
+    private Long totalViews;
 
-    private Long likeCount;
+    private Long totalFavorites;
 
-    private Long commentCount;
+    private Long totalComments;
 
-    private Long collectCount;
+    private Long totalShares;
 
-    private Long shareCount;
+    private Integer avgReadingTime;
 
-    private Long downloadCount;
+    private BigDecimal completionRate;
 
     private BigDecimal heatScore;
 
-    private Integer ranking;
+    private LocalDateTime lastCalculatedAt;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

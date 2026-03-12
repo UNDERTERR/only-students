@@ -1,6 +1,3 @@
--- Analytics Service 数据库表结构
--- 数据库: only_students_analytics
--- 执行: mysql -u root -p only_students_analytics < analytics-service.sql
 
 USE only_students_analytics;
 
@@ -32,11 +29,9 @@ CREATE TABLE IF NOT EXISTS creator_summary (
     total_notes BIGINT DEFAULT 0 COMMENT '总笔记数',
     total_views BIGINT DEFAULT 0 COMMENT '总浏览量',
     total_comments BIGINT DEFAULT 0 COMMENT '总评论数',
-    total_collects BIGINT DEFAULT 0 COMMENT '总收藏数',
+    total_favorites BIGINT DEFAULT 0 COMMENT '总收藏数',
     total_ratings BIGINT DEFAULT 0 COMMENT '总评分次数',
     avg_rating DECIMAL(3,2) DEFAULT 0.00 COMMENT '平均评分',
-    total_followers BIGINT DEFAULT 0 COMMENT '总粉丝数',
-    total_revenue BIGINT DEFAULT 0 COMMENT '累计收入(分)',
     avg_heat_score DECIMAL(10,2) DEFAULT 0.00 COMMENT '平均热度分',
     weekly_ranking INT DEFAULT 0 COMMENT '周榜排名',
     monthly_ranking INT DEFAULT 0 COMMENT '月榜排名',

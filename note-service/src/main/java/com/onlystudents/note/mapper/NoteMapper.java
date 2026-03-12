@@ -87,7 +87,7 @@ public interface NoteMapper extends BaseMapper<Note> {
             "COUNT(*) as totalNotes, " +
             "COALESCE(SUM(view_count), 0) as totalViews, " +
             "COALESCE(SUM(comment_count), 0) as totalComments, " +
-            "COALESCE(SUM(favorite_count), 0) as totalCollects, " +
+            "COALESCE(SUM(favorite_count), 0) as totalFavorites, " +
             "COALESCE(SUM(share_count), 0) as totalShares " +
             "FROM note WHERE user_id = #{creatorId} AND deleted = 0 AND status = 2")
     java.util.Map<String, Object> selectCreatorNoteStats(@Param("creatorId") Long creatorId);

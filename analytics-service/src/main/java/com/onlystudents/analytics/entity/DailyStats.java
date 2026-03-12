@@ -16,23 +16,26 @@ public class DailyStats {
 
     private Long creatorId;
 
+    @TableField("stat_date")
     private LocalDate statsDate;
 
-    private Integer viewCount;
+    private Integer newViews;
 
-    private Integer likeCount;
+    private Integer newFavorites;
 
-    private Integer commentCount;
+    private Integer newComments;
 
-    private Integer collectCount;
+    private Integer newShares;
 
-    private Integer shareCount;
+    private Integer newSubscribers;
 
-    private Integer downloadCount;
+    private Integer lostSubscribers;
 
-    private Integer newFollowers;
+    private Integer orderCount;
 
-    private BigDecimal revenue;
+    private BigDecimal orderAmount;
+
+    private BigDecimal incomeAmount;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
