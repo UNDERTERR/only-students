@@ -11,6 +11,7 @@ import com.onlystudents.note.client.SubscriptionFeignClient;
 import com.onlystudents.note.client.UserFeignClient;
 import com.onlystudents.note.dto.CreateNoteRequest;
 import com.onlystudents.note.dto.NoteDTO;
+import com.onlystudents.note.dto.NoteStatsDTO;
 import com.onlystudents.note.dto.UpdateNoteRequest;
 import com.onlystudents.note.entity.Note;
 import com.onlystudents.common.event.note.NotePublishEvent;
@@ -481,6 +482,19 @@ public class NoteServiceImpl implements NoteService {
         if (stats == null) {
             stats = new java.util.HashMap<>();
         }
+        return stats;
+    }
+
+    @Override
+    public NoteStatsDTO getNoteStats() {
+        NoteStatsDTO stats = new NoteStatsDTO();
+        stats.setTotalNotes(noteMapper.countTotalNotes());
+        stats.setTodayNewNotes(noteMapper.countTodayNewNotes());
+        stats.setWeekNewNotes(noteMapper.countWeekNewNotes());
+        stats.setMonthNewNotes(noteMapper.countMonthNewNotes());
+        stats.setPublishedNotes(noteMapper.countPublishedNotes());
+        stats.setPendingAuditNotes(noteMapper.countPendingAuditNotes());
+        stats.setRejectedNotes(noteMapper.countRejectedNotes());
         return stats;
     }
 }

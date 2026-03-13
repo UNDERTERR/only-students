@@ -11,7 +11,7 @@ import java.util.List;
 @Mapper
 public interface AdminRoleMapper extends BaseMapper<AdminRole> {
 
-    @Select("SELECT * FROM admin_role WHERE role_code = #{roleCode}")
+    @Select("SELECT * FROM admin_role WHERE code = #{roleCode}")
     AdminRole selectByRoleCode(@Param("roleCode") String roleCode);
 
     @Select("SELECT * FROM admin_role WHERE status = 1")

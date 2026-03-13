@@ -64,4 +64,24 @@ public interface UserService {
      * 减少学校笔记数
      */
     void decrementSchoolNotes(Long schoolId);
+    
+    /**
+     * 获取用户统计数据
+     */
+    UserStatsDTO getUserStats();
+    
+    /**
+     * 分页查询用户列表（管理员）
+     */
+    List<UserResponse> getUserListPage(Integer page, Integer size, String keyword, Integer status, Integer isCreator);
+    
+    /**
+     * 统计用户数量（管理员）
+     */
+    Long countUsers(Integer status, Integer isCreator);
+    
+    /**
+     * 封禁/解封用户
+     */
+    void updateUserStatus(Long userId, Integer status);
 }

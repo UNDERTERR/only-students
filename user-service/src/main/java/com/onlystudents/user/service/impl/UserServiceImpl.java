@@ -543,6 +543,66 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    @Override
+    public UserStatsDTO getUserStats() {
+        UserStatsDTO stats = new UserStatsDTO();
+        stats.setTotalUsers(userMapper.countTotalUsers());
+        stats.setTodayNewUsers(userMapper.countTodayNewUsers());
+        stats.setWeekNewUsers(userMapper.countWeekNewUsers());
+        stats.setMonthNewUsers(userMapper.countMonthNewUsers());
+        stats.setTotalCreators(userMapper.countTotalCreators());
+        stats.setTodayNewCreators(userMapper.countTodayNewCreators());
+        return stats;
+    }
+
+    @Override
+    public List<UserResponse> getUserListPage(Integer page, Integer size, String keyword, Integer status, Integer isCreator) {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(User::getId);
+        
+        if (keyword != null && !keyword.isEmpty()) {
+            wrapper.like(User::getNickname, keyword)
+                   .or()
+                   .like(User::getBio, keyword);
+        }
+        if (status != null) {
+            wrapper.eq(User::getStatus, status);
+        }
+        if (isCreator != null) {
+            wrapper.eq(User::getIsCreator, isCreator);
+        }
+        
+        int offset = (page - 1) * size;
+        wrapper.last("LIMIT " + offset + ", " + size);
+        
+        List<User> users = userMapper.selectList(wrapper);
+        return users.stream().map(this::toUserResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    public Long countUsers(Integer status, Integer isCreator) {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        
+        if (status != null) {
+            wrapper.eq(User::getStatus, status);
+        }
+        if (isCreator != null) {
+            wrapper.eq(User::getIsCreator, isCreator);
+        }
+        
+        return userMapper.selectCount(wrapper);
+    }
+
+    @Override
+    public void updateUserStatus(Long userId, Integer status) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+        userMapper.updateUserStatus(userId, status);
+        log.info("更新用户状态: userId={}, status={}", userId, status);
+    }
+
 
     private void publishUserInfoUpdated(User user) {
         try {

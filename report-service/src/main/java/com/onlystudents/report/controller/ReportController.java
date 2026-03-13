@@ -2,6 +2,7 @@ package com.onlystudents.report.controller;
 
 import com.onlystudents.common.constants.CommonConstants;
 import com.onlystudents.common.result.Result;
+import com.onlystudents.report.dto.ReportStatsDTO;
 import com.onlystudents.report.dto.SubmitReportRequest;
 import com.onlystudents.report.entity.Report;
 import com.onlystudents.report.service.ReportService;
@@ -58,5 +59,11 @@ public class ReportController {
     @Operation(summary = "获取举报详情", description = "获取指定举报的详细信息")
     public Result<Report> getReportDetail(@PathVariable Long reportId) {
         return Result.success(reportService.getReportDetail(reportId));
+    }
+    
+    @GetMapping("/stats")
+    @Operation(summary = "获取举报统计数据", description = "获取举报统计数据，包括总数、处理中等")
+    public Result<ReportStatsDTO> getReportStats() {
+        return Result.success(reportService.getReportStats());
     }
 }

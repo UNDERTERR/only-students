@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.ResultCode;
+import com.onlystudents.report.dto.ReportStatsDTO;
 import com.onlystudents.report.entity.Report;
 import com.onlystudents.report.mapper.ReportMapper;
 import com.onlystudents.report.service.ReportService;
@@ -100,5 +101,17 @@ public class ReportServiceImpl implements ReportService {
             throw new BusinessException(ResultCode.NOT_FOUND, "举报不存在");
         }
         return report;
+    }
+    
+    @Override
+    public ReportStatsDTO getReportStats() {
+        ReportStatsDTO stats = new ReportStatsDTO();
+        stats.setTotalReports(reportMapper.countTotalReports());
+        stats.setPendingReports(reportMapper.countPendingReports());
+        stats.setProcessingReports(reportMapper.countProcessingReports());
+        stats.setProcessedReports(reportMapper.countProcessedReports());
+        stats.setRejectedReports(reportMapper.countRejectedReports());
+        stats.setTodayReports(reportMapper.countTodayReports());
+        return stats;
     }
 }

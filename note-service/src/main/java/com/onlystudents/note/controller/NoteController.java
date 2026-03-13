@@ -6,6 +6,7 @@ import com.onlystudents.common.result.Result;
 import com.onlystudents.note.client.SubscriptionFeignClient;
 import com.onlystudents.note.dto.CreateNoteRequest;
 import com.onlystudents.note.dto.NoteDTO;
+import com.onlystudents.note.dto.NoteStatsDTO;
 import com.onlystudents.note.dto.UpdateNoteRequest;
 import com.onlystudents.note.entity.Note;
 import com.onlystudents.note.mapper.NoteMapper;
@@ -233,5 +234,11 @@ public class NoteController {
     public Result<java.util.Map<String, Object>> getCreatorNoteStats(@PathVariable Long creatorId) {
         java.util.Map<String, Object> stats = noteService.getCreatorNoteStats(creatorId);
         return Result.success(stats);
+    }
+    
+    @GetMapping("/stats")
+    @Operation(summary = "获取笔记统计数据", description = "获取笔记统计数据，包括总数、新增数、待审核数等")
+    public Result<NoteStatsDTO> getNoteStats() {
+        return Result.success(noteService.getNoteStats());
     }
 }

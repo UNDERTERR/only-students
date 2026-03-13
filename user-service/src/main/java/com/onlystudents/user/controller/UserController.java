@@ -157,4 +157,37 @@ public class UserController {
         userService.decrementSchoolNotes(schoolId);
         return Result.success();
     }
+    
+    @GetMapping("/stats")
+    @Operation(summary = "获取用户统计数据", description = "获取用户统计数据，包括总用户数、新增用户数等")
+    public Result<UserStatsDTO> getUserStats() {
+        return Result.success(userService.getUserStats());
+    }
+    
+    @GetMapping("/list")
+    @Operation(summary = "分页获取用户列表", description = "管理员分页获取用户列表")
+    public Result<List<UserResponse>> getUserList(
+            @RequestParam(name = "page", defaultValue = "1") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size,
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "status", required = false) Integer status,
+            @RequestParam(name = "isCreator", required = false) Integer isCreator) {
+        return Result.success(userService.getUserListPage(page, size, keyword, status, isCreator));
+    }
+    
+    @GetMapping("/count")
+    @Operation(summary = "统计用户数量", description = "管理员统计用户数量")
+    public Result<Long> countUsers(
+            @RequestParam(name = "status", required = false) Integer status,
+            @RequestParam(name = "isCreator", required = false) Integer isCreator) {
+        return Result.success(userService.countUsers(status, isCreator));
+    }
+    
+    @PutMapping("/{userId}/status")
+    @Operation(summary = "更新用户状态", description = "管理员封禁/解封用户，status=0禁用，status=1启用")
+    public Result<Void> updateUserStatus(@PathVariable(name = "userId") Long userId,
+            @RequestParam(name = "status") Integer status) {
+        userService.updateUserStatus(userId, status);
+        return Result.success();
+    }
 }

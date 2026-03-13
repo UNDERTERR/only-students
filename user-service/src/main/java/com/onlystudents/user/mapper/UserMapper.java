@@ -58,4 +58,25 @@ public interface UserMapper extends BaseMapper<User> {
     
     @Update("UPDATE user SET follower_count = follower_count - 1 WHERE id = #{userId} AND follower_count > 0")
     int decrementFollowerCount(@Param("userId") Long userId);
+    
+    @Select("SELECT COUNT(*) FROM user WHERE status = 1")
+    Long countTotalUsers();
+    
+    @Select("SELECT COUNT(*) FROM user WHERE status = 1 AND DATE(created_at) = CURDATE()")
+    Long countTodayNewUsers();
+    
+    @Select("SELECT COUNT(*) FROM user WHERE status = 1 AND YEARWEEK(DATE(created_at)) = YEARWEEK(CURDATE())")
+    Long countWeekNewUsers();
+    
+    @Select("SELECT COUNT(*) FROM user WHERE status = 1 AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL DAYOFMONTH(CURDATE()) DAY)")
+    Long countMonthNewUsers();
+    
+    @Select("SELECT COUNT(*) FROM user WHERE status = 1 AND is_creator = 1")
+    Long countTotalCreators();
+    
+    @Select("SELECT COUNT(*) FROM user WHERE status = 1 AND is_creator = 1 AND DATE(created_at) = CURDATE()")
+    Long countTodayNewCreators();
+    
+    @Update("UPDATE user SET status = #{status} WHERE id = #{userId}")
+    int updateUserStatus(@Param("userId") Long userId, @Param("status") Integer status);
 }
