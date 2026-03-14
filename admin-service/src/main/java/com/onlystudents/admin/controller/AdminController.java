@@ -44,6 +44,30 @@ public class AdminController {
         return Result.success();
     }
 
+    @GetMapping("/account/profile")
+    @Operation(summary = "获取当前登录管理员信息", description = "获取当前登录管理员的个人信息")
+    public Result<AdminLoginResponse.AdminUserInfo> getCurrentUserInfo(@RequestHeader("X-Admin-Id") Long adminId) {
+        AdminUser adminUser = adminUserService.getAdminById(adminId);
+        if (adminUser == null) {
+            return Result.success(null);
+        }
+        
+        AdminLoginResponse.AdminUserInfo userInfo = new AdminLoginResponse.AdminUserInfo();
+        userInfo.setId(adminUser.getId());
+        userInfo.setUsername(adminUser.getUsername());
+        userInfo.setRealName(adminUser.getRealName());
+        userInfo.setAvatar(adminUser.getAvatar());
+        userInfo.setPhone(adminUser.getPhone());
+        userInfo.setEmail(adminUser.getEmail());
+        userInfo.setRoleId(adminUser.getRoleId());
+        userInfo.setStatus(adminUser.getStatus());
+        
+        AdminRole role = adminRoleService.getRoleById(adminUser.getRoleId());
+        userInfo.setRoleName(role != null ? role.getRoleName() : "");
+        
+        return Result.success(userInfo);
+    }
+
     @GetMapping("/user/{adminId}")
     @Operation(summary = "获取管理员信息", description = "根据ID获取管理员详细信息")
     public Result<AdminUser> getAdminById(@PathVariable Long adminId) {

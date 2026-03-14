@@ -1,11 +1,14 @@
 package com.onlystudents.user.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.onlystudents.common.event.user.UserInfoUpdatedEvent;
 import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.common.utils.JwtUtils;
 import com.onlystudents.user.config.RabbitConfig;
+import com.onlystudents.user.client.NotificationFeignClient;
+import com.onlystudents.user.client.OperationLogFeignClient;
 import com.onlystudents.user.dto.*;
 import com.onlystudents.user.entity.User;
 import com.onlystudents.user.entity.UserDevice;
@@ -30,6 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -47,6 +51,8 @@ public class UserServiceImpl implements UserService {
     private final SensitiveWordFilterService sensitiveWordFilterService;
     private final CacheManager cacheManager;
     private final RabbitTemplate rabbitTemplate;
+    private final NotificationFeignClient notificationFeignClient;
+    private final OperationLogFeignClient operationLogFeignClient;
     private static final int MAX_DEVICES = 3;
 
     @Override
@@ -97,7 +103,6 @@ public class UserServiceImpl implements UserService {
         user.setNickname(filteredNickname);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setStatus(1);
-        user.setIsCreator(0);
         user.setEducationLevel(request.getEducationLevel());
 
         Long schoolId = request.getSchoolId();
@@ -160,7 +165,37 @@ public class UserServiceImpl implements UserService {
 
         // 检查状态
         if (user.getStatus() != 1) {
-            throw new BusinessException(ResultCode.USER_DISABLED);
+            // 检查封禁/冻结时间是否已过期
+            LocalDateTime now = LocalDateTime.now();
+            boolean expired = false;
+            
+            if (user.getBanTime() != null && user.getBanTime().isBefore(now)) {
+                // 封禁时间已过期，自动解禁
+                user.setBanTime(null);
+                user.setBanReason(null);
+                user.setFreezeType(null);
+                user.setStatus(1);
+                expired = true;
+            } else if (user.getFreezeTime() != null && user.getFreezeTime().isBefore(now)) {
+                // 冻结时间已过期，自动解冻
+                user.setFreezeTime(null);
+                user.setBanReason(null);
+                user.setFreezeType(null);
+                user.setStatus(1);
+                expired = true;
+            }
+            
+            if (expired) {
+                userMapper.updateById(user);
+                log.info("用户封禁/冻结时间已过期，自动解禁: userId={}", user.getId());
+            } else {
+                // 未过期，显示具体原因
+                String reason = user.getBanReason();
+                if (reason != null && !reason.isEmpty()) {
+                    throw new BusinessException(ResultCode.USER_DISABLED, "账号已被封禁: " + reason);
+                }
+                throw new BusinessException(ResultCode.USER_DISABLED);
+            }
         }
 
         // 更新最后登录时间
@@ -345,12 +380,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserResponse> searchUsers(String keyword, Integer educationLevel, Integer isCreator, Integer page, Integer size) {
-        log.info("搜索用户：keyword={}, educationLevel={}, isCreator={}, page={}, size={}",
-                keyword, educationLevel, isCreator, page, size);
+    public List<UserResponse> searchUsers(String keyword, Integer educationLevel, Integer page, Integer size) {
+        log.info("搜索用户：keyword={}, educationLevel={}, page={}, size={}",
+                keyword, educationLevel, page, size);
 
         // 调用 Mapper 进行 MySQL 搜索
-        List<User> users = userMapper.searchUsers(keyword, educationLevel, isCreator, (page - 1) * size, size);
+        List<User> users = userMapper.searchUsers(keyword, educationLevel, (page - 1) * size, size);
 
         return users.stream()
                 .map(this::convertToResponse)
@@ -541,6 +576,265 @@ public class UserServiceImpl implements UserService {
             schoolMapper.decrementNotes(schoolId);
             log.info("学校笔记数-1: schoolId={}", schoolId);
         }
+    }
+
+    @Override
+    public UserStatsDTO getUserStats() {
+        UserStatsDTO stats = new UserStatsDTO();
+        stats.setTotalUsers(userMapper.countTotalUsers());
+        stats.setTodayNewUsers(userMapper.countTodayNewUsers());
+        stats.setWeekNewUsers(userMapper.countWeekNewUsers());
+        stats.setMonthNewUsers(userMapper.countMonthNewUsers());
+        return stats;
+    }
+
+    @Override
+    public List<UserResponse> getUserListPage(Integer page, Integer size, String keyword, Integer status) {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(User::getId);
+        
+        if (keyword != null && !keyword.isEmpty()) {
+            wrapper.like(User::getNickname, keyword)
+                   .or()
+                   .like(User::getBio, keyword);
+        }
+        if (status != null) {
+            wrapper.eq(User::getStatus, status);
+        }
+        
+        int offset = (page - 1) * size;
+        wrapper.last("LIMIT " + offset + ", " + size);
+        
+        List<User> users = userMapper.selectList(wrapper);
+        return users.stream().map(this::toUserResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    public Long countUsers(Integer status) {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        
+        if (status != null) {
+            wrapper.eq(User::getStatus, status);
+        }
+        
+        return userMapper.selectCount(wrapper);
+    }
+
+    @Override
+    public void updateUserStatus(Long userId, Integer status) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+        userMapper.updateUserStatus(userId, status);
+        log.info("更新用户状态: userId={}, status={}", userId, status);
+    }
+
+    @Override
+    public void updateUserPhone(Long userId, String phone) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+        user.setPhone(phone);
+        userMapper.updateById(user);
+        log.info("设置用户手机号: userId={}, phone={}", userId, phone);
+    }
+
+    @Override
+    public void updateUserEmail(Long userId, String email) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+        user.setEmail(email);
+        userMapper.updateById(user);
+        log.info("设置用户邮箱: userId={}, email={}", userId, email);
+    }
+
+    @Override
+    public void setUserBan(Long userId, LocalDateTime banTime, String reason) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+        user.setBanTime(banTime);
+        user.setBanReason(reason);
+        user.setFreezeType(1);
+        user.setStatus(0);
+        userMapper.updateById(user);
+        clearUserCache(userId);
+        log.info("设置用户封禁: userId={}, banTime={}, reason={}", userId, banTime, reason);
+        
+        // 发送封禁通知
+        try {
+            long days = java.time.Duration.between(LocalDateTime.now(), banTime).toDays();
+            String title = "账号被封禁";
+            String content = "您的账号因违规已被封禁 " + days + " 天，原因：" + (reason != null ? reason : "未知");
+            notificationFeignClient.sendNotification(userId, 1, title, content);
+            log.info("发送封禁通知: userId={}", userId);
+        } catch (Exception e) {
+            log.error("发送封禁通知失败: userId={}", userId, e);
+        }
+        
+        // 记录操作日志
+        try {
+            java.util.Map<String, Object> logMap = new java.util.HashMap<>();
+            logMap.put("adminId", 1L);
+            logMap.put("operationType", "BAN_USER");
+            logMap.put("operationDesc", "封禁用户: " + user.getNickname() + ", 时长: " + java.time.Duration.between(LocalDateTime.now(), banTime).toDays() + "天");
+            logMap.put("requestMethod", "PUT");
+            logMap.put("requestUrl", "/user/" + userId + "/ban");
+            logMap.put("status", 1);
+            operationLogFeignClient.saveLog(logMap);
+        } catch (Exception e) {
+            log.error("记录操作日志失败", e);
+        }
+    }
+
+    @Override
+    public void setUserFreeze(Long userId, LocalDateTime freezeTime, String reason) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+        user.setFreezeTime(freezeTime);
+        user.setBanReason(reason);
+        user.setFreezeType(2);
+        user.setStatus(0);
+        userMapper.updateById(user);
+        clearUserCache(userId);
+        log.info("直接冻结用户: userId={}, freezeTime={}, reason={}", userId, freezeTime, reason);
+        
+        // 发送冻结通知
+        try {
+            long days = java.time.Duration.between(LocalDateTime.now(), freezeTime).toDays();
+            String title = "账号被冻结";
+            String content = "您的账号因违规已被冻结 " + days + " 天，原因：" + (reason != null ? reason : "未知");
+            notificationFeignClient.sendNotification(userId, 1, title, content);
+            log.info("发送冻结通知: userId={}", userId);
+        } catch (Exception e) {
+            log.error("发送冻结通知失败: userId={}", userId, e);
+        }
+        
+        // 记录操作日志
+        try {
+            java.util.Map<String, Object> logMap = new java.util.HashMap<>();
+            logMap.put("adminId", 1L);
+            logMap.put("operationType", "FREEZE_USER");
+            logMap.put("operationDesc", "冻结用户: " + user.getNickname() + ", 时长: " + java.time.Duration.between(LocalDateTime.now(), freezeTime).toDays() + "天");
+            logMap.put("requestMethod", "PUT");
+            logMap.put("requestUrl", "/user/" + userId + "/freeze");
+            logMap.put("status", 1);
+            operationLogFeignClient.saveLog(logMap);
+        } catch (Exception e) {
+            log.error("记录操作日志失败", e);
+        }
+    }
+
+    @Override
+    public void unfreezeUser(Long userId) {
+        log.info("开始执行解冻用户: userId={}", userId);
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+        log.info("解冻前用户状态: status={}, freezeType={}, banTime={}, freezeTime={}", 
+            user.getStatus(), user.getFreezeType(), user.getBanTime(), user.getFreezeTime());
+        
+        // 使用 UpdateWrapper 强制更新这些字段为 null
+        LambdaUpdateWrapper<User> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(User::getId, userId)
+               .set(User::getBanTime, null)
+               .set(User::getFreezeTime, null)
+               .set(User::getFreezeType, null)
+               .set(User::getBanReason, null)
+               .set(User::getStatus, 1);
+        
+        int rows = userMapper.update(null, wrapper);
+        log.info("解冻用户更新结果: userId={}, rows={}", userId, rows);
+        
+        // 验证更新后的数据
+        User updatedUser = userMapper.selectById(userId);
+        log.info("解冻后用户状态: status={}, freezeType={}, banTime={}, freezeTime={}", 
+            updatedUser.getStatus(), updatedUser.getFreezeType(), updatedUser.getBanTime(), updatedUser.getFreezeTime());
+        
+        clearUserCache(userId);
+        log.info("解冻/解禁用户完成: userId={}", userId);
+        
+        // 发送解封通知
+        try {
+            String title = "账号已解封";
+            String content = "您的账号已解除封禁，可以正常使用平台功能";
+            notificationFeignClient.sendNotification(userId, 1, title, content);
+            log.info("发送解封通知: userId={}", userId);
+        } catch (Exception e) {
+            log.error("发送解封通知失败: userId={}", userId, e);
+        }
+        
+        // 记录操作日志
+        try {
+            java.util.Map<String, Object> logMap = new java.util.HashMap<>();
+            logMap.put("adminId", 1L);
+            logMap.put("operationType", "UNFREEZE_USER");
+            logMap.put("operationDesc", "解封用户: " + user.getNickname());
+            logMap.put("requestMethod", "PUT");
+            logMap.put("requestUrl", "/user/" + userId + "/unfreeze");
+            logMap.put("status", 1);
+            operationLogFeignClient.saveLog(logMap);
+        } catch (Exception e) {
+            log.error("记录操作日志失败", e);
+        }
+    }
+
+    @Override
+    public Boolean canUserPost(Long userId) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            return false;
+        }
+        // 检查是否被禁用
+        if (user.getStatus() != 1) {
+            return false;
+        }
+        // 检查是否有未解冻的封禁/冻结
+        if (user.getFreezeType() != null) {
+            return false;
+        }
+        // 检查封禁时间是否未过期
+        LocalDateTime now = LocalDateTime.now();
+        if (user.getBanTime() != null && user.getBanTime().isAfter(now)) {
+            return false;
+        }
+        if (user.getFreezeTime() != null && user.getFreezeTime().isAfter(now)) {
+            return false;
+        }
+        return true;
+    }
+
+    private UserResponse toUserResponse(User user) {
+        if (user == null) {
+            return null;
+        }
+        UserResponse response = new UserResponse();
+        response.setId(user.getId());
+        response.setEmail(user.getEmail());
+        response.setPhone(user.getPhone());
+        response.setNickname(user.getNickname());
+        response.setAvatar(user.getAvatar());
+        response.setBio(user.getBio());
+        response.setEducationLevel(user.getEducationLevel());
+        response.setSchoolId(user.getSchoolId());
+        response.setSchoolName(user.getSchoolName());
+        response.setStatus(user.getStatus());
+        response.setBanTime(user.getBanTime());
+        response.setFreezeTime(user.getFreezeTime());
+        response.setFreezeType(user.getFreezeType());
+        response.setBanReason(user.getBanReason());
+        response.setFollowerCount(user.getFollowerCount());
+        response.setLastLoginTime(user.getLastLoginTime());
+        response.setCreatedAt(user.getCreatedAt());
+        return response;
     }
 
 

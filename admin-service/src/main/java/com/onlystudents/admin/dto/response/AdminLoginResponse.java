@@ -22,6 +22,8 @@ public class AdminLoginResponse {
         private String email;
         private String phone;
         private String avatar;
+        private Long roleId;
+        private Integer status;
         private String roleName;
         private List<String> permissions;
         private LocalDateTime lastLoginTime;

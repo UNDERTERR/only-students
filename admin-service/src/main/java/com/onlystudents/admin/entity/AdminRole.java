@@ -12,8 +12,10 @@ public class AdminRole {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    @TableField("name")
     private String roleName;
 
+    @TableField("code")
     private String roleCode;
 
     private String description;

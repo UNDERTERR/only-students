@@ -100,4 +100,11 @@ public class CommentController {
         commentService.markCommentAsRead(commentId);
         return Result.success();
     }
+    
+    @DeleteMapping("/admin/{commentId}")
+    @Operation(summary = "管理员物理删除评论", description = "管理员删除评论，不经过逻辑删除")
+    public Result<Void> adminDeleteComment(@PathVariable Long commentId) {
+        commentService.adminDeleteComment(commentId);
+        return Result.success();
+    }
 }

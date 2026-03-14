@@ -91,4 +91,28 @@ public interface NoteMapper extends BaseMapper<Note> {
             "COALESCE(SUM(share_count), 0) as totalShares " +
             "FROM note WHERE user_id = #{creatorId} AND deleted = 0 AND status = 2")
     java.util.Map<String, Object> selectCreatorNoteStats(@Param("creatorId") Long creatorId);
+    
+    @Select("SELECT COUNT(*) FROM note WHERE deleted = 0")
+    Long countTotalNotes();
+    
+    @Select("SELECT COUNT(*) FROM note WHERE deleted = 0 AND DATE(created_at) = CURDATE()")
+    Long countTodayNewNotes();
+    
+    @Select("SELECT COUNT(*) FROM note WHERE deleted = 0 AND YEARWEEK(DATE(created_at)) = YEARWEEK(CURDATE())")
+    Long countWeekNewNotes();
+    
+    @Select("SELECT COUNT(*) FROM note WHERE deleted = 0 AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL DAYOFMONTH(CURDATE()) DAY)")
+    Long countMonthNewNotes();
+    
+    @Select("SELECT COUNT(*) FROM note WHERE deleted = 0 AND status = 2")
+    Long countPublishedNotes();
+    
+    @Select("SELECT COUNT(*) FROM note WHERE deleted = 0 AND status = 1")
+    Long countPendingAuditNotes();
+    
+    @Select("SELECT COUNT(*) FROM note WHERE deleted = 0 AND status = 3")
+    Long countRejectedNotes();
+    
+    @Select("SELECT * FROM note WHERE deleted = 0 AND status = 1 ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}")
+    List<Note> selectPendingAuditNotes(@Param("offset") Integer offset, @Param("size") Integer size);
 }

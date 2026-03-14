@@ -155,7 +155,7 @@ spring:
         - id: admin-service
           uri: lb://admin-service
           predicates:
-            - Path=/api/admin/**
+            - Path=/api/admin/**,/api/auth/**
           filters:
             - StripPrefix=1
   data:
@@ -178,7 +178,7 @@ jwt:
 
 # 白名单路径（不需要认证）
 whitelist:
-  paths: /api/sms/send,/api/user/register,/api/user/login,/api/user/refresh-token,/api/user/**,/api/note,/api/note/latest,/api/note/hot,/api/note/*,/api/search/**,/api/file/preview/**,/api/notification/sse/subscribe
+  paths: /api/sms/send,/api/user/register,/api/user/login,/api/user/refresh-token,/api/user/**,/api/note,/api/note/latest,/api/note/hot,/api/note/*,/api/search/**,/api/file/preview/**,/api/notification/sse/subscribe,/api/admin/**,/api/auth/**
 
 # Sentinel配置
 sentinel:

@@ -6,6 +6,7 @@ import com.onlystudents.common.result.Result;
 import com.onlystudents.note.client.SubscriptionFeignClient;
 import com.onlystudents.note.dto.CreateNoteRequest;
 import com.onlystudents.note.dto.NoteDTO;
+import com.onlystudents.note.dto.NoteStatsDTO;
 import com.onlystudents.note.dto.UpdateNoteRequest;
 import com.onlystudents.note.entity.Note;
 import com.onlystudents.note.mapper.NoteMapper;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -233,5 +235,83 @@ public class NoteController {
     public Result<java.util.Map<String, Object>> getCreatorNoteStats(@PathVariable Long creatorId) {
         java.util.Map<String, Object> stats = noteService.getCreatorNoteStats(creatorId);
         return Result.success(stats);
+    }
+    
+    @GetMapping("/stats")
+    @Operation(summary = "获取笔记统计数据", description = "获取笔记统计数据，包括总数、新增数、待审核数等")
+    public Result<NoteStatsDTO> getNoteStats() {
+        return Result.success(noteService.getNoteStats());
+    }
+    
+    @GetMapping("/audit/pending")
+    @Operation(summary = "获取待审核笔记列表", description = "获取所有待审核的笔记列表")
+    public Result<java.util.Map<String, Object>> getPendingAuditNotes(
+            @RequestParam(name = "page", defaultValue = "1") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size) {
+        List<NoteDTO> list = noteService.getPendingAuditNotes(page, size);
+        Long total = noteService.getPendingAuditCount();
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("list", list);
+        result.put("total", total);
+        return Result.success(result);
+    }
+    
+    @GetMapping("/audit/count")
+    @Operation(summary = "获取待审核笔记数量", description = "获取待审核笔记的数量")
+    public Result<Long> getPendingAuditCount() {
+        return Result.success(noteService.getPendingAuditCount());
+    }
+    
+    @PostMapping("/audit/{noteId}/pass")
+    @Operation(summary = "审核通过", description = "管理员审核通过笔记")
+    public Result<Void> auditPass(
+            @PathVariable(name = "noteId") Long noteId,
+            @RequestHeader(CommonConstants.ADMIN_ID_HEADER) Long adminId) {
+        noteService.auditPass(noteId, adminId);
+        return Result.success();
+    }
+    
+    @PostMapping("/audit/{noteId}/reject")
+    @Operation(summary = "审核拒绝", description = "管理员审核拒绝笔记")
+    public Result<Void> auditReject(
+            @PathVariable(name = "noteId") Long noteId,
+            @RequestParam(name = "reason") String reason,
+            @RequestHeader(CommonConstants.ADMIN_ID_HEADER) Long adminId) {
+        noteService.auditReject(noteId, reason, adminId);
+        return Result.success();
+    }
+    
+    @PutMapping("/{noteId}/to-draft")
+    @Operation(summary = "设置笔记为草稿状态", description = "将笔记状态设置为草稿，用于举报处理")
+    public Result<Void> setNoteToDraft(@PathVariable(name = "noteId") Long noteId) {
+        noteService.setNoteToDraft(noteId);
+        return Result.success();
+    }
+    
+    @GetMapping("/admin/list")
+    @Operation(summary = "管理员获取笔记列表", description = "管理员分页获取笔记列表")
+    public Result<Map<String, Object>> getNoteListForAdmin(
+            @RequestParam(name = "page", defaultValue = "1") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size,
+            @RequestParam(name = "status", required = false) Integer status,
+            @RequestParam(name = "keyword", required = false) String keyword) {
+        Map<String, Object> result = noteService.getNoteListForAdmin(page, size, status, keyword);
+        return Result.success(result);
+    }
+    
+    @DeleteMapping("/admin/{noteId}")
+    @Operation(summary = "管理员删除笔记", description = "管理员物理删除笔记")
+    public Result<Void> deleteNoteByAdmin(@PathVariable(name = "noteId") Long noteId) {
+        noteService.deleteNoteByAdmin(noteId);
+        return Result.success();
+    }
+    
+    @PostMapping("/admin/{noteId}/view-count")
+    @Operation(summary = "管理员增加浏览量", description = "管理员手动增加笔记浏览量")
+    public Result<Void> incrementViewCountByAdmin(
+            @PathVariable(name = "noteId") Long noteId,
+            @RequestParam(name = "count", defaultValue = "1") Integer count) {
+        noteService.incrementViewCountByAdmin(noteId, count);
+        return Result.success();
     }
 }

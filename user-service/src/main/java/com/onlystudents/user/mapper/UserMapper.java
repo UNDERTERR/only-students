@@ -35,21 +35,17 @@ public interface UserMapper extends BaseMapper<User> {
             "SELECT * FROM user " +
             "WHERE status = 1 " +
             "<if test='keyword != null and keyword != \"\"'>" +
-            "OR nickname LIKE CONCAT('%', #{keyword}, '%') " +
-            "OR bio LIKE CONCAT('%', #{keyword}, '%') " +
+            "AND (nickname LIKE CONCAT('%', #{keyword}, '%') " +
+            "OR bio LIKE CONCAT('%', #{keyword}, '%')) " +
             "</if>" +
             "<if test='educationLevel != null'>" +
             "AND education_level = #{educationLevel} " +
-            "</if>" +
-            "<if test='isCreator != null'>" +
-            "AND is_creator = #{isCreator} " +
             "</if>" +
             "ORDER BY follower_count DESC " +
             "LIMIT #{offset}, #{limit}" +
             "</script>")
     List<User> searchUsers(@Param("keyword") String keyword, 
                            @Param("educationLevel") Integer educationLevel,
-                           @Param("isCreator") Integer isCreator,
                            @Param("offset") Integer offset, 
                            @Param("limit") Integer limit);
     
@@ -58,4 +54,19 @@ public interface UserMapper extends BaseMapper<User> {
     
     @Update("UPDATE user SET follower_count = follower_count - 1 WHERE id = #{userId} AND follower_count > 0")
     int decrementFollowerCount(@Param("userId") Long userId);
+    
+    @Select("SELECT COUNT(*) FROM user WHERE status = 1")
+    Long countTotalUsers();
+    
+    @Select("SELECT COUNT(*) FROM user WHERE status = 1 AND DATE(created_at) = CURDATE()")
+    Long countTodayNewUsers();
+    
+    @Select("SELECT COUNT(*) FROM user WHERE status = 1 AND YEARWEEK(DATE(created_at)) = YEARWEEK(CURDATE())")
+    Long countWeekNewUsers();
+    
+    @Select("SELECT COUNT(*) FROM user WHERE status = 1 AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL DAYOFMONTH(CURDATE()) DAY)")
+    Long countMonthNewUsers();
+    
+    @Update("UPDATE user SET status = #{status} WHERE id = #{userId}")
+    int updateUserStatus(@Param("userId") Long userId, @Param("status") Integer status);
 }

@@ -6,7 +6,25 @@
   <img src="https://img.shields.io/badge/Microservices-15-orange" alt="Microservices">
 </p>
 
-> 一个类似 OnlyFans 的学习笔记分享平台，支持订阅、支付、实时通知等功能
+> 一个学习笔记分享平台，支持订阅、支付、实时通知等功能
+
+## 📱 项目预览
+
+### 用户端
+
+| 首页 | 笔记详情 | 创作者主页 |
+|------|----------|------------|
+| ![首页](assets/images/1.png) | ![笔记详情](assets/images/2.png) | ![创作者主页](assets/images/3.png) |
+
+| 消息通知 | 个人中心 | 搜索 |
+|---------|----------|------|
+| ![消息](assets/images/4.png) | ![个人中心](assets/images/5.png) | ![搜索](assets/images/6.png) |
+
+### 管理后台
+
+![管理后台](assets/images/7.png)
+
+![用户管理](assets/images/8.png)
 
 ## 📚 项目简介
 

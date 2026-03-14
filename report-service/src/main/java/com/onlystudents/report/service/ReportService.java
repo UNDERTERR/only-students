@@ -1,5 +1,6 @@
 package com.onlystudents.report.service;
 
+import com.onlystudents.report.dto.ReportStatsDTO;
 import com.onlystudents.report.entity.Report;
 
 import java.util.List;
@@ -15,4 +16,8 @@ public interface ReportService {
     void processReport(Long reportId, Long handlerId, Integer status, String handleResult);
     
     Report getReportDetail(Long reportId);
+    
+    ReportStatsDTO getReportStats();
+    
+    Long countReports(Integer status);
 }
