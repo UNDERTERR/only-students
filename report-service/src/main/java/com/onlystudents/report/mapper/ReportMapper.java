@@ -36,4 +36,10 @@ public interface ReportMapper extends BaseMapper<Report> {
     
     @Select("SELECT COUNT(*) FROM report WHERE DATE(created_at) = CURDATE()")
     Long countTodayReports();
+    
+    @Select("<script>" +
+            "SELECT COUNT(*) FROM report WHERE 1=1 " +
+            "<if test='status != null'> AND status = #{status} </if>" +
+            "</script>")
+    Long countByStatus(Integer status);
 }

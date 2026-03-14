@@ -45,6 +45,14 @@ public interface UserFeignClient {
      */
     @PostMapping("/user/school/notes/decrement/{schoolId}")
     Result<Void> decrementSchoolNotes(@PathVariable("schoolId") Long schoolId);
+    
+    /**
+     * 检查用户是否可以发布内容
+     * @param userId 用户ID
+     * @return 如果可以发布返回true，否则返回false
+     */
+    @GetMapping("/user/{userId}/canPost")
+    Result<Boolean> canUserPost(@PathVariable("userId") Long userId);
 }
 
 

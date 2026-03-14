@@ -38,4 +38,20 @@ public interface NoteService {
     java.util.Map<String, Object> getCreatorNoteStats(Long creatorId);
     
     NoteStatsDTO getNoteStats();
+    
+    List<NoteDTO> getPendingAuditNotes(Integer page, Integer size);
+    
+    Long getPendingAuditCount();
+    
+    void auditPass(Long noteId, Long adminId);
+    
+    void auditReject(Long noteId, String reason, Long adminId);
+    
+    void setNoteToDraft(Long noteId);
+    
+    java.util.Map<String, Object> getNoteListForAdmin(Integer page, Integer size, Integer status, String keyword);
+    
+    void deleteNoteByAdmin(Long noteId);
+    
+    void incrementViewCountByAdmin(Long noteId, Integer count);
 }

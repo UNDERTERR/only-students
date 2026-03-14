@@ -31,10 +31,15 @@ public class ReportController {
     
     @GetMapping("/list")
     @Operation(summary = "获取举报列表", description = "管理员获取举报列表，可按状态筛选")
-    public Result<List<Report>> getReportList(@RequestParam(name = "status", required = false) Integer status,
+    public Result<java.util.Map<String, Object>> getReportList(@RequestParam(name = "status", required = false) Integer status,
                                               @RequestParam(name = "page", defaultValue = "1") Integer page,
                                               @RequestParam(name = "size", defaultValue = "20") Integer size) {
-        return Result.success(reportService.getReportList(status, page, size));
+        List<Report> list = reportService.getReportList(status, page, size);
+        Long total = reportService.countReports(status);
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("list", list);
+        result.put("total", total);
+        return Result.success(result);
     }
     
     @GetMapping("/my")

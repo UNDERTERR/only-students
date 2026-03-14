@@ -112,4 +112,7 @@ public interface NoteMapper extends BaseMapper<Note> {
     
     @Select("SELECT COUNT(*) FROM note WHERE deleted = 0 AND status = 3")
     Long countRejectedNotes();
+    
+    @Select("SELECT * FROM note WHERE deleted = 0 AND status = 1 ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}")
+    List<Note> selectPendingAuditNotes(@Param("offset") Integer offset, @Param("size") Integer size);
 }

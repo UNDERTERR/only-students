@@ -1,6 +1,7 @@
 package com.onlystudents.comment.service.impl;
 
 import com.onlystudents.comment.client.NoteFeignClient;
+import com.onlystudents.comment.client.NotificationFeignClient;
 import com.onlystudents.comment.client.UserFeignClient;
 import com.onlystudents.comment.dto.UserResponse;
 import com.onlystudents.comment.dto.CommentDTO;
@@ -34,11 +35,18 @@ public class CommentServiceImpl implements CommentService {
     private final CommentLikeMapper likeMapper;
     private final UserFeignClient userFeignClient;
     private final NoteFeignClient noteFeignClient;
+    private final NotificationFeignClient notificationFeignClient;
     private final RabbitTemplate rabbitTemplate;
     
     @Override
     @Transactional
     public CommentDTO createComment(CreateCommentRequest request, Long userId) {
+        // 检查用户是否可以发布内容
+        Result<Boolean> canPostResult = userFeignClient.canUserPost(userId);
+        if (canPostResult == null || canPostResult.getData() == null || !canPostResult.getData()) {
+            throw new BusinessException(400, "您已被封禁，无法评论");
+        }
+        
         Comment comment = new Comment();
         BeanUtils.copyProperties(request, comment);
         comment.setUserId(userId);
@@ -290,6 +298,27 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public void markCommentAsRead(Long commentId) {
         commentMapper.markAsRead(commentId);
+    }
+
+    @Override
+    public void adminDeleteComment(Long commentId) {
+        Comment comment = commentMapper.selectById(commentId);
+        if (comment == null) {
+            throw new BusinessException(404, "评论不存在");
+        }
+        Long userId = comment.getUserId();
+        commentMapper.deleteById(commentId);
+        log.info("管理员物理删除评论: commentId={}", commentId);
+        
+        // 发送评论被删除通知给用户
+        try {
+            String title = "评论被删除";
+            String content = "您的评论因违规已被系统删除，请遵守社区规范";
+            notificationFeignClient.sendNotification(userId, 1, title, content);
+            log.info("发送评论删除通知: commentId={}, userId={}", commentId, userId);
+        } catch (Exception e) {
+            log.error("发送评论删除通知失败: commentId={}", commentId, e);
+        }
     }
     
     private CommentDTO convertToDTO(Comment comment, Long currentUserId) {

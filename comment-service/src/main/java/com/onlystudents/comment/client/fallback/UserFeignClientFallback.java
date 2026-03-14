@@ -25,4 +25,10 @@ public class UserFeignClientFallback implements UserFeignClient {
         
         return Result.success(fallbackUser);
     }
+
+    @Override
+    public Result<Boolean> canUserPost(Long userId) {
+        log.warn("调用 user-service 检查用户发布权限失败，降级处理，userId={}", userId);
+        return Result.success(false);
+    }
 }

@@ -7,6 +7,8 @@ import com.onlystudents.common.exception.BusinessException;
 import com.onlystudents.common.result.ResultCode;
 import com.onlystudents.common.result.Result;
 import com.onlystudents.note.client.FileFeignClient;
+import com.onlystudents.note.client.NotificationFeignClient;
+import com.onlystudents.note.client.OperationLogFeignClient;
 import com.onlystudents.note.client.SubscriptionFeignClient;
 import com.onlystudents.note.client.UserFeignClient;
 import com.onlystudents.note.dto.CreateNoteRequest;
@@ -28,6 +30,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -39,17 +42,23 @@ public class NoteServiceImpl implements NoteService {
     private final NoteMapper noteMapper;
     private final FileFeignClient fileFeignClient;
     private final UserFeignClient userFeignClient;
+    private final NotificationFeignClient notificationFeignClient;
+    private final OperationLogFeignClient operationLogFeignClient;
     private final RabbitTemplate rabbitTemplate;
     private final TagService tagService;
 
     public NoteServiceImpl(NoteMapper noteMapper,
                            FileFeignClient fileFeignClient,
                            UserFeignClient userFeignClient,
+                           NotificationFeignClient notificationFeignClient,
+                           OperationLogFeignClient operationLogFeignClient,
                            RabbitTemplate rabbitTemplate,
                            TagService tagService) {
         this.noteMapper = noteMapper;
         this.fileFeignClient = fileFeignClient;
         this.userFeignClient = userFeignClient;
+        this.notificationFeignClient = notificationFeignClient;
+        this.operationLogFeignClient = operationLogFeignClient;
         this.rabbitTemplate = rabbitTemplate;
         this.tagService = tagService;
     }
@@ -61,6 +70,12 @@ public class NoteServiceImpl implements NoteService {
             @CacheEvict(value = "latestNotes", allEntries = true)
     })
     public NoteDTO createNote(CreateNoteRequest request, Long userId) {
+        // 检查用户是否可以发布内容
+        Result<Boolean> canPostResult = userFeignClient.canUserPost(userId);
+        if (canPostResult == null || canPostResult.getData() == null || !canPostResult.getData()) {
+            throw new BusinessException(400, "您已被封禁，无法发布笔记");
+        }
+        
         Note note = new Note();
         BeanUtils.copyProperties(request, note);
         note.setUserId(userId);
@@ -124,6 +139,9 @@ public class NoteServiceImpl implements NoteService {
         }
 
         BeanUtils.copyProperties(request, note);
+        
+        // 保存后状态重置为草稿，需要重新发布才能再次审核
+        note.setStatus(0);
         noteMapper.updateById(note);
 
         // 更新标签关联
@@ -385,6 +403,12 @@ public class NoteServiceImpl implements NoteService {
 
     @Override
     public void publishNote(Long noteId, Long userId) {
+        // 检查用户是否可以发布内容
+        Result<Boolean> canPostResult = userFeignClient.canUserPost(userId);
+        if (canPostResult == null || canPostResult.getData() == null || !canPostResult.getData()) {
+            throw new BusinessException(400, "您已被封禁，无法发布笔记");
+        }
+        
         Note note = noteMapper.selectById(noteId);
         if (note == null) {
             throw new BusinessException(ResultCode.NOTE_NOT_FOUND);
@@ -394,36 +418,14 @@ public class NoteServiceImpl implements NoteService {
             throw new BusinessException(ResultCode.FORBIDDEN);
         }
 
-        note.setStatus(2); // 已发布
-        note.setPublishTime(LocalDateTime.now());
+        // 发布时设置为待审核状态，需要管理员审核后才能显示
+        note.setStatus(1); // 待审核
         noteMapper.updateById(note);
+        
+        log.info("笔记提交审核: noteId={}, userId={}", noteId, userId);
 
-        // 如果有学校，增加学校笔记数
-        if (note.getSchoolId() != null) {
-            log.info("准备增加学校笔记数, schoolId={}, noteId={}", note.getSchoolId(), noteId);
-            try {
-                    Result<Void> result = userFeignClient.incrementSchoolNotes(note.getSchoolId());
-                    log.info("Feign增加学校笔记数结果: schoolId={}, result={}", note.getSchoolId(), result);
-
-            } catch (Exception e) {
-                log.error("增加学校笔记数失败: schoolId={}", note.getSchoolId(), e);
-            }
-        } else {
-            log.warn("笔记没有学校信息, noteId={}, schoolId={}", noteId, note.getSchoolId());
-        }
-
-        try {
-            // 发送笔记同步消息
-            rabbitTemplate.convertAndSend("note.exchange", "note.sync", note);
-            log.info("笔记 [{}] 已发布，同步消息已发送到MQ", noteId + ":" + note);
-
-            // 发送笔记发布成功通知给作者
-            NotePublishEvent event = new NotePublishEvent(noteId, userId, note.getTitle(), note.getCoverImage());
-            rabbitTemplate.convertAndSend("note.exchange", "note.publish", event);
-            log.info("笔记发布通知事件已发送: noteId={}", noteId);
-        } catch (Exception e) {
-            log.error("发送消息失败: noteId={}", noteId, e);
-        }
+        // 注意：暂时不增加学校笔记数，等审核通过后再增加
+        // 注意：暂时不发送同步消息，等审核通过后再发送
     }
 
     @Override
@@ -496,5 +498,220 @@ public class NoteServiceImpl implements NoteService {
         stats.setPendingAuditNotes(noteMapper.countPendingAuditNotes());
         stats.setRejectedNotes(noteMapper.countRejectedNotes());
         return stats;
+    }
+
+    @Override
+    public List<NoteDTO> getPendingAuditNotes(Integer page, Integer size) {
+        Integer offset = (page - 1) * size;
+        List<Note> notes = noteMapper.selectPendingAuditNotes(offset, size);
+        return notes.stream().map(this::toNoteDTO).collect(Collectors.toList());
+    }
+
+    @Override
+    public Long getPendingAuditCount() {
+        return noteMapper.countPendingAuditNotes();
+    }
+
+    @Override
+    public void auditPass(Long noteId, Long adminId) {
+        Note note = noteMapper.selectById(noteId);
+        if (note == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "笔记不存在");
+        }
+        if (note.getStatus() != 1) {
+            throw new BusinessException(ResultCode.PARAM_ERROR, "笔记不是待审核状态");
+        }
+        note.setStatus(2); // 审核通过，设置为已发布
+        note.setPublishTime(LocalDateTime.now());
+        noteMapper.updateById(note);
+        
+        log.info("笔记审核通过: noteId={}, adminId={}", noteId, adminId);
+        
+        // 审核通过后，增加学校笔记数
+        if (note.getSchoolId() != null) {
+            try {
+                userFeignClient.incrementSchoolNotes(note.getSchoolId());
+                log.info("审核通过增加学校笔记数: schoolId={}", note.getSchoolId());
+            } catch (Exception e) {
+                log.error("增加学校笔记数失败: schoolId={}", note.getSchoolId(), e);
+            }
+        }
+        
+        // 审核通过后，发送同步消息
+        try {
+            rabbitTemplate.convertAndSend("note.exchange", "note.sync", note);
+            log.info("审核通过，笔记同步消息已发送到MQ: noteId={}", noteId);
+        } catch (Exception e) {
+            log.error("发送消息失败: noteId={}", noteId, e);
+        }
+        
+        // 发送审核通过通知给用户
+        try {
+            String title = "笔记审核通过";
+            String content = "您的笔记《" + note.getTitle() + "》已审核通过，快去分享给小伙伴吧！";
+            notificationFeignClient.sendNotification(note.getUserId(), 1, title, content);
+            log.info("发送审核通过通知: noteId={}, userId={}", noteId, note.getUserId());
+        } catch (Exception e) {
+            log.error("发送审核通过通知失败: noteId={}", noteId, e);
+        }
+        
+        // 记录操作日志
+        try {
+            Map<String, Object> logMap = new HashMap<>();
+            logMap.put("adminId", adminId);
+            logMap.put("operationType", "AUDIT_PASS");
+            logMap.put("operationDesc", "审核通过笔记: " + note.getTitle());
+            logMap.put("requestMethod", "POST");
+            logMap.put("requestUrl", "/note/audit/" + noteId + "/pass");
+            logMap.put("status", 1);
+            operationLogFeignClient.saveLog(logMap);
+        } catch (Exception e) {
+            log.error("记录操作日志失败", e);
+        }
+    }
+
+    @Override
+    public void auditReject(Long noteId, String reason, Long adminId) {
+        Note note = noteMapper.selectById(noteId);
+        if (note == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "笔记不存在");
+        }
+        if (note.getStatus() != 1) {
+            throw new BusinessException(ResultCode.PARAM_ERROR, "笔记不是待审核状态");
+        }
+        String noteTitle = note.getTitle();
+        note.setStatus(3);
+        noteMapper.updateById(note);
+        log.info("笔记审核拒绝: noteId={}, reason={}, adminId={}", noteId, reason, adminId);
+        
+        // 发送审核拒绝通知给用户
+        try {
+            String title = "笔记审核未通过";
+            String content = "您的笔记《" + noteTitle + "》审核未通过，原因：" + reason;
+            notificationFeignClient.sendNotification(note.getUserId(), 1, title, content);
+            log.info("发送审核拒绝通知: noteId={}, userId={}", noteId, note.getUserId());
+        } catch (Exception e) {
+            log.error("发送审核拒绝通知失败: noteId={}", noteId, e);
+        }
+        
+        // 记录操作日志
+        try {
+            Map<String, Object> logMap = new HashMap<>();
+            logMap.put("adminId", adminId);
+            logMap.put("operationType", "AUDIT_REJECT");
+            logMap.put("operationDesc", "审核拒绝笔记: " + noteTitle + ", 原因: " + reason);
+            logMap.put("requestMethod", "POST");
+            logMap.put("requestUrl", "/note/audit/" + noteId + "/reject");
+            logMap.put("status", 1);
+            operationLogFeignClient.saveLog(logMap);
+        } catch (Exception e) {
+            log.error("记录操作日志失败", e);
+        }
+    }
+
+    @Override
+    public void setNoteToDraft(Long noteId) {
+        Note note = noteMapper.selectById(noteId);
+        if (note == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "笔记不存在");
+        }
+        note.setStatus(0);
+        noteMapper.updateById(note);
+        log.info("设置笔记为草稿状态: noteId={}", noteId);
+    }
+
+    @Override
+    public Map<String, Object> getNoteListForAdmin(Integer page, Integer size, Integer status, String keyword) {
+        LambdaQueryWrapper<Note> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(Note::getId);
+        
+        if (status != null) {
+            wrapper.eq(Note::getStatus, status);
+        }
+        if (keyword != null && !keyword.isEmpty()) {
+            wrapper.like(Note::getTitle, keyword);
+        }
+        
+        int offset = (page - 1) * size;
+        wrapper.last("LIMIT " + offset + ", " + size);
+        
+        List<Note> notes = noteMapper.selectList(wrapper);
+        List<NoteDTO> list = notes.stream().map(this::toNoteDTO).collect(Collectors.toList());
+        
+        // Get total count
+        LambdaQueryWrapper<Note> countWrapper = new LambdaQueryWrapper<>();
+        if (status != null) {
+            countWrapper.eq(Note::getStatus, status);
+        }
+        if (keyword != null && !keyword.isEmpty()) {
+            countWrapper.like(Note::getTitle, keyword);
+        }
+        Long total = noteMapper.selectCount(countWrapper);
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", list);
+        result.put("total", total);
+        return result;
+    }
+
+    @Override
+    public void deleteNoteByAdmin(Long noteId) {
+        Note note = noteMapper.selectById(noteId);
+        if (note == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "笔记不存在");
+        }
+        noteMapper.deleteById(noteId);
+        log.info("管理员删除笔记: noteId={}", noteId);
+        
+        // 记录操作日志
+        try {
+            Map<String, Object> logMap = new HashMap<>();
+            logMap.put("adminId", 1L);
+            logMap.put("operationType", "DELETE_NOTE");
+            logMap.put("operationDesc", "删除笔记: " + note.getTitle());
+            logMap.put("requestMethod", "DELETE");
+            logMap.put("requestUrl", "/note/admin/" + noteId);
+            logMap.put("status", 1);
+            operationLogFeignClient.saveLog(logMap);
+        } catch (Exception e) {
+            log.error("记录操作日志失败", e);
+        }
+    }
+
+    @Override
+    public void incrementViewCountByAdmin(Long noteId, Integer count) {
+        Note note = noteMapper.selectById(noteId);
+        if (note == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "笔记不存在");
+        }
+        if (count == null || count <= 0) {
+            count = 1;
+        }
+        note.setViewCount(note.getViewCount() + count);
+        noteMapper.updateById(note);
+        log.info("管理员增加浏览量: noteId={}, count={}", noteId, count);
+        
+        // 记录操作日志
+        try {
+            Map<String, Object> logMap = new HashMap<>();
+            logMap.put("adminId", 1L);
+            logMap.put("operationType", "INCREMENT_VIEW_COUNT");
+            logMap.put("operationDesc", "增加浏览量: 笔记《" + note.getTitle() + "》增加 " + count);
+            logMap.put("requestMethod", "POST");
+            logMap.put("requestUrl", "/note/admin/" + noteId + "/view-count");
+            logMap.put("status", 1);
+            operationLogFeignClient.saveLog(logMap);
+        } catch (Exception e) {
+            log.error("记录操作日志失败", e);
+        }
+    }
+
+    private NoteDTO toNoteDTO(Note note) {
+        if (note == null) {
+            return null;
+        }
+        NoteDTO dto = new NoteDTO();
+        BeanUtils.copyProperties(note, dto);
+        return dto;
     }
 }

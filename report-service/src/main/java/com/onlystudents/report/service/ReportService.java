@@ -18,4 +18,6 @@ public interface ReportService {
     Report getReportDetail(Long reportId);
     
     ReportStatsDTO getReportStats();
+    
+    Long countReports(Integer status);
 }

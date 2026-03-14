@@ -23,7 +23,7 @@ public interface UserService {
     /**
      * 搜索用户
      */
-    List<UserResponse> searchUsers(String keyword, Integer educationLevel, Integer isCreator, Integer page, Integer size);
+    List<UserResponse> searchUsers(String keyword, Integer educationLevel, Integer page, Integer size);
     
     /**
      * 批量获取用户
@@ -73,15 +73,53 @@ public interface UserService {
     /**
      * 分页查询用户列表（管理员）
      */
-    List<UserResponse> getUserListPage(Integer page, Integer size, String keyword, Integer status, Integer isCreator);
+    List<UserResponse> getUserListPage(Integer page, Integer size, String keyword, Integer status);
     
     /**
      * 统计用户数量（管理员）
      */
-    Long countUsers(Integer status, Integer isCreator);
+    Long countUsers(Integer status);
     
     /**
      * 封禁/解封用户
      */
     void updateUserStatus(Long userId, Integer status);
+    
+    /**
+     * 设置用户手机号
+     */
+    void updateUserPhone(Long userId, String phone);
+    
+    /**
+     * 设置用户邮箱
+     */
+    void updateUserEmail(Long userId, String email);
+    
+    /**
+     * 设置封禁时间（普通举报封禁）
+     * @param userId 用户ID
+     * @param banTime 封禁截止时间
+     * @param reason 封禁原因
+     */
+    void setUserBan(Long userId, java.time.LocalDateTime banTime, String reason);
+    
+    /**
+     * 直接冻结用户
+     * @param userId 用户ID
+     * @param freezeTime 冻结截止时间
+     * @param reason 冻结原因
+     */
+    void setUserFreeze(Long userId, java.time.LocalDateTime freezeTime, String reason);
+    
+    /**
+     * 解冻/解禁用户
+     */
+    void unfreezeUser(Long userId);
+    
+    /**
+     * 检查用户是否可以发布内容
+     * @param userId 用户ID
+     * @return 如果可以发布返回true，被封禁/冻结返回false
+     */
+    Boolean canUserPost(Long userId);
 }

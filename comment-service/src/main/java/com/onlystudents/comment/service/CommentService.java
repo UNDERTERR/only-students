@@ -28,4 +28,6 @@ public interface CommentService {
     Integer getReceivedCommentUnreadCount(Long userId);
     
     void markCommentAsRead(Long commentId);
+    
+    void adminDeleteComment(Long commentId);
 }

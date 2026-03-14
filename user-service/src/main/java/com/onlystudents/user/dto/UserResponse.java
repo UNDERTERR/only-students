@@ -25,7 +25,17 @@ public class UserResponse {
     
     private String schoolName;
     
-    private Integer isCreator;
+    private String creatorConfig;
+    
+    private Integer status;
+    
+    private LocalDateTime banTime;
+    
+    private LocalDateTime freezeTime;
+    
+    private Integer freezeType;
+    
+    private String banReason;
     
     private Integer followerCount;
     

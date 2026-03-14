@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -16,6 +17,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/user")
+@Slf4j
 @RequiredArgsConstructor
 @Tag(name = "用户管理", description = "用户注册、登录、更新等接口")
 public class UserController {
@@ -65,10 +67,9 @@ public class UserController {
     @Operation(summary = "搜索用户", description = "根据关键词搜索用户（用户名、昵称、简介）")
     public Result<List<UserResponse>> searchUsers(@RequestParam(name = "keyword") String keyword,
                                                    @RequestParam(name = "educationLevel", required = false) Integer educationLevel,
-                                                   @RequestParam(name = "isCreator", required = false) Integer isCreator,
                                                    @RequestParam(name = "page", defaultValue = "1") Integer page,
                                                    @RequestParam(name = "size", defaultValue = "10") Integer size) {
-        return Result.success(userService.searchUsers(keyword, educationLevel, isCreator, page, size));
+        return Result.success(userService.searchUsers(keyword, educationLevel, page, size));
     }
     
     @PostMapping("/logout")
@@ -166,21 +167,24 @@ public class UserController {
     
     @GetMapping("/list")
     @Operation(summary = "分页获取用户列表", description = "管理员分页获取用户列表")
-    public Result<List<UserResponse>> getUserList(
+    public Result<java.util.Map<String, Object>> getUserList(
             @RequestParam(name = "page", defaultValue = "1") Integer page,
             @RequestParam(name = "size", defaultValue = "10") Integer size,
             @RequestParam(name = "keyword", required = false) String keyword,
-            @RequestParam(name = "status", required = false) Integer status,
-            @RequestParam(name = "isCreator", required = false) Integer isCreator) {
-        return Result.success(userService.getUserListPage(page, size, keyword, status, isCreator));
+            @RequestParam(name = "status", required = false) Integer status) {
+        List<UserResponse> list = userService.getUserListPage(page, size, keyword, status);
+        Long total = userService.countUsers(status);
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("list", list);
+        result.put("total", total);
+        return Result.success(result);
     }
     
     @GetMapping("/count")
     @Operation(summary = "统计用户数量", description = "管理员统计用户数量")
     public Result<Long> countUsers(
-            @RequestParam(name = "status", required = false) Integer status,
-            @RequestParam(name = "isCreator", required = false) Integer isCreator) {
-        return Result.success(userService.countUsers(status, isCreator));
+            @RequestParam(name = "status", required = false) Integer status) {
+        return Result.success(userService.countUsers(status));
     }
     
     @PutMapping("/{userId}/status")
@@ -189,5 +193,55 @@ public class UserController {
             @RequestParam(name = "status") Integer status) {
         userService.updateUserStatus(userId, status);
         return Result.success();
+    }
+    
+    @PutMapping("/{userId}/phone")
+    @Operation(summary = "设置用户手机号", description = "管理员设置用户手机号")
+    public Result<Void> updateUserPhone(@PathVariable(name = "userId") Long userId,
+            @RequestParam(name = "phone") String phone) {
+        userService.updateUserPhone(userId, phone);
+        return Result.success();
+    }
+    
+    @PutMapping("/{userId}/email")
+    @Operation(summary = "设置用户邮箱", description = "管理员设置用户邮箱")
+    public Result<Void> updateUserEmail(@PathVariable(name = "userId") Long userId,
+            @RequestParam(name = "email") String email) {
+        userService.updateUserEmail(userId, email);
+        return Result.success();
+    }
+    
+    @PutMapping("/{userId}/ban")
+    @Operation(summary = "设置封禁时间", description = "管理员设置用户封禁时间（普通举报封禁）")
+    public Result<Void> setUserBan(@PathVariable(name = "userId") Long userId,
+            @RequestParam(name = "banTime") String banTimeStr,
+            @RequestParam(name = "reason", required = false) String reason) {
+        java.time.LocalDateTime banTime = java.time.LocalDateTime.parse(banTimeStr.replace(" ", "T"));
+        userService.setUserBan(userId, banTime, reason);
+        return Result.success();
+    }
+    
+    @PutMapping("/{userId}/freeze")
+    @Operation(summary = "直接冻结用户", description = "管理员直接冻结用户")
+    public Result<Void> setUserFreeze(@PathVariable(name = "userId") Long userId,
+            @RequestParam(name = "freezeTime") String freezeTimeStr,
+            @RequestParam(name = "reason", required = false) String reason) {
+        java.time.LocalDateTime freezeTime = java.time.LocalDateTime.parse(freezeTimeStr.replace(" ", "T"));
+        userService.setUserFreeze(userId, freezeTime, reason);
+        return Result.success();
+    }
+    
+    @PutMapping("/{userId}/unfreeze")
+    @Operation(summary = "解冻/解禁用户", description = "管理员解冻/解禁用户")
+    public Result<Void> unfreezeUser(@PathVariable(name = "userId") Long userId) {
+        log.info("收到解禁请求: userId={}", userId);
+        userService.unfreezeUser(userId);
+        return Result.success();
+    }
+    
+    @GetMapping("/{userId}/canPost")
+    @Operation(summary = "检查用户是否可以发布内容", description = "检查用户是否被封禁/冻结")
+    public Result<Boolean> canUserPost(@PathVariable(name = "userId") Long userId) {
+        return Result.success(userService.canUserPost(userId));
     }
 }

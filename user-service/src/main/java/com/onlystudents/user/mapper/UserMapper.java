@@ -35,21 +35,17 @@ public interface UserMapper extends BaseMapper<User> {
             "SELECT * FROM user " +
             "WHERE status = 1 " +
             "<if test='keyword != null and keyword != \"\"'>" +
-            "OR nickname LIKE CONCAT('%', #{keyword}, '%') " +
-            "OR bio LIKE CONCAT('%', #{keyword}, '%') " +
+            "AND (nickname LIKE CONCAT('%', #{keyword}, '%') " +
+            "OR bio LIKE CONCAT('%', #{keyword}, '%')) " +
             "</if>" +
             "<if test='educationLevel != null'>" +
             "AND education_level = #{educationLevel} " +
-            "</if>" +
-            "<if test='isCreator != null'>" +
-            "AND is_creator = #{isCreator} " +
             "</if>" +
             "ORDER BY follower_count DESC " +
             "LIMIT #{offset}, #{limit}" +
             "</script>")
     List<User> searchUsers(@Param("keyword") String keyword, 
                            @Param("educationLevel") Integer educationLevel,
-                           @Param("isCreator") Integer isCreator,
                            @Param("offset") Integer offset, 
                            @Param("limit") Integer limit);
     
@@ -70,12 +66,6 @@ public interface UserMapper extends BaseMapper<User> {
     
     @Select("SELECT COUNT(*) FROM user WHERE status = 1 AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL DAYOFMONTH(CURDATE()) DAY)")
     Long countMonthNewUsers();
-    
-    @Select("SELECT COUNT(*) FROM user WHERE status = 1 AND is_creator = 1")
-    Long countTotalCreators();
-    
-    @Select("SELECT COUNT(*) FROM user WHERE status = 1 AND is_creator = 1 AND DATE(created_at) = CURDATE()")
-    Long countTodayNewCreators();
     
     @Update("UPDATE user SET status = #{status} WHERE id = #{userId}")
     int updateUserStatus(@Param("userId") Long userId, @Param("status") Integer status);
