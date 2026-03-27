@@ -20,6 +20,7 @@ import com.onlystudents.common.event.note.NotePublishEvent;
 import com.onlystudents.note.mapper.NoteMapper;
 import com.onlystudents.note.service.NoteService;
 import com.onlystudents.note.service.TagService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
@@ -37,6 +38,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class NoteServiceImpl implements NoteService {
 
     private final NoteMapper noteMapper;
@@ -46,22 +48,6 @@ public class NoteServiceImpl implements NoteService {
     private final OperationLogFeignClient operationLogFeignClient;
     private final RabbitTemplate rabbitTemplate;
     private final TagService tagService;
-
-    public NoteServiceImpl(NoteMapper noteMapper,
-                           FileFeignClient fileFeignClient,
-                           UserFeignClient userFeignClient,
-                           NotificationFeignClient notificationFeignClient,
-                           OperationLogFeignClient operationLogFeignClient,
-                           RabbitTemplate rabbitTemplate,
-                           TagService tagService) {
-        this.noteMapper = noteMapper;
-        this.fileFeignClient = fileFeignClient;
-        this.userFeignClient = userFeignClient;
-        this.notificationFeignClient = notificationFeignClient;
-        this.operationLogFeignClient = operationLogFeignClient;
-        this.rabbitTemplate = rabbitTemplate;
-        this.tagService = tagService;
-    }
 
 
     @Override
@@ -194,6 +180,7 @@ public class NoteServiceImpl implements NoteService {
         // 发送MQ消息通知删除ES文档
         try {
             rabbitTemplate.convertAndSend("note.exchange", "note.delete", noteId);
+            rabbitTemplate.convertAndSend("note.exchange", "note.vector.delete", noteId);
             log.info("笔记 [{}] 已删除，删除消息已发送到MQ", noteId);
         } catch (Exception e) {
             log.error("发送笔记删除消息失败: noteId={}", noteId, e);
@@ -540,6 +527,7 @@ public class NoteServiceImpl implements NoteService {
         // 审核通过后，发送同步消息
         try {
             rabbitTemplate.convertAndSend("note.exchange", "note.sync", note);
+            rabbitTemplate.convertAndSend("note.exchange", "note.vector.sync", note);
             log.info("审核通过，笔记同步消息已发送到MQ: noteId={}", noteId);
         } catch (Exception e) {
             log.error("发送消息失败: noteId={}", noteId, e);

@@ -42,6 +42,22 @@ public class RabbitConfig {
     }
 
     /**
+     * 笔记向量同步队列（供 Python Agent 消费）
+     */
+    @Bean
+    public Queue noteVectorSyncQueue() {
+        return new Queue("note.vector.sync.queue", true);
+    }
+
+    /**
+     * 笔记向量删除队列（供 Python Agent 消费）
+     */
+    @Bean
+    public Queue noteVectorDeleteQueue() {
+        return new Queue("note.vector.delete.queue", true);
+    }
+
+    /**
      * 笔记交换机（使用Topic类型，支持通配符）
      */
     @Bean
@@ -77,6 +93,26 @@ public class RabbitConfig {
         return BindingBuilder.bind(notePublishQueue())
                 .to(noteExchange())
                 .with("note.publish");
+    }
+
+    /**
+     * 绑定向量同步队列到交换机
+     */
+    @Bean
+    public Binding noteVectorSyncBinding() {
+        return BindingBuilder.bind(noteVectorSyncQueue())
+                .to(noteExchange())
+                .with("note.vector.sync");
+    }
+
+    /**
+     * 绑定向量删除队列到交换机
+     */
+    @Bean
+    public Binding noteVectorDeleteBinding() {
+        return BindingBuilder.bind(noteVectorDeleteQueue())
+                .to(noteExchange())
+                .with("note.vector.delete");
     }
 
     // ==================== 接收评分服务的事件队列 ====================

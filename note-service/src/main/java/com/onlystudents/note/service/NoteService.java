@@ -6,6 +6,7 @@ import com.onlystudents.note.dto.NoteStatsDTO;
 import com.onlystudents.note.dto.UpdateNoteRequest;
 
 import java.util.List;
+import java.util.Map;
 
 public interface NoteService {
     
@@ -35,7 +36,7 @@ public interface NoteService {
     
     List<Long> getNoteIdsByUserId(Long userId);
     
-    java.util.Map<String, Object> getCreatorNoteStats(Long creatorId);
+    Map<String, Object> getCreatorNoteStats(Long creatorId);
     
     NoteStatsDTO getNoteStats();
     
@@ -49,7 +50,7 @@ public interface NoteService {
     
     void setNoteToDraft(Long noteId);
     
-    java.util.Map<String, Object> getNoteListForAdmin(Integer page, Integer size, Integer status, String keyword);
+    Map<String, Object> getNoteListForAdmin(Integer page, Integer size, Integer status, String keyword);
     
     void deleteNoteByAdmin(Long noteId);
     
