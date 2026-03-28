@@ -12,13 +12,13 @@
 
 ### 用户端
 
-| 首页 | 笔记详情 | 创作者主页 |
-|------|----------|------------|
-| ![首页](assets/images/1.png) | ![笔记详情](assets/images/2.png) | ![创作者主页](assets/images/3.png) |
+| 首页                         | 创作者主页                        | 笔记详情                          |
+|----------------------------|------------------------------|-------------------------------|
+| ![首页](assets/images/1.png) | ![创作者主页](assets/images/2.png) | ![笔记详情](assets/images/3.png) |
 
-| 消息通知 | 个人中心 | 搜索 |
-|---------|----------|------|
-| ![消息](assets/images/4.png) | ![个人中心](assets/images/5.png) | ![搜索](assets/images/6.png) |
+| 消息                       | 数据中心                         | 举报                         |
+|----------------------------|------------------------------|----------------------------|
+| ![消息](assets/images/4.png) | ![数据中心](assets/images/5.png) | ![举报](assets/images/6.png) |
 
 ### 管理后台
 
@@ -141,24 +141,26 @@ only-students/
 ## 🔧 技术栈
 
 ### 后端
-| 技术 | 版本 |
-|------|------|
-| Spring Boot | 3.2.0 |
-| Spring Cloud | 2023.0.0 |
-| MyBatis Plus | 3.5.7 |
-| MySQL | 8.0 |
-| Redis | 7.0 |
-| RabbitMQ | 3.8.5 |
-| Elasticsearch | 7.17 |
-| Nacos | 2.3 |
+
+| 技术            | 版本       |
+|---------------|----------|
+| Spring Boot   | 3.2.0    |
+| Spring Cloud  | 2023.0.0 |
+| MyBatis Plus  | 3.5.7    |
+| MySQL         | 8.0      |
+| Redis         | 7.0      |
+| RabbitMQ      | 3.8.5    |
+| Elasticsearch | 7.17     |
+| Nacos         | 2.3      |
 
 ### 前端
-| 技术 | 版本 |
-|------|------|
-| Vue | 3.3 |
-| uni-app | - |
-| Vite | - |
-| Pinia | - |
+
+| 技术      | 版本  |
+|---------|-----|
+| Vue     | 3.3 |
+| uni-app | -   |
+| Vite    | -   |
+| Pinia   | -   |
 
 ## 📱 API 文档
 
@@ -173,7 +175,7 @@ only-students/
 # 用户注册
 POST /api/user/register
 
-# 用户登录  
+# 用户登录
 POST /api/user/login
 
 # 创建笔记
@@ -212,22 +214,22 @@ hotScore = viewCount * 1 + likeCount * 3 + favoriteCount * 5 + shareCount * 10
 
 ## 📊 数据库
 
-| 服务 | 数据库 | 表数量 |
-|------|--------|--------|
-| user-service | onlystudents_user | 3 |
-| note-service | onlystudents_note | 5 |
-| file-service | onlystudents_file | 3 |
-| subscription-service | onlystudents_subscription | 3 |
-| payment-service | onlystudents_payment | 5 |
-| comment-service | onlystudents_comment | 3 |
-| rating-service | onlystudents_rating | 6 |
-| message-service | onlystudents_message | 3 |
-| notification-service | onlystudents_notification | 7 |
-| search-service | onlystudents_search | 3 |
-| report-service | onlystudents_report | 4 |
-| withdrawal-service | onlystudents_withdrawal | 2 |
-| analytics-service | onlystudents_analytics | 4 |
-| admin-service | onlystudents_admin | 6 |
+| 服务                   | 数据库                       | 表数量 |
+|----------------------|---------------------------|-----|
+| user-service         | onlystudents_user         | 3   |
+| note-service         | onlystudents_note         | 5   |
+| file-service         | onlystudents_file         | 3   |
+| subscription-service | onlystudents_subscription | 3   |
+| payment-service      | onlystudents_payment      | 5   |
+| comment-service      | onlystudents_comment      | 3   |
+| rating-service       | onlystudents_rating       | 6   |
+| message-service      | onlystudents_message      | 3   |
+| notification-service | onlystudents_notification | 7   |
+| search-service       | onlystudents_search       | 3   |
+| report-service       | onlystudents_report       | 4   |
+| withdrawal-service   | onlystudents_withdrawal   | 2   |
+| analytics-service    | onlystudents_analytics    | 4   |
+| admin-service        | onlystudents_admin        | 6   |
 
 **总计**: 14个数据库，63张表
 
